@@ -1,0 +1,27 @@
+[package]
+name = "ghost-runtime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = []
+
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+ghost-core = { path = "../ghost-core" }
+ghost-accounts = { path = "../ghost-accounts" }
+ghost-contacts = { path = "../ghost-contacts" }
+ghost-protocol = { path = "../ghost-protocol" }
+ghost-rooms = { path = "../ghost-rooms" }
+ghost-sync = { path = "../ghost-sync" }
+ghost-kaspa = { path = "../ghost-kaspa" }
+ghost-history = { path = "../ghost-history" }
+ghost-names = { path = "../ghost-names" }
+ghost-voice = { path = "../ghost-voice" }
+ghost-games = { path = "../ghost-games" }
+ghost-storage = { path = "../ghost-storage" }
+serde_json.workspace = true

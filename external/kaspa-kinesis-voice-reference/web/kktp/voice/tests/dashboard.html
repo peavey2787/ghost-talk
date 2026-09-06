@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>KKTP Voice Live Test (Two-Peer)</title>
+  <style>
+    body { background: #181617; color: #49eacb; font-family: 'Segoe UI', Arial, sans-serif; margin: 0; min-height: 100vh; }
+    .dashboard-container { margin: 2.5rem auto; padding: 2rem 1.5rem; background: #2d292a; border-radius: 10px; box-shadow: 0 2px 12px #00000044; max-width: 560px; text-align: center; }
+    h1 { color: #49eacb; margin-bottom: 1em; font-size: 1.6em; letter-spacing: 1px; }
+    .section { text-align: left; margin: 1.2em 0; padding: 0.8em; background: #232223; border-radius: 8px; border: 1px solid #3d393a; }
+    .section-title { font-weight: 600; margin-bottom: 0.5em; color: #49eacb; }
+    .role-row { display: flex; gap: 1em; margin-bottom: 0.5em; }
+    .role-row label { display: flex; align-items: center; gap: 0.4em; cursor: pointer; }
+    .role-row input[type="radio"] { accent-color: #49eacb; }
+    input[type="password"], input[type="text"], select {
+      background: #181617; color: #49eacb; border: 1.5px solid #49eacb; border-radius: 5px; padding: 0.5em 0.7em; font-size: 1em; min-width: 200px;
+    }
+    input::placeholder { color: #49eacb66; }
+    button {
+      background: #232223; color: #49eacb; border: 1.5px solid #49eacb; border-radius: 5px; padding: 0.6em 1.2em; font-size: 1em; font-weight: 500; cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s; margin: 0.2em 0.2em 0.2em 0;
+    }
+    button:hover, button:focus { background: #49eacb; color: #232223; border-color: #7fffd4; outline: none; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .funding-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5em; margin: 0.4em 0; }
+    .address-text { font-family: 'Fira Mono', Consolas, monospace; font-size: 0.9em; word-break: break-all; color: #d4d4d4; }
+    .copy-feedback { color: #27ae60; font-size: 0.9em; margin-left: 0.3em; display: none; }
+    .copy-feedback.show { display: inline; }
+    a.faucet-link, a.explorer-link { color: #49eacb; text-decoration: underline; }
+    a.faucet-link:hover, a.explorer-link:hover { color: #7fffd4; }
+    .instructions { white-space: pre-line; line-height: 1.5; color: #d4d4d4; font-size: 0.95em; margin: 0.5em 0; }
+    .state-badge { display: inline-block; background: #181617; border: 1px solid #49eacb; border-radius: 999px; padding: 0.25em 0.7em; font-size: 0.9em; margin-bottom: 0.5em; }
+    #log-container {
+      background: #181617; color: #d4d4d4; padding: 12px 10px 12px 18px; font-family: 'Fira Mono', 'Consolas', monospace;
+      height: 200px; overflow-y: auto; border-radius: 8px; margin: 1em auto 0 auto; max-width: 100%; font-size: 0.9em; border: 1.5px solid #232223;
+    }
+    .log-entry { margin-bottom: 4px; border-left: 3px solid #555; padding-left: 8px; font-size: 0.9em; }
+    .hidden { display: none !important; }
+    .loading-overlay { display: none; align-items: center; justify-content: center; gap: 0.6rem; margin: 0.5em 0; padding: 0.5rem; background: #232223; border-radius: 8px; border: 1px solid #49eacb; }
+    .loading-overlay.show { display: flex; }
+    .spinner { width: 16px; height: 16px; border: 2px solid #49eacb55; border-top-color: #49eacb; border-radius: 50%; animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    code { background: #181617; padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.9em; }
+    .tx-list { max-height: 150px; overflow-y: auto; font-size: 0.85em; }
+    .tx-list a { display: block; margin: 0.2em 0; word-break: break-all; }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5em; font-size: 0.9em; color: #d4d4d4; }
+    .mode-group { display: flex; gap: 1.2em; margin-bottom: 0.6em; }
+    .mode-group label { display: flex; align-items: center; gap: 0.35em; cursor: pointer; font-size: 0.95em; color: #d4d4d4; }
+    .mode-group input[type="radio"] { accent-color: #49eacb; }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+    <h1>KKTP Voice Live Test (Two-Peer)</h1>
+    <p style="color: #d4d4d4; font-size: 0.95em; margin-bottom: 1em;">Open in two browsers. One Host, one Joiner. Fund both via testnet-10 faucet, create/join lobby, then join voice chat.</p>
+
+    <!-- Role -->
+    <div class="section">
+      <div class="section-title">Role</div>
+      <div class="role-row">
+        <label><input type="radio" name="role" value="host" checked> Host</label>
+        <label><input type="radio" name="role" value="joiner"> Joiner</label>
+      </div>
+    </div>
+
+    <!-- Initialize -->
+    <div id="init-section" class="section">
+      <div class="section-title">Initialize</div>
+      <div class="funding-row">
+        <label>Wallet:</label>
+        <select id="wallet-select"><option value="">-- Load wallets first --</option></select>
+      </div>
+      <div class="funding-row">
+        <label>Password:</label>
+        <input type="password" id="password-input" placeholder="Wallet password" autocomplete="current-password" />
+      </div>
+      <div class="funding-row">
+        <button type="button" id="btn-init">Initialize</button>
+        <div id="init-loading" class="loading-overlay"><div class="spinner"></div><span>Initializing...</span></div>
+      </div>
+      <div style="margin-top: 1em; padding-top: 0.8em; border-top: 1px solid #3d393a;">
+        <div class="section-title" style="margin-bottom: 0.4em;">Create new wallet</div>
+        <div class="funding-row">
+          <input type="text" id="new-wallet-name" placeholder="e.g. voice-host" style="min-width: 160px;" />
+          <input type="password" id="new-wallet-password" placeholder="Password" />
+        </div>
+        <div class="funding-row">
+          <button type="button" id="btn-create-wallet">Create and initialize</button>
+          <div id="create-wallet-loading" class="loading-overlay"><div class="spinner"></div><span>Creating...</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Funding -->
+    <div id="funding-section" class="section hidden">
+      <div class="section-title">Funding (testnet-10)</div>
+      <div class="funding-row"><span>Balance:</span><strong id="balance-display">0 KAS</strong></div>
+      <div class="funding-row">
+        <span class="address-text" id="address-display">--</span>
+        <button type="button" id="btn-copy-address">Copy address</button>
+        <span id="copy-address-feedback" class="copy-feedback">Copied!</span>
+      </div>
+      <div class="funding-row">
+        <a id="faucet-link" href="https://faucet-tn10.kaspanet.io/" target="_blank" rel="noopener noreferrer" class="faucet-link">Fund on testnet-10</a>
+      </div>
+    </div>
+
+    <!-- Instructions -->
+    <div id="instructions-section" class="section hidden">
+      <div class="section-title">Steps</div>
+      <div class="instructions" id="instructions-text"></div>
+    </div>
+
+    <!-- Lobby state -->
+    <div id="state-section" class="section hidden">
+      <div class="section-title">Lobby state</div>
+      <div><span class="state-badge" id="state-badge">IDLE</span></div>
+    </div>
+
+    <!-- Lobby actions -->
+    <div id="actions-section" class="section hidden">
+      <div class="section-title">Lobby</div>
+      <div id="host-actions" class="hidden">
+        <button type="button" id="btn-create-lobby">Create Lobby</button>
+        <div id="join-code-area" class="hidden" style="margin-top: 0.6em;">
+          <div class="funding-row">
+            <input type="text" id="join-code-display" readonly style="min-width: 260px;" />
+            <button type="button" id="btn-copy-join-code">Copy join code</button>
+            <span id="copy-join-feedback" class="copy-feedback">Copied!</span>
+          </div>
+        </div>
+      </div>
+      <div id="joiner-actions" class="hidden">
+        <div class="funding-row">
+          <input type="text" id="join-code-input" placeholder="Paste join code from Host" style="flex: 1; min-width: 0;" />
+          <button type="button" id="btn-join-lobby">Join Lobby</button>
+        </div>
+      </div>
+      <div id="lobby-search-section" class="hidden" style="margin-top: 0.8em; padding-top: 0.6em; border-top: 1px solid #3d393a;">
+        <div class="section-title" style="font-size: 0.95em;">Search for lobbies</div>
+        <div class="funding-row">
+          <label>Only lobbies from last</label>
+          <input type="number" id="lobby-max-age-mins" placeholder="e.g. 60" min="1" max="1440" style="min-width: 80px;" title="Leave empty for any age" />
+          <span>mins (optional)</span>
+        </div>
+        <div class="funding-row">
+          <button type="button" id="btn-toggle-search">Start searching for lobbies</button>
+        </div>
+        <div id="lobby-search-results" class="tx-list" style="margin-top: 0.4em; max-height: 100px;"></div>
+      </div>
+      <div id="leave-area" class="hidden" style="margin-top: 0.5em;">
+        <button type="button" id="btn-leave-lobby">Leave Lobby</button>
+        <button type="button" id="btn-close-lobby" class="hidden">Close Lobby</button>
+      </div>
+    </div>
+
+    <!-- Voice chat -->
+    <div id="voice-section" class="section hidden">
+      <div class="section-title">Voice chat</div>
+      <div id="voice-mode-group" class="mode-group">
+        <label><input type="radio" name="voice-mode" id="mode-half-duplex" value="half" checked> Half-duplex (walkie-talkie)</label>
+        <label><input type="radio" name="voice-mode" id="mode-full-duplex" value="full"> Full-duplex (live chat)</label>
+      </div>
+      <div class="funding-row">
+        <button type="button" id="btn-join-voice">Join Voice Chat</button>
+        <button type="button" id="btn-leave-voice" class="hidden" disabled>Leave Voice Chat</button>
+        <button type="button" id="btn-voice-action" disabled>Request to Talk</button>
+        <button type="button" id="btn-mute" class="hidden">Mute</button>
+      </div>
+      <div id="voice-loading" class="loading-overlay"><div class="spinner"></div><span id="voice-loading-text">...</span></div>
+    </div>
+
+    <!-- Stats -->
+    <div id="stats-section" class="section hidden">
+      <div class="section-title">Stats</div>
+      <div class="stats-grid">
+        <span>RTT sent:</span><span id="stat-rtt-sent">0</span>
+        <span>RTT received:</span><span id="stat-rtt-received">0</span>
+        <span>Audio sent:</span><span id="stat-audio-sent">0</span>
+        <span>Audio received:</span><span id="stat-audio-received">0</span>
+        <span>KAS sent (voice):</span><span id="stat-kas-sent">0</span>
+        <span>Last received:</span><span id="stat-last-received">&mdash;</span>
+      </div>
+    </div>
+
+    <!-- Explorer links -->
+    <div id="explorer-section" class="section hidden">
+      <div class="section-title">Explorer links (testnet-10)</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1em;">
+        <div>
+          <div class="section-title" style="font-size: 0.95em;">Sent</div>
+          <div id="sent-tx-list" class="tx-list"></div>
+        </div>
+        <div>
+          <div class="section-title" style="font-size: 0.95em;">Received</div>
+          <div id="received-tx-list" class="tx-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="loading-actions" class="loading-overlay hidden"><div class="spinner"></div><span id="loading-actions-text">Working...</span></div>
+
+    <!-- Log -->
+    <div class="section">
+      <div class="section-title">Log</div>
+      <div id="log-container"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { boot } from "./dashboardController.js";
+    document.addEventListener("DOMContentLoaded", boot);
+  </script>
+</body>
+</html>

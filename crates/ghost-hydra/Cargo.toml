@@ -1,0 +1,22 @@
+[package]
+name = "ghost-hydra"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = []
+upstream = ["dep:hydra-msg", "dep:hydra-core", "dep:hydra-stego", "dep:hydra-group"]
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+ghost-core = { path = "../ghost-core" }
+base64.workspace = true
+hex.workspace = true
+hydra-msg = { workspace = true, optional = true }
+hydra-core = { workspace = true, optional = true }
+hydra-stego = { workspace = true, optional = true }
+hydra-group = { workspace = true, optional = true }
+zeroize.workspace = true

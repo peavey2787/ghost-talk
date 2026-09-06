@@ -1,0 +1,143 @@
+name: Release validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      fuzz_runs:
+        description: Deep-campaign runs per fast fuzz target
+        required: true
+        default: "100000"
+        type: string
+      mutation_jobs:
+        description: Concurrent cargo-mutants jobs
+        required: true
+        default: "1"
+        type: string
+      check_all_args:
+        description: "Optional extra qa/ci/check-all.sh args, e.g. --from coverage or --only mutation"
+        required: false
+        default: ""
+        type: string
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-validation-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: "1"
+
+jobs:
+  check-all:
+    name: Full sequential release check-all
+    runs-on: ubuntu-24.04
+    timeout-minutes: 720
+    env:
+      HYDRA_BROWSER_WORKERS: "1"
+      HYDRA_PLAYWRIGHT_INSTALL_DEPS: "1"
+      HYDRA_RELEASE_FUZZ_RUNS: ${{ inputs.fuzz_runs || '100000' }}
+      HYDRA_RELEASE_MUTATION_JOBS: ${{ inputs.mutation_jobs || '1' }}
+      HYDRA_CHECK_ALL_ARGS: ${{ inputs.check_all_args }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: qa/browser/playwright/package-lock.json
+
+      - name: Install Rust toolchains
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt,clippy
+          rustup target add wasm32-unknown-unknown --toolchain stable
+          rustup toolchain install nightly --profile minimal --component miri,rust-src,llvm-tools-preview
+          rustup target add x86_64-unknown-linux-gnu --toolchain nightly
+          rustup default stable
+
+      - name: Install required QA tools
+        run: |
+          cargo install cargo-audit --locked
+          cargo install cargo-deny --locked
+          cargo install wasm-pack --locked
+          cargo install cargo-llvm-cov --locked
+          cargo install cargo-mutants --locked
+          cargo install cargo-fuzz --locked
+
+      - name: Run full release check-all pipeline
+        shell: bash
+        run: |
+          mkdir -p target/ci-logs
+          log_file="target/ci-logs/release-check-all.log"
+          printf '%s\n' \
+            "HYDRA-MSG full sequential release check-all" \
+            "Commit: $GITHUB_SHA" \
+            "Fuzz mode: deep" \
+            "Fast fuzz runs: ${HYDRA_RELEASE_FUZZ_RUNS}" \
+            "Mutation jobs: ${HYDRA_RELEASE_MUTATION_JOBS}" \
+            "Extra args: ${HYDRA_CHECK_ALL_ARGS:-<none>}" > "$log_file"
+          extra_args=()
+          if [ -n "${HYDRA_CHECK_ALL_ARGS:-}" ]; then
+            read -r -a extra_args <<< "$HYDRA_CHECK_ALL_ARGS"
+          fi
+          set -o pipefail
+          ./qa/ci/check-all.sh \
+            --skip-permissions \
+            --deep-fuzz \
+            --fuzz-runs "$HYDRA_RELEASE_FUZZ_RUNS" \
+            --mutation-jobs "$HYDRA_RELEASE_MUTATION_JOBS" \
+            "${extra_args[@]}" 2>&1 | tee -a "$log_file"
+
+      - name: Verify release check-all evidence
+        if: always()
+        run: |
+          test -s "$GITHUB_WORKSPACE/target/ci-logs/release-check-all.log"
+          ls -l "$GITHUB_WORKSPACE/target/ci-logs/release-check-all.log"
+          sha256sum "$GITHUB_WORKSPACE/target/ci-logs/release-check-all.log"
+
+      - name: Upload release check-all evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-check-all-${{ github.sha }}
+          path: |
+            target/ci-logs/release-check-all.log
+            target/coverage/
+            target/mutants/
+            target/hydra-fuzz-evidence/
+            qa/browser/playwright/test-results/
+            qa/browser/playwright/playwright-report/
+          if-no-files-found: warn
+          retention-days: 90
+
+  summary:
+    name: Release validation summary
+    if: always()
+    needs:
+      - check-all
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Publish release validation summary
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF2
+          # HYDRA-MSG release validation
+
+          Commit: \`${{ github.sha }}\`
+
+          | Gate | Result |
+          |---|---|
+          | Full sequential release check-all | ${{ needs['check-all'].result }} |
+
+          The release check-all job runs all validation sections in order and stops on the first failing section. Complete logs and generated diagnostics are attached as commit-named artifacts.
+          EOF2

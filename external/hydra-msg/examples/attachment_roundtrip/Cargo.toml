@@ -1,0 +1,14 @@
+[package]
+name = "hydra-msg-example-attachment-roundtrip"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+hydra-msg = { version = "0.1.0", path = "../../crates/hydra-msg" }
+
+[lints]
+workspace = true

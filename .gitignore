@@ -1,0 +1,53 @@
+# Rust / JS build output
+/target/
+**/target/
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+
+# Tauri generated mobile projects and signing material
+crates/ghost-app/src-tauri/gen/
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+
+# Local state / secrets
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite
+*.log
+*.key
+*.pem
+*.seed
+*.mnemonic
+
+# Editors / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Python QA artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Packaging
+/release/
+*.tar.gz
+*.AppImage
+*.deb
+*.msi
+*.exe
+*.apk
+*.aab
+*.ipa
+
+# Never commit locally generated dependency caches
+.cargo/
+.npm/

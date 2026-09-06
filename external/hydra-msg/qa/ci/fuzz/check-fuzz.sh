@@ -1,0 +1,174 @@
+#!/usr/bin/env sh
+set -eu
+
+. "$(dirname -- "$0")/../lib/repo-root.sh"
+hydra_enter_repo_root
+
+if [ "${HYDRA_CI_EPHEMERAL_LOCK_REFRESH:-0}" = "1" ]; then
+  HYDRA_FUZZ_CASES="${HYDRA_FUZZ_CASES:-8}" \
+    cargo run -p hydra-fuzz-gate --
+else
+  HYDRA_FUZZ_CASES="${HYDRA_FUZZ_CASES:-8}" \
+    cargo run --locked -p hydra-fuzz-gate --
+fi
+
+if [ "${HYDRA_RUN_COVERAGE_GUIDED_FUZZ:-0}" != "1" ]; then
+  echo "coverage-guided fuzz campaigns skipped; set HYDRA_RUN_COVERAGE_GUIDED_FUZZ=1 to run them"
+  exit 0
+fi
+
+if ! command -v rustup >/dev/null 2>&1; then
+  echo "HYDRA coverage-guided fuzzing requires rustup and a nightly Rust toolchain" >&2
+  echo "Install nightly with: rustup toolchain install nightly" >&2
+  exit 1
+fi
+
+require_positive_integer() {
+  name=$1
+  value=$2
+  case "$value" in
+    ''|*[!0-9]*|0)
+      echo "$name must be a positive integer, got: $value" >&2
+      exit 2
+      ;;
+  esac
+}
+
+FUZZ_MODE="${HYDRA_FUZZ_MODE:-smoke}"
+case "$FUZZ_MODE" in
+  smoke)
+    FAST_BUDGET_KIND=runs
+    FAST_BUDGET="${HYDRA_COVERAGE_FUZZ_RUNS:-256}"
+    STATEFUL_BUDGET_KIND=runs
+    STATEFUL_BUDGET="${HYDRA_STATEFUL_FUZZ_RUNS:-256}"
+    ;;
+  overnight)
+    FAST_BUDGET_KIND=seconds
+    FAST_BUDGET="${HYDRA_COVERAGE_FUZZ_SECONDS:-900}"
+    STATEFUL_BUDGET_KIND=seconds
+    STATEFUL_BUDGET="${HYDRA_STATEFUL_FUZZ_SECONDS:-300}"
+    ;;
+  deep)
+    FAST_BUDGET_KIND=runs
+    FAST_BUDGET="${HYDRA_COVERAGE_FUZZ_RUNS:-100000}"
+    STATEFUL_BUDGET_KIND=runs
+    STATEFUL_BUDGET="${HYDRA_STATEFUL_FUZZ_RUNS:-1000}"
+    ;;
+  *)
+    echo "HYDRA_FUZZ_MODE must be smoke, overnight, or deep; got: $FUZZ_MODE" >&2
+    exit 2
+    ;;
+esac
+
+require_positive_integer "fast fuzz budget" "$FAST_BUDGET"
+require_positive_integer "stateful fuzz budget" "$STATEFUL_BUDGET"
+
+FUZZ_TOOLCHAIN="${HYDRA_FUZZ_TOOLCHAIN:-nightly}"
+FUZZ_DIR="$HYDRA_REPO_ROOT/qa/fuzz/cargo-fuzz"
+FUZZ_MANIFEST="$FUZZ_DIR/Cargo.toml"
+EVIDENCE_DIR="${HYDRA_COVERAGE_FUZZ_EVIDENCE_DIR:-target/hydra-fuzz-evidence}"
+case "$EVIDENCE_DIR" in
+  /*) EVIDENCE_ROOT=$EVIDENCE_DIR ;;
+  *) EVIDENCE_ROOT="$HYDRA_REPO_ROOT/$EVIDENCE_DIR" ;;
+esac
+
+if [ ! -f "$FUZZ_MANIFEST" ]; then
+  echo "HYDRA cargo-fuzz manifest is missing: $FUZZ_MANIFEST" >&2
+  exit 1
+fi
+
+if ! fuzz_rustc_version=$(rustup run "$FUZZ_TOOLCHAIN" rustc --version 2>&1); then
+  echo "HYDRA coverage-guided fuzzing requires the selected Rust toolchain: $FUZZ_TOOLCHAIN" >&2
+  echo "Install it with: rustup toolchain install $FUZZ_TOOLCHAIN" >&2
+  echo "$fuzz_rustc_version" >&2
+  exit 1
+fi
+case "$fuzz_rustc_version" in
+  *nightly*) ;;
+  *)
+    echo "HYDRA coverage-guided fuzzing requires nightly Rust" >&2
+    echo "HYDRA_FUZZ_TOOLCHAIN=$FUZZ_TOOLCHAIN selected: $fuzz_rustc_version" >&2
+    exit 1
+    ;;
+esac
+
+if ! RUSTUP_TOOLCHAIN="$FUZZ_TOOLCHAIN" cargo fuzz --version >/dev/null 2>&1; then
+  echo "cargo-fuzz is required for HYDRA_RUN_COVERAGE_GUIDED_FUZZ=1" >&2
+  echo "Install it with: cargo install cargo-fuzz --locked" >&2
+  exit 1
+fi
+
+FAST_TARGETS="
+envelope_header_decoding
+protected_record_decoding
+message_codec
+storage_backup_chunk_parser
+contact_card_parser
+handshake_offer_answer_parser
+lobby_invite_parser
+anonymous_auth_token_parser
+fragment_reassembly
+session_receive_state_machine
+group_commit_message_parser
+stego_cover_decoding
+"
+
+STATEFUL_TARGETS="
+message_stateful_flow
+"
+
+budget_argument() {
+  kind=$1
+  value=$2
+  case "$kind" in
+    runs) printf '%s\n' "-runs=$value" ;;
+    seconds) printf '%s\n' "-max_total_time=$value" ;;
+    *)
+      echo "internal error: unknown fuzz budget kind: $kind" >&2
+      exit 2
+      ;;
+  esac
+}
+
+run_target() {
+  target=$1
+  kind=$2
+  value=$3
+  argument=$(budget_argument "$kind" "$value")
+  echo "==> coverage-guided fuzz target: $target mode=$FUZZ_MODE $kind=$value"
+  target_evidence_dir="$EVIDENCE_ROOT/$target"
+  mkdir -p "$target_evidence_dir"
+  RUSTUP_TOOLCHAIN="$FUZZ_TOOLCHAIN" cargo fuzz run --fuzz-dir "$FUZZ_DIR" "$target" -- \
+    "$argument" \
+    -print_final_stats=1 \
+    -artifact_prefix="$target_evidence_dir/"
+}
+
+echo "Coverage-guided fuzz mode: $FUZZ_MODE"
+echo "Coverage-guided fuzz toolchain: $FUZZ_TOOLCHAIN ($fuzz_rustc_version)"
+echo "Fast target budget: $FAST_BUDGET_KIND=$FAST_BUDGET"
+echo "Stateful target budget: $STATEFUL_BUDGET_KIND=$STATEFUL_BUDGET"
+mkdir -p "$EVIDENCE_ROOT"
+
+echo "==> preflight: compile all coverage-guided fuzz targets"
+RUSTUP_TOOLCHAIN="$FUZZ_TOOLCHAIN" cargo fuzz build --fuzz-dir "$FUZZ_DIR"
+
+for target in $FAST_TARGETS; do
+  run_target "$target" "$FAST_BUDGET_KIND" "$FAST_BUDGET"
+done
+for target in $STATEFUL_TARGETS; do
+  run_target "$target" "$STATEFUL_BUDGET_KIND" "$STATEFUL_BUDGET"
+done
+
+cat > "$EVIDENCE_ROOT/README.txt" <<EOF2
+HYDRA coverage-guided fuzz evidence
+
+Mode: $FUZZ_MODE
+Rust toolchain: $FUZZ_TOOLCHAIN
+
+Fast targets ($FAST_BUDGET_KIND=$FAST_BUDGET):
+$FAST_TARGETS
+Stateful targets ($STATEFUL_BUDGET_KIND=$STATEFUL_BUDGET):
+$STATEFUL_TARGETS
+Generated by: qa/ci/fuzz/check-fuzz.sh
+EOF2

@@ -1,0 +1,51 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/ghost-core", "crates/ghost-protocol", "crates/ghost-accounts",
+  "crates/ghost-contacts", "crates/ghost-names", "crates/ghost-storage",
+  "crates/ghost-history", "crates/ghost-rooms", "crates/ghost-voice",
+  "crates/ghost-games", "crates/ghost-sync", "crates/ghost-hydra",
+  "crates/ghost-kaspa", "crates/ghost-messaging", "crates/ghost-runtime",
+  "crates/ghost-wasm", "crates/ghost-app/src-tauri"
+]
+exclude = ["external/hydra-msg", "external/kaspa-kinesis-voice-reference", "external/kassigner-sdk", "external/kassigner-protocol", "external/shared-signer", "external/rqrr-nostd"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.95"
+license = "GPL-2.0-or-later"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+hex = "0.4"
+base64 = "0.22"
+blake3 = "1"
+sha2 = "0.10"
+sha3 = "0.10"
+rand = "0.8"
+argon2 = "0.5"
+aes-gcm = "0.10"
+chacha20poly1305 = "0.10"
+zeroize = { version = "1", features = ["derive"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+qrcode = { version = "0.14.1", default-features = false }
+tokio = { version = "1", features = ["rt", "macros", "sync", "time"] }
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+web-sys = "0.3"
+hydra-msg = { path = "external/hydra-msg/crates/hydra-msg" }
+hydra-core = { path = "external/hydra-msg/crates/hydra-core" }
+hydra-stego = { path = "external/hydra-msg/crates/hydra-stego" }
+hydra-group = { path = "external/hydra-msg/crates/hydra-group" }
+kaspa-portal = "1.0.1"
+kassigner-sdk = { path = "external/kassigner-sdk", version = "=2.0.0" }
+kassigner-protocol = { path = "external/kassigner-protocol", version = "=2.0.0" }
+rqrr = { path = "external/rqrr-nostd", version = "=0.10.1-nostd" }
+
+# Keep workspace code debuggable while compiling crypto/protocol dependencies
+# with optimization. Memory-hard password KDF parameters are unchanged.
+[profile.dev.package."*"]
+opt-level = 3

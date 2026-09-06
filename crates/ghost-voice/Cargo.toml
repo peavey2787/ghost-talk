@@ -1,0 +1,18 @@
+[package]
+name = "ghost-voice"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = []
+
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+ghost-core = { path = "../ghost-core" }
+chacha20poly1305.workspace = true
+blake3.workspace = true
+rand.workspace = true

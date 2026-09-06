@@ -1,0 +1,10 @@
+[package]
+name = "ghost-example-direct-chat"
+version = "0.1.0"
+edition = "2021"
+publish = false
+[dependencies]
+ghost-core = { path = "../../crates/ghost-core" }
+ghost-protocol = { path = "../../crates/ghost-protocol" }
+
+[workspace]

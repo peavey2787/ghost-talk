@@ -1,0 +1,17 @@
+[package]
+name = "ghost-messaging"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = []
+
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+ghost-core = { path = "../ghost-core" }
+ghost-protocol = { path = "../ghost-protocol" }
+ghost-hydra = { path = "../ghost-hydra" }

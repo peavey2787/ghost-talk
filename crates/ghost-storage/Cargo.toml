@@ -1,0 +1,17 @@
+[package]
+name = "ghost-storage"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = []
+
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+argon2.workspace = true
+aes-gcm.workspace = true
+rand.workspace = true

@@ -1,0 +1,39 @@
+# HYDRA attachment roundtrip
+
+Shows text plus file and byte attachments through the public send/receive API.
+
+## Navigation
+
+- [Main README](../../README.md)
+- [How HYDRA messaging works](../../docs/impl/message-flow/README.md)
+- [Spec docs and repo structure](../../docs/spec/README.md)
+- [Crates](../../crates/README.md)
+- [Examples](../README.md)
+- [Public developer API](../../docs/spec/public-developer-api.md)
+- [Benchmark notes](../../docs/validation/benchmarks/benchmark-results.md)
+
+## Shape
+
+```rust
+let packets = hydra.send(
+    contact_id,
+    HydraMessage::text("hello")
+        .attach_file("./photo.jpg")?
+        .attach_bytes("data.bin", bytes_here)?,
+)?;
+
+for packet in packets {
+    if let Some(data) = hydra.receive(packet)? {
+        println!("{}", data.text()?);
+        for attachment in data.attachments() {
+            std::fs::write(attachment.filename(), attachment.bytes())?;
+        }
+    }
+}
+```
+
+## Run
+
+```bash
+cargo run --manifest-path examples/attachment_roundtrip/Cargo.toml
+```

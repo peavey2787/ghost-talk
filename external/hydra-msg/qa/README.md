@@ -1,0 +1,120 @@
+# HYDRA-MSG checks
+
+`qa/` contains executable validation tooling, system tests, machine-readable manifests, vector tooling, and fuzzing workspaces. Long-lived human-readable evidence lives under [`docs/validation/`](../docs/validation/README.md).
+
+## Navigation
+
+- [Main README](../README.md)
+
+## Contents
+
+```text
+qa/
+├── browser/   Playwright browser lifecycle evidence harness
+├── ci/        grouped local-check scripts; check-all stays at top level
+├── coverage/  critical-path manifest and Rust LCOV threshold helper
+├── fixtures/  fixed validation fixtures, including cross-runtime interop fixtures
+├── fuzz/      fuzzing workspace
+├── mutation/  mutation-testing targets for release CI
+├── tests/     global/system test crates
+├── vectors/   generated vector artifacts
+└── tools/     validation and vector-generation tooling
+```
+
+
+## First-time developer setup
+
+Install HYDRA's required Rust QA tools, WASM tooling, and optional nightly Miri/sanitizer components with:
+
+```bash
+./scripts/setup-dev-env.sh
+```
+
+PowerShell:
+
+```powershell
+.\scripts\setup-dev-env.ps1
+```
+
+## Main commands
+
+`check-all` is the release-complete gate. The individual scripts are useful for debugging one failing area, but the release path is `check-all`.
+
+Unix:
+
+```bash
+sh qa/ci/core/linux-permissions.sh
+./qa/ci/check-all.sh
+./qa/ci/core/check-tests.sh
+./qa/ci/core/check-examples.sh
+./qa/ci/fuzz/check-fuzz.sh
+./qa/ci/security/check-supply-chain.sh
+./qa/ci/security/check-resource-limits.sh
+./qa/ci/reliability/check-memory-safety.sh
+./qa/ci/reliability/check-interop.sh
+./qa/ci/quality/check-coverage.sh
+./qa/ci/quality/check-mutation.sh
+./qa/ci/reliability/check-cross-version-compat.sh
+./qa/ci/reliability/check-browser-e2e.sh
+```
+
+PowerShell:
+
+```powershell
+.\qa\ci\check-all.ps1
+.\qa\ci\core\check-tests.ps1
+.\qa\ci\core\check-examples.ps1
+.\qa\ci\fuzz\check-fuzz.ps1
+.\qa\ci\security\check-supply-chain.ps1
+.\qa\ci\security\check-resource-limits.ps1
+.\qa\ci\reliability\check-memory-safety.ps1
+.\qa\ci\reliability\check-interop.ps1
+.\qa\ci\quality\check-coverage.ps1
+.\qa\ci\quality\check-mutation.ps1
+.\qa\ci\reliability\check-cross-version-compat.ps1
+```
+
+
+## Release evidence
+
+`qa/ci/run_all.py` is the single shared orchestration source used by both `qa/ci/check-all.sh` and `qa/ci/check-all.ps1`. The native wrappers contain only platform launch plumbing. `check-all` includes every validation section. With no flags, it runs them in order, stops on the first failure, and finishes with a bounded 256-run-per-target fuzz campaign. Use the explicit overnight or deep flags when collecting longer fuzz evidence.
+
+Use the individual scripts only when debugging one failing gate or intentionally collecting isolated evidence. The Unix runner can resume at a release section and can skip already-collected evidence:
+A skipped cargo-mutants baseline is valid only when the same tree has already passed its Rust tests.
+
+```bash
+./qa/ci/check-all.sh --from browser --skip-browser-install
+./qa/ci/check-all.sh --resume-from browser --skip-browser-install
+./qa/ci/check-all.sh --from coverage
+./qa/ci/check-all.sh --only mutation
+./qa/ci/check-all.sh --section mutation
+./qa/ci/check-all.sh --from mutation --skip-mutation-baseline
+./qa/ci/check-all.sh --help
+```
+
+```bash
+./qa/ci/check-all.sh --only fuzz
+./qa/ci/check-all.sh --only fuzz --overnight
+./qa/ci/check-all.sh --only fuzz --deep-fuzz
+```
+
+PowerShell:
+
+```powershell
+.\qa\ci\check-all.ps1 -Only fuzz
+.\qa\ci\check-all.ps1 -Only fuzz -Overnight
+.\qa\ci\check-all.ps1 -Only fuzz -DeepFuzz
+```
+
+To include the full WASM app probe in browser E2E, set `HYDRA_BROWSER_TEST_URL` to a running `examples/mobile_perf_web` host before running `check-all`.
+
+## Release artifact process
+
+After all normal and heavy gates are green, create the signed release package with:
+
+```bash
+scripts/release/create-signed-tag.sh vX.Y.Z [gpg-key-id]
+scripts/release/create-release-package.sh vX.Y.Z
+scripts/release/sign-release-artifacts.sh vX.Y.Z [gpg-key-id]
+scripts/release/verify-release-artifacts.sh vX.Y.Z
+```

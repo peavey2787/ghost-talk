@@ -1,0 +1,16 @@
+﻿{
+    "version":  "2.0.0",
+    "name":  "@kassigner/sdk",
+    "types":  "./kassigner_sdk.d.ts",
+    "files":  [
+                  "kassigner_sdk.js",
+                  "kassigner_sdk.d.ts",
+                  "kassigner_sdk_bg.wasm",
+                  "kassigner_sdk_bg.wasm.d.ts",
+                  "LICENSE-MIT",
+                  "LICENSE-APACHE"
+              ],
+    "type":  "module",
+    "module":  "./kassigner_sdk.js",
+    "license":  "MIT OR Apache-2.0"
+}
