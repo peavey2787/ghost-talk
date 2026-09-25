@@ -1,0 +1,24 @@
+[package]
+name = "ghost-names"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = []
+
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+reqwest.workspace = true
+serde_json.workspace = true
+hex.workspace = true
+blake3.workspace = true
+kaspa-addresses = { version = "2.0.1", git = "https://github.com/kaspanet/rusty-kaspa", rev = "cfafeb4c093fa37a303f1b9f19c58f986b870ce3" }
+kaspa-txscript = { version = "2.0.1", git = "https://github.com/kaspanet/rusty-kaspa", rev = "cfafeb4c093fa37a303f1b9f19c58f986b870ce3" }
+secp256k1 = "0.29.1"
+tokio.workspace = true
+kaspa-wrpc-client.workspace = true
+ghost-domain = { path = "../ghost-domain" }

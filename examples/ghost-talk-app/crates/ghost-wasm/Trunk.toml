@@ -1,0 +1,5 @@
+trunk-version = "=0.21.14"
+
+[build]
+target = "index.html"
+dist = "../../../../target/build/frontend"

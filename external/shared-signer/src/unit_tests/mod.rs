@@ -1,9 +1,0 @@
-mod bytes_tests;
-mod account_key_tests;
-mod qr_frame_tests;
-mod qr_frame_boundaries;
-mod pskt_tests;
-mod security_tests;
-mod property_tests;
-mod external_input_hardening_tests;
-mod pairing_tests;

@@ -1,0 +1,59 @@
+{
+  "revision": "r215",
+  "requirements": {
+    "funded_multi_instance_e2e": {
+      "status": "pending",
+      "tested_at": "",
+      "environment": "",
+      "evidence": ""
+    },
+    "production_keystore_biometrics": {
+      "status": "pending",
+      "tested_at": "",
+      "environment": "",
+      "evidence": ""
+    },
+    "group_cryptographic_lifecycle": {
+      "status": "pending",
+      "tested_at": "",
+      "environment": "",
+      "evidence": ""
+    },
+    "device_audio_hil": {
+      "status": "pending",
+      "tested_at": "",
+      "environment": "",
+      "evidence": ""
+    },
+    "platform_hardening": {
+      "status": "pending",
+      "tested_at": "",
+      "environment": "",
+      "evidence": ""
+    },
+    "interoperability": {
+      "status": "pending",
+      "tested_at": "",
+      "environment": "",
+      "evidence": ""
+    },
+    "background_notifications": {
+      "status": "pending",
+      "tested_at": "",
+      "environment": "",
+      "evidence": ""
+    },
+    "ui_platform_parity": {
+      "status": "pending",
+      "tested_at": "",
+      "environment": "",
+      "evidence": ""
+    },
+    "release_manifest_signature": {
+      "status": "pending",
+      "tested_at": "",
+      "environment": "",
+      "evidence": ""
+    }
+  }
+}

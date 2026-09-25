@@ -1,16 +1,7 @@
-# Licensing
+# Licensing inventory
 
-Ghost Talk first-party source is **GNU GPL-2.0-or-later**. The root `LICENSE` contains GPL version 2.
-
-Vendored sources retain their own notices:
-
-- `external/hydra-msg/`: GPL-2.0-or-later.
-- `external/kaspa-kinesis-voice-reference/`: MIT, reference-only.
-- `external/kassigner-sdk/`, `external/kassigner-protocol/`, and `external/shared-signer/`: MIT OR Apache-2.0.
-- `external/rqrr-nostd/`: (MIT OR Apache-2.0) AND ISC.
-
-Registry dependency:
-
-- `kaspa-portal` 1.0.1: GPL-3.0-only. Its source is not copied or modified in this repository.
-
-A distributed build that combines with the GPL-3.0-only Kaspa Portal dependency must be conveyed under GPLv3-compatible terms. Upstream notices and source obligations must be retained.
+- Ghost Talk first-party SDK and reference-application code: GPL-2.0-or-later; see `LICENSE`.
+- HYDRA is not vendored; the reference application consumes its required crates from one pinned upstream Git commit.
+- Kaspa Portal is not vendored; the reference application consumes the published package dependency.
+- DotK interoperability in `examples/ghost-talk-app/crates/ghost-names` was implemented from the reviewed Kaspire DotK v4 integration and pinned deployment data. Kaspire is Apache-2.0, Copyright 2026 Kaspire contributors; the corresponding license and NOTICE are retained under `licenses/kaspire/`. Ghost Talk does not use Kaspire branding or wallet code outside this interoperability implementation.
+- KasKold interoperability vendors the user-supplied KasKold 2.0.0 compatibility crates under `external/kaskold/`. The SDK/protocol/shared-signer crates retain their MIT/Apache-2.0 files; vault-runtime/hot-wallet/offline-signer are covered by the retained upstream GPL license in `external/kaskold/LICENSE`.

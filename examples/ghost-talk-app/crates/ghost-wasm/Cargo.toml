@@ -1,0 +1,111 @@
+[package]
+name = "ghost-wasm"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.98"
+license = "GPL-2.0-or-later"
+publish = false
+
+[workspace]
+resolver = "2"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+ghost-core = { path = "../ghost-core" }
+ghost-domain = { path = "../ghost-domain" }
+ghost-protocol = { path = "../ghost-protocol" }
+ghost-p2p = { path = "../ghost-p2p" }
+ghost-realtime = { path = "../ghost-realtime" }
+ghost-contacts = { path = "../ghost-contacts" }
+ghost-chat = { path = "../ghost-chat" }
+ghost-rooms = { path = "../ghost-rooms" }
+ghost-api = { path = "../ghost-api" }
+ghost-kaskold = { path = "../ghost-kaskold" }
+ghost-runtime = { path = "../ghost-runtime" }
+ghost-media = { path = "../ghost-media" }
+ghost-broadcast = { path = "../ghost-broadcast" }
+ghost-kasia = { path = "../ghost-kasia", default-features = false, features = ["crypto"] }
+ghost-talk-wasm = { path = "../../../../crates/ghost-talk-wasm" }
+ghost-talk = { path = "../../../../crates/ghost-talk" }
+ghost-storage = { path = "../ghost-storage" }
+ghost-kaspa = { path = "../ghost-kaspa", features = ["upstream"] }
+ghost-indexer = { path = "../ghost-indexer" }
+ghost-hydra = { path = "../ghost-hydra", features = ["upstream"] }
+vault-runtime = { path = "../../../../external/kaskold/vault-runtime" }
+kaskold-sdk = { path = "../../../../external/kaskold/kaskold-sdk", default-features = false, features = ["wasm"] }
+zeroize = { version = "1", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hex = "0.4"
+sha2 = "0.10"
+aes-gcm = "0.10"
+rand = "0.8"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+# Cargo feature unification is version-specific. The standalone browser graph currently
+# contains getrandom 0.2, 0.3, and 0.4 through independent dependency families, so
+# each generation must explicitly opt into its JavaScript/Web Crypto backend.
+getrandom = { version = "0.2.17", features = ["js"] }
+getrandom_v03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
+getrandom_v04 = { package = "getrandom", version = "0.4", features = ["wasm_js"] }
+# Rusty-Kaspa's wRPC client selects rustls/ring; its own WASM wrapper enables this
+# ring feature so SystemRandom is backed by Web Crypto on wasm32-unknown-unknown.
+ring = { version = "0.17", features = ["wasm32_unknown_unknown_js"] }
+# Yew 0.22 uses implicit-clone 0.6 and indexmap 2.11+, which overlaps
+# Rusty-Kaspa's indexmap ^2.1 requirement. Pin one concrete 2.x package so
+# Yew, implicit-clone, and Kaspa share the same IndexMap type identity.
+implicit-clone = { version = "=0.6.0", features = ["map"] }
+indexmap = "=2.14.2"
+kaspa-wrpc-client = { version = "2.0.1", git = "https://github.com/kaspanet/rusty-kaspa", rev = "cfafeb4c093fa37a303f1b9f19c58f986b870ce3" }
+workflow-core = "0.18.0"
+yew = { version = "=0.22.0", features = ["csr"] }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+serde-wasm-bindgen = "0.6"
+js-sys = "0.3"
+gloo-timers = { version = "0.3", features = ["futures"] }
+base64 = "0.22"
+web-sys = { version = "0.3", features = [
+  "AudioContext",
+  "Blob",
+  "BlobEvent",
+  "Clipboard",
+  "Crypto",
+  "Document",
+  "Element",
+  "Event",
+  "EventTarget",
+  "File",
+  "FileList",
+  "FileReader",
+  "Headers",
+  "HtmlAnchorElement",
+  "HtmlAudioElement",
+  "HtmlCanvasElement",
+  "HtmlImageElement",
+  "CanvasRenderingContext2d",
+  "HtmlElement",
+  "HtmlInputElement",
+  "HtmlSelectElement",
+  "HtmlTextAreaElement",
+  "MediaDevices",
+  "MediaRecorder",
+  "MediaRecorderOptions",
+  "MediaStream",
+  "MediaStreamConstraints",
+  "MouseEvent",
+  "Node",
+  "NodeList",
+  "Response",
+  "Navigator",
+  "Storage",
+  "SubmitEvent",
+  "Url",
+  "Window",
+  "WebSocket",
+] }
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = "0.3"

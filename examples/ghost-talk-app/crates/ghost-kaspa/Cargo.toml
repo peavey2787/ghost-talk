@@ -1,0 +1,30 @@
+[package]
+name = "ghost-kaspa"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = []
+upstream = ["dep:kaspa-portal"]
+
+[dependencies]
+serde.workspace = true
+ghost-core = { path = "../ghost-core" }
+ghost-protocol = { path = "../ghost-protocol" }
+ghost-domain = { path = "../ghost-domain" }
+ghost-api = { path = "../ghost-api" }
+ghost-chat = { path = "../ghost-chat" }
+ghost-media = { path = "../ghost-media" }
+base64.workspace = true
+sha2.workspace = true
+blake3.workspace = true
+hex.workspace = true
+rand.workspace = true
+zeroize.workspace = true
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+kaspa-portal = { workspace = true, optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+kaspa-portal = { workspace = true, optional = true, features = ["wasm"] }

@@ -1,0 +1,15 @@
+[package]
+name = "ghost-api"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde.workspace = true
+ghost-core = { path = "../ghost-core" }
+ghost-chat = { path = "../ghost-chat" }
+ghost-hydra = { path = "../ghost-hydra" }
+ghost-domain = { path = "../ghost-domain" }
+ghost-media = { path = "../ghost-media" }
+ghost-broadcast = { path = "../ghost-broadcast" }

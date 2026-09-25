@@ -1,0 +1,25 @@
+[package]
+name = "ghost-talk"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.98"
+license = "GPL-2.0-or-later"
+description = "Transport-neutral realtime voice/media SDK"
+repository = "https://github.com/peavey2787/ghost-talk"
+homepage = "https://github.com/peavey2787/ghost-talk"
+documentation = "https://docs.rs/ghost-talk"
+readme = "../../README.md"
+keywords = ["voice", "audio", "opus", "realtime", "media"]
+categories = ["multimedia::audio"]
+
+[dependencies]
+thiserror = "2"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+getrandom = "0.2"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
+
+[features]
+default = []

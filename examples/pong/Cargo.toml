@@ -1,9 +1,0 @@
-[package]
-name = "ghost-example-pong"
-version = "0.1.0"
-edition = "2021"
-publish = false
-[dependencies]
-ghost-games = { path = "../../crates/ghost-games" }
-
-[workspace]

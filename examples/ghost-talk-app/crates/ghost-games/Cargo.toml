@@ -1,0 +1,16 @@
+[package]
+name = "ghost-games"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = []
+
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+blake3.workspace = true
+serde_json.workspace = true

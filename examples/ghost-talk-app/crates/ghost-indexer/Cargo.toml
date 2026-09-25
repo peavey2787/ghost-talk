@@ -1,0 +1,10 @@
+[package]
+name = "ghost-indexer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+ghost-protocol = { path = "../ghost-protocol" }
+ghost-kaspa = { path = "../ghost-kaspa" }

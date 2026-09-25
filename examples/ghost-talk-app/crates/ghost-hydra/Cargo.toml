@@ -1,0 +1,27 @@
+[package]
+name = "ghost-hydra"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[features]
+default = []
+upstream = ["dep:hydra-msg", "dep:hydra-core", "dep:hydra-crypto", "dep:hydra-stego", "dep:hydra-group"]
+native = ["upstream", "dep:sysinfo", "dep:fs2"]
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+base64.workspace = true
+hex.workspace = true
+hydra-msg = { workspace = true, optional = true }
+hydra-core = { workspace = true, optional = true }
+hydra-crypto = { workspace = true, optional = true }
+hydra-stego = { workspace = true, optional = true }
+hydra-group = { workspace = true, optional = true }
+zeroize.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+sysinfo = { workspace = true, optional = true }
+fs2 = { workspace = true, optional = true }

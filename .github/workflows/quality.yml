@@ -1,0 +1,28 @@
+name: quality
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pinned Rust toolchain
+        run: rustup show active-toolchain
+      - name: Install quality tools
+        run: |
+          cargo install cargo-llvm-cov --locked
+          cargo install wasm-pack --locked
+          sudo apt-get update
+          sudo apt-get install -y firefox
+      - name: Complete repository quality gates
+        env:
+          GHOST_TALK_NO_PAUSE: "1"
+          GHOST_TALK_WASM_BROWSER: firefox
+        run: bash scripts/run-all-tests.sh

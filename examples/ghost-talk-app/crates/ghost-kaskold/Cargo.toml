@@ -1,0 +1,23 @@
+[package]
+name = "ghost-kaskold"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+ghost-api = { path = "../ghost-api" }
+ghost-storage = { path = "../ghost-storage" }
+vault-runtime = { path = "../../../../external/kaskold/vault-runtime" }
+rand.workspace = true
+zeroize.workspace = true
+sha2.workspace = true
+hex.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+kaskold-sdk = { path = "../../../../external/kaskold/kaskold-sdk" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+kaskold-sdk = { path = "../../../../external/kaskold/kaskold-sdk", default-features = false, features = ["wasm"] }
+getrandom = { version = "0.2.17", features = ["js"] }
