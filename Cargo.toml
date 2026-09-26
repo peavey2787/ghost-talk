@@ -1,11 +1,3 @@
 [workspace]
 resolver = "2"
 members = ["crates/*"]
-exclude = [
-    "external/kaskold/hot-wallet",
-    "external/kaskold/kaskold-protocol",
-    "external/kaskold/kaskold-sdk",
-    "external/kaskold/offline-signer",
-    "external/kaskold/shared-signer",
-    "external/kaskold/vault-runtime",
-]

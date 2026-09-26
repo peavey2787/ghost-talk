@@ -1714,6 +1714,7 @@ dependencies = [
  "ghost-api",
  "ghost-storage",
  "hex",
+ "js-sys",
  "kaskold-sdk",
  "rand 0.8.8",
  "sha2 0.10.9",
@@ -2310,6 +2311,7 @@ dependencies = [
 [[package]]
 name = "hot-wallet"
 version = "2.0.0"
+source = "git+https://github.com/peavey2787/KasKold.git?rev=ec9b5f28c28e8973dd4f2c9009077df0808573f9#ec9b5f28c28e8973dd4f2c9009077df0808573f9"
 dependencies = [
  "aes-gcm",
  "getrandom 0.2.17",
@@ -2384,12 +2386,12 @@ dependencies = [
 [[package]]
 name = "hydra-core"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/hydra-msg.git?rev=18dfb0e2ed78b657c86630e28db99a7f18978c22#18dfb0e2ed78b657c86630e28db99a7f18978c22"
+source = "git+https://github.com/peavey2787/hydra-msg.git?rev=d90b387aaefbc20c5a686192e59c8c4b0d98cb26#d90b387aaefbc20c5a686192e59c8c4b0d98cb26"
 
 [[package]]
 name = "hydra-crypto"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/hydra-msg.git?rev=18dfb0e2ed78b657c86630e28db99a7f18978c22#18dfb0e2ed78b657c86630e28db99a7f18978c22"
+source = "git+https://github.com/peavey2787/hydra-msg.git?rev=d90b387aaefbc20c5a686192e59c8c4b0d98cb26#d90b387aaefbc20c5a686192e59c8c4b0d98cb26"
 dependencies = [
  "chacha20poly1305",
  "getrandom 0.4.3",
@@ -2407,7 +2409,7 @@ dependencies = [
 [[package]]
 name = "hydra-envelope"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/hydra-msg.git?rev=18dfb0e2ed78b657c86630e28db99a7f18978c22#18dfb0e2ed78b657c86630e28db99a7f18978c22"
+source = "git+https://github.com/peavey2787/hydra-msg.git?rev=d90b387aaefbc20c5a686192e59c8c4b0d98cb26#d90b387aaefbc20c5a686192e59c8c4b0d98cb26"
 dependencies = [
  "hydra-core",
 ]
@@ -2415,7 +2417,7 @@ dependencies = [
 [[package]]
 name = "hydra-group"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/hydra-msg.git?rev=18dfb0e2ed78b657c86630e28db99a7f18978c22#18dfb0e2ed78b657c86630e28db99a7f18978c22"
+source = "git+https://github.com/peavey2787/hydra-msg.git?rev=d90b387aaefbc20c5a686192e59c8c4b0d98cb26#d90b387aaefbc20c5a686192e59c8c4b0d98cb26"
 dependencies = [
  "hydra-core",
  "hydra-crypto",
@@ -2426,7 +2428,7 @@ dependencies = [
 [[package]]
 name = "hydra-msg"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/hydra-msg.git?rev=18dfb0e2ed78b657c86630e28db99a7f18978c22#18dfb0e2ed78b657c86630e28db99a7f18978c22"
+source = "git+https://github.com/peavey2787/hydra-msg.git?rev=d90b387aaefbc20c5a686192e59c8c4b0d98cb26#d90b387aaefbc20c5a686192e59c8c4b0d98cb26"
 dependencies = [
  "getrandom 0.4.3",
  "hydra-core",
@@ -2446,12 +2448,12 @@ dependencies = [
 [[package]]
 name = "hydra-platform"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/hydra-msg.git?rev=18dfb0e2ed78b657c86630e28db99a7f18978c22#18dfb0e2ed78b657c86630e28db99a7f18978c22"
+source = "git+https://github.com/peavey2787/hydra-msg.git?rev=d90b387aaefbc20c5a686192e59c8c4b0d98cb26#d90b387aaefbc20c5a686192e59c8c4b0d98cb26"
 
 [[package]]
 name = "hydra-session"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/hydra-msg.git?rev=18dfb0e2ed78b657c86630e28db99a7f18978c22#18dfb0e2ed78b657c86630e28db99a7f18978c22"
+source = "git+https://github.com/peavey2787/hydra-msg.git?rev=d90b387aaefbc20c5a686192e59c8c4b0d98cb26#d90b387aaefbc20c5a686192e59c8c4b0d98cb26"
 dependencies = [
  "hydra-core",
  "hydra-crypto",
@@ -2461,7 +2463,7 @@ dependencies = [
 [[package]]
 name = "hydra-stego"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/hydra-msg.git?rev=18dfb0e2ed78b657c86630e28db99a7f18978c22#18dfb0e2ed78b657c86630e28db99a7f18978c22"
+source = "git+https://github.com/peavey2787/hydra-msg.git?rev=d90b387aaefbc20c5a686192e59c8c4b0d98cb26#d90b387aaefbc20c5a686192e59c8c4b0d98cb26"
 
 [[package]]
 name = "hyper"
@@ -2873,6 +2875,7 @@ dependencies = [
 [[package]]
 name = "kaskold-protocol"
 version = "2.0.0"
+source = "git+https://github.com/peavey2787/KasKold.git?rev=ec9b5f28c28e8973dd4f2c9009077df0808573f9#ec9b5f28c28e8973dd4f2c9009077df0808573f9"
 dependencies = [
  "blake2b_simd",
  "hex",
@@ -2889,6 +2892,7 @@ dependencies = [
 [[package]]
 name = "kaskold-sdk"
 version = "2.0.0"
+source = "git+https://github.com/peavey2787/KasKold.git?rev=ec9b5f28c28e8973dd4f2c9009077df0808573f9#ec9b5f28c28e8973dd4f2c9009077df0808573f9"
 dependencies = [
  "getrandom 0.2.17",
  "hex",
@@ -4000,6 +4004,7 @@ dependencies = [
 [[package]]
 name = "offline-signer"
 version = "2.0.0"
+source = "git+https://github.com/peavey2787/KasKold.git?rev=ec9b5f28c28e8973dd4f2c9009077df0808573f9#ec9b5f28c28e8973dd4f2c9009077df0808573f9"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -5241,6 +5246,7 @@ dependencies = [
 [[package]]
 name = "shared-signer"
 version = "2.0.0"
+source = "git+https://github.com/peavey2787/KasKold.git?rev=ec9b5f28c28e8973dd4f2c9009077df0808573f9#ec9b5f28c28e8973dd4f2c9009077df0808573f9"
 dependencies = [
  "sha2 0.10.9",
 ]
@@ -5971,6 +5977,7 @@ checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
 [[package]]
 name = "vault-runtime"
 version = "2.0.0"
+source = "git+https://github.com/peavey2787/KasKold.git?rev=ec9b5f28c28e8973dd4f2c9009077df0808573f9#ec9b5f28c28e8973dd4f2c9009077df0808573f9"
 dependencies = [
  "hot-wallet",
  "kaskold-protocol",

@@ -1,9 +1,11 @@
 """Architecture contracts for identity, media, room access, and protocol isolation."""
 from __future__ import annotations
 
+import re
+
 from pathlib import Path
 
-from .common import APP_CRATES, fail, function_bodies, rel, structural_complexity, text
+from .common import APP_CRATES, APP_ROOT, fail, function_bodies, rel, structural_complexity, text
 
 
 def _manifest_dependencies(crate: str) -> str:
@@ -226,11 +228,8 @@ def check_kaskold_compatibility_and_ui_contracts() -> None:
     details = text(APP_CRATES / "ghost-wasm" / "src" / "components" / "chat" / "view" / "details.rs")
     styles = text(APP_CRATES / "ghost-wasm" / "style.css")
     wallet = text(APP_CRATES / "ghost-runtime" / "src" / "wallet.rs")
-    sdk = root / "external" / "kaskold" / "kaskold-sdk" / "src" / "lib.rs"
-    vault = root / "external" / "kaskold" / "vault-runtime" / "src" / "wallet_tools.rs"
-    if not sdk.is_file() or not vault.is_file():
-        fail("KasKold 2.0 SDK/Vault compatibility source must remain vendored with Ghost Talk")
-        return
+    if (root / "external").exists():
+        fail("Ghost Talk must not vendor dependencies; import KasKold (and everything else) by git revision")
     required_shared = (
         "add_restored_wallet", "add_recovery_material", "add_account_xprv",
         "add_raw_private_key", "add_portable_backup", "add_stego_backup",
@@ -242,25 +241,13 @@ def check_kaskold_compatibility_and_ui_contracts() -> None:
         fail("shared KasKold compatibility must cover every Vault import/backup and SDK PSKT signing path")
     if "ghost-kaskold" not in native_manifest or "ghost_kaskold::" not in native:
         fail("native KasKold commands must delegate to the shared ghost-kaskold facade")
-    shared_manifest = text(shared_root / "Cargo.toml")
-    for dependency, rel_path in (
-        ("vault-runtime", "../../../../external/kaskold/vault-runtime"),
-        ("kaskold-sdk", "../../../../external/kaskold/kaskold-sdk"),
-    ):
-        if dependency not in shared_manifest or rel_path not in shared_manifest:
-            fail(f"ghost-kaskold must own the official {dependency} path dependency")
-        if not (shared_root / rel_path).resolve().is_dir():
-            fail(f"ghost-kaskold dependency path must resolve inside the Ghost Talk source tree: {rel_path}")
-    sdk_manifest = text(root / "external" / "kaskold" / "kaskold-sdk" / "Cargo.toml")
-    protocol_manifest = text(root / "external" / "kaskold" / "kaskold-protocol" / "Cargo.toml")
-    for manifest in (sdk_manifest, protocol_manifest):
-        if '=0.2.108' not in manifest.replace(" ", "") or '=0.3.85' not in manifest.replace(" ", ""):
-            fail("vendored KasKold WASM bindings must stay aligned with Ghost Talk's pinned wasm-bindgen/js-sys family")
-    root_manifest = text(root / "Cargo.toml")
-    for crate in ("hot-wallet", "kaskold-protocol", "kaskold-sdk", "offline-signer", "shared-signer", "vault-runtime"):
-        token = f'"external/kaskold/{crate}"'
-        if token not in root_manifest:
-            fail(f"vendored KasKold crate must be explicitly excluded from the Ghost Talk root workspace: {crate}")
+    kaskold_source = re.compile(r'(vault-runtime|kaskold-sdk)\s*=\s*\{[^}]*git = "https://github\.com/peavey2787/KasKold\.git", rev = "([0-9a-f]{40})"')
+    manifests = [APP_ROOT / "Cargo.toml", shared_root / "Cargo.toml", APP_CRATES / "ghost-wasm" / "Cargo.toml"]
+    found = [match for manifest in manifests for match in kaskold_source.findall(text(manifest))]
+    if {name for name, _ in found} != {"vault-runtime", "kaskold-sdk"}:
+        fail("ghost-kaskold must import vault-runtime and kaskold-sdk from upstream KasKold by git revision")
+    if len({rev for _, rev in found}) != 1:
+        fail(f"KasKold is pinned to more than one revision: {sorted({rev for _, rev in found})}")
     if "ghost_storage::seal" not in shared or "ghost_storage::open" not in shared:
         fail("shared KasKold secret inventory must remain encrypted by Ghost profile custody")
     if "local.kaskold_inventory != baseline.kaskold_inventory" not in wallet:

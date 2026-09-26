@@ -9,15 +9,16 @@ publish = false
 [dependencies]
 ghost-api = { path = "../ghost-api" }
 ghost-storage = { path = "../ghost-storage" }
-vault-runtime = { path = "../../../../external/kaskold/vault-runtime" }
+vault-runtime.workspace = true
 rand.workspace = true
 zeroize.workspace = true
 sha2.workspace = true
 hex.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-kaskold-sdk = { path = "../../../../external/kaskold/kaskold-sdk" }
+kaskold-sdk.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-kaskold-sdk = { path = "../../../../external/kaskold/kaskold-sdk", default-features = false, features = ["wasm"] }
+kaskold-sdk = { git = "https://github.com/peavey2787/KasKold.git", rev = "ec9b5f28c28e8973dd4f2c9009077df0808573f9", default-features = false, features = ["wasm"] }
+js-sys.workspace = true
 getrandom = { version = "0.2.17", features = ["js"] }

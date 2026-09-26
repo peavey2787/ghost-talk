@@ -74,7 +74,7 @@ pub fn sign_pskt(
     runtime
         .load_transaction_file(&wire)
         .map_err(runtime_error)?;
-    runtime.approve().map_err(runtime_error)?;
+    runtime.approve(now_unix()).map_err(runtime_error)?;
     let response_hex = hex::encode(runtime.signed_response_wire().map_err(runtime_error)?);
     let signed =
         kaskold_sdk::complete(&request, &response_hex).map_err(|error| error.to_string())?;
@@ -83,4 +83,19 @@ pub fn sign_pskt(
         signed_pskt_hex: signed.pskt_hex,
         transaction_json,
     })
+}
+
+/// Wall-clock seconds for KasKold's session signing policy.
+fn now_unix() -> u64 {
+    #[cfg(target_arch = "wasm32")]
+    {
+        (js_sys::Date::now() / 1000.0).max(0.0) as u64
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|elapsed| elapsed.as_secs())
+            .unwrap_or_default()
+    }
 }

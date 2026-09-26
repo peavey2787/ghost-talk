@@ -1,2 +1,0 @@
-mod pairing;
-mod stealth;

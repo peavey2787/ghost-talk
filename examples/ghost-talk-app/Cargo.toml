@@ -32,11 +32,11 @@ sysinfo = { version = "0.39.6", default-features = false, features = ["system", 
 fs2 = "0.4.3"
 
 # HYDRA is external and every directly consumed HYDRA crate is pinned to one commit.
-hydra-msg = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "18dfb0e2ed78b657c86630e28db99a7f18978c22" }
-hydra-core = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "18dfb0e2ed78b657c86630e28db99a7f18978c22" }
-hydra-crypto = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "18dfb0e2ed78b657c86630e28db99a7f18978c22" }
-hydra-stego = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "18dfb0e2ed78b657c86630e28db99a7f18978c22" }
-hydra-group = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "18dfb0e2ed78b657c86630e28db99a7f18978c22" }
+hydra-msg = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "d90b387aaefbc20c5a686192e59c8c4b0d98cb26" }
+hydra-core = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "d90b387aaefbc20c5a686192e59c8c4b0d98cb26" }
+hydra-crypto = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "d90b387aaefbc20c5a686192e59c8c4b0d98cb26" }
+hydra-stego = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "d90b387aaefbc20c5a686192e59c8c4b0d98cb26" }
+hydra-group = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "d90b387aaefbc20c5a686192e59c8c4b0d98cb26" }
 kaspa-portal = { git = "https://github.com/peavey2787/kaspa-portal.git", rev = "fd644f6a8755bb86f19c7c44707acadcfa484575" }
 ghost-talk = { path = "../../crates/ghost-talk" }
 # Shared realtime/voice contract and the p2p-net transport it drives. Kaspa
@@ -44,6 +44,9 @@ ghost-talk = { path = "../../crates/ghost-talk" }
 ghost-realtime = { path = "../../crates/ghost-realtime" }
 p2p-net = { git = "https://github.com/peavey2787/p2p-net", rev = "1c0af490ef3f00aa945943d4a9a2e8dbbd767b2c" }
 ghost-voice = { path = "../../crates/ghost-voice" }
+# KasKold 2.0 import/backup/signing formats (upstream KasKold, v2 branch).
+vault-runtime = { git = "https://github.com/peavey2787/KasKold.git", rev = "ec9b5f28c28e8973dd4f2c9009077df0808573f9" }
+kaskold-sdk = { git = "https://github.com/peavey2787/KasKold.git", rev = "ec9b5f28c28e8973dd4f2c9009077df0808573f9" }
 
 [profile.dev.package."*"]
 opt-level = 3
