@@ -63,7 +63,9 @@ fn join(runtime: CallRuntime, room_id: String) {
 }
 
 async fn start_capture(runtime: CallRuntime) -> Result<(), String> {
-    let sender = if let Some(existing) = runtime.sender_ref.borrow().clone() {
+    // Bind first so the `borrow()` is released before any `borrow_mut()` below.
+    let existing = runtime.sender_ref.borrow().clone();
+    let sender = if let Some(existing) = existing {
         existing
     } else {
         let created = BrowserVoiceSender::new()?;

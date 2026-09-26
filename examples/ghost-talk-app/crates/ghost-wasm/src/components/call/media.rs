@@ -34,7 +34,10 @@ pub(super) fn start_connected_media(runtime: CallRuntime, chat: Chat) {
 }
 
 async fn start_capture(runtime: CallRuntime) -> Result<(), String> {
-    let sender = if let Some(existing) = runtime.sender_ref.borrow().clone() {
+    // Bind first: an `if let` scrutinee's `borrow()` would otherwise stay alive
+    // through the `else` branch and make its `borrow_mut()` panic.
+    let existing = runtime.sender_ref.borrow().clone();
+    let sender = if let Some(existing) = existing {
         existing
     } else {
         let created = BrowserVoiceSender::new()?;

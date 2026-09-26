@@ -2362,8 +2362,8 @@ dependencies = [
 
 [[package]]
 name = "kaspa-portal"
-version = "1.1.0"
-source = "git+https://github.com/peavey2787/kaspa-portal.git?rev=fd644f6a8755bb86f19c7c44707acadcfa484575#fd644f6a8755bb86f19c7c44707acadcfa484575"
+version = "1.1.1"
+source = "git+https://github.com/peavey2787/kaspa-portal.git?rev=fcc8d2bddc689f5afc2d6e7c5104a7c0aaf933c8#fcc8d2bddc689f5afc2d6e7c5104a7c0aaf933c8"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -3432,7 +3432,7 @@ dependencies = [
 [[package]]
 name = "p2p-net"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net?rev=1c0af490ef3f00aa945943d4a9a2e8dbbd767b2c#1c0af490ef3f00aa945943d4a9a2e8dbbd767b2c"
+source = "git+https://github.com/peavey2787/p2p-net?rev=4c7d322e5acd2fc9430f19fe0065af8376e29a34#4c7d322e5acd2fc9430f19fe0065af8376e29a34"
 dependencies = [
  "blake3",
  "either",
@@ -3469,7 +3469,7 @@ dependencies = [
 [[package]]
 name = "p2p-net-webrtc"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net?rev=1c0af490ef3f00aa945943d4a9a2e8dbbd767b2c#1c0af490ef3f00aa945943d4a9a2e8dbbd767b2c"
+source = "git+https://github.com/peavey2787/p2p-net?rev=4c7d322e5acd2fc9430f19fe0065af8376e29a34#4c7d322e5acd2fc9430f19fe0065af8376e29a34"
 dependencies = [
  "async-trait",
  "futures",

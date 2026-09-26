@@ -115,7 +115,8 @@ fn can_start_call(chat: &Chat) -> bool {
 }
 
 fn close_media(runtime: &CallRuntime) {
-    if let Some(sender) = runtime.sender_ref.borrow_mut().take() {
+    let sender = runtime.sender_ref.borrow_mut().take();
+    if let Some(sender) = sender {
         sender.close();
     }
     runtime.receiver.borrow().reset();

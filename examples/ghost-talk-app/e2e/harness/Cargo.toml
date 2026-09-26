@@ -18,7 +18,7 @@ path = "src/main.rs"
 [dependencies]
 ghost-kaspa = { path = "../../crates/ghost-kaspa", features = ["upstream"] }
 ghost-realtime = { path = "../../../../crates/ghost-realtime" }
-p2p-net = { git = "https://github.com/peavey2787/p2p-net", rev = "1c0af490ef3f00aa945943d4a9a2e8dbbd767b2c" }
+p2p-net = { git = "https://github.com/peavey2787/p2p-net", rev = "4c7d322e5acd2fc9430f19fe0065af8376e29a34" }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 serde = { version = "1", features = ["derive"] }

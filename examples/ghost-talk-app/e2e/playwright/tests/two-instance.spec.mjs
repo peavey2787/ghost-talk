@@ -39,8 +39,8 @@ test.afterEach(async ({}, testInfo) => {
   for (const instance of [alice, bob]) {
     const entries = await app.debugLog(instance.page).catch((error) => [`debug log unavailable: ${error}`]);
     await testInfo.attach(`${instance.name}-debug-log`, { body: entries.join('\n'), contentType: 'text/plain' });
-    console.log(`==== ${instance.name} protocol debug (last 40)`);
-    for (const entry of entries.slice(-40)) console.log(`  ${entry.slice(0, 300)}`);
+    console.log(`==== ${instance.name} protocol debug`);
+    for (const entry of entries.filter((e) => !e.includes('live-block')).slice(-150)) console.log(`  ${entry.slice(0, 300)}`);
   }
 });
 

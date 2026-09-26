@@ -19,6 +19,11 @@ hex.workspace = true
 kaskold-sdk.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-kaskold-sdk = { git = "https://github.com/peavey2787/KasKold.git", rev = "ec9b5f28c28e8973dd4f2c9009077df0808573f9", default-features = false, features = ["wasm"] }
+kaskold-sdk = { git = "https://github.com/peavey2787/KasKold.git", rev = "fff5e7cc2928c4baade3a7a4bd6695f8a2da4ed8", default-features = false, features = ["wasm"] }
 js-sys.workspace = true
 getrandom = { version = "0.2.17", features = ["js"] }
+
+[dev-dependencies]
+# Cross-library contract: a Kaspa Portal PSKB must be accepted by KasKold.
+kaspa-portal.workspace = true
+serde_json.workspace = true

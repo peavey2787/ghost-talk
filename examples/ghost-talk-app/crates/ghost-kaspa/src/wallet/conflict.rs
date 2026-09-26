@@ -3,8 +3,9 @@
 //! Kaspa Portal plans from the node's UTXO index, which trails the mempool by
 //! about a block. A send issued right after another one from the same wallet
 //! (a chat message racing a realtime announcement, say) can therefore pick an
-//! input that is already spent and be rejected. Such a rejection is safe to
-//! replan once the index catches up; every other error is returned unchanged.
+//! input that is already spent, or whose parent the node has not accepted yet
+//! (an orphan), and be rejected. Both are safe to replan once the index
+//! catches up; every other error is returned unchanged.
 
 use std::future::Future;
 
@@ -12,7 +13,7 @@ const MAX_REPLANS: usize = 6;
 const REPLAN_DELAY_MS: u32 = 1_000;
 
 pub(super) fn is_spent_conflict(error: &str) -> bool {
-    error.contains("already spent")
+    error.contains("already spent") || error.contains("is an orphan")
 }
 
 pub(super) async fn retry_on_spent_conflict<T, F, Fut>(mut attempt: F) -> Result<T, String>
@@ -64,6 +65,14 @@ mod tests {
         .await;
         assert_eq!(result, Ok(7));
         assert_eq!(calls.get(), 3);
+    }
+
+    #[test]
+    fn orphan_rejections_are_replanned_too() {
+        assert!(is_spent_conflict(
+            "Rejected transaction 36ff: transaction 36ff is an orphan where orphan is disallowed"
+        ));
+        assert!(!is_spent_conflict("insufficient funds"));
     }
 
     #[tokio::test(start_paused = true)]

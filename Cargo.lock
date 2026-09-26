@@ -2933,7 +2933,7 @@ dependencies = [
 [[package]]
 name = "p2p-net"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net?rev=1c0af490ef3f00aa945943d4a9a2e8dbbd767b2c#1c0af490ef3f00aa945943d4a9a2e8dbbd767b2c"
+source = "git+https://github.com/peavey2787/p2p-net?rev=4c7d322e5acd2fc9430f19fe0065af8376e29a34#4c7d322e5acd2fc9430f19fe0065af8376e29a34"
 dependencies = [
  "blake3",
  "either",
@@ -2970,7 +2970,7 @@ dependencies = [
 [[package]]
 name = "p2p-net-webrtc"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net?rev=1c0af490ef3f00aa945943d4a9a2e8dbbd767b2c#1c0af490ef3f00aa945943d4a9a2e8dbbd767b2c"
+source = "git+https://github.com/peavey2787/p2p-net?rev=4c7d322e5acd2fc9430f19fe0065af8376e29a34#4c7d322e5acd2fc9430f19fe0065af8376e29a34"
 dependencies = [
  "async-trait",
  "futures",
