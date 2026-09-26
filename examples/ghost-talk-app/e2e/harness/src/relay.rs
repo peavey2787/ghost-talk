@@ -9,6 +9,13 @@ use p2p_net::{NodeProfile, PublicBootstrapConfig};
 use serde_json::json;
 
 pub async fn run(network: &str) -> Result<(), String> {
+    // Opt-in diagnostics on stderr, e.g. RUST_LOG=libp2p_relay=debug.
+    if std::env::var_os("RUST_LOG").is_some() {
+        let _ = tracing_subscriber::fmt()
+            .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+            .with_writer(std::io::stderr)
+            .try_init();
+    }
     let home = crate::state::home();
     std::fs::create_dir_all(&home).map_err(|error| error.to_string())?;
     let mut config = ghost_node_config(network, &P2pInfrastructure::default());
