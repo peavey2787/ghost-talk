@@ -16,7 +16,9 @@ fn validate_inputs(contact_card: &[u8], hydra_identity_id: &str) -> Result<(), S
         return Err("HYDRA contact card size is invalid".into());
     }
     if hydra_identity_id.len() != 64
-        || !hydra_identity_id.bytes().all(|byte| byte.is_ascii_hexdigit())
+        || !hydra_identity_id
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit())
     {
         return Err("HYDRA identity id must be exactly 64 hexadecimal characters".into());
     }
@@ -33,7 +35,10 @@ fn normalized_interests(interests: &[String]) -> Vec<String> {
         .collect()
 }
 
-#[expect(clippy::too_many_arguments, reason = "explicit signed descriptor fields")]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "explicit signed descriptor fields"
+)]
 fn unsigned_descriptor(
     public: &WalletPublic,
     contact_card: &[u8],
@@ -94,7 +99,10 @@ fn visibility_fields(
     )
 }
 
-#[expect(clippy::too_many_arguments, reason = "explicit signed descriptor fields")]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "explicit signed descriptor fields"
+)]
 pub fn build_signed_descriptor(
     secret: &WalletSecret,
     public: &WalletPublic,

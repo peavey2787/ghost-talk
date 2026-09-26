@@ -23,15 +23,19 @@ pub(crate) fn backup_messages(profile: &Profile) -> Vec<BackupMessage> {
         .chats
         .iter()
         .flat_map(|chat| {
-            chat.messages().iter().map(move |message| BackupMessage {
-                chat_id: chat.id.clone(),
-                contact_id: chat.contact_id().map(str::to_owned),
-                chat_label: chat.label.clone(),
-                id: message.id.clone(),
-                direction: message.direction.clone(),
-                body: message.body.clone(),
-                created_at: message.created_at.max(0.0) as u64,
-            })
+            // Ephemeral p2p-net text must never reach Kaspa, including via backups.
+            chat.messages()
+                .iter()
+                .filter(|message| message.stored_on_kaspa())
+                .map(move |message| BackupMessage {
+                    chat_id: chat.id.clone(),
+                    contact_id: chat.contact_id().map(str::to_owned),
+                    chat_label: chat.label.clone(),
+                    id: message.id.clone(),
+                    direction: message.direction.clone(),
+                    body: message.body.clone(),
+                    created_at: message.created_at.max(0.0) as u64,
+                })
         })
         .collect()
 }

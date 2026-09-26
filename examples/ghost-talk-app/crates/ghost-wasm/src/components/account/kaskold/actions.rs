@@ -4,11 +4,8 @@ use yew::prelude::*;
 use super::io::show_backup;
 use crate::model::{KasKoldBackupResult, Profile, WalletRecovery};
 
-type BackupHandler = fn(
-    &mut vault_runtime::VaultRuntime,
-    &str,
-    &[u8],
-) -> Result<KasKoldBackupResult, String>;
+type BackupHandler =
+    fn(&mut vault_runtime::VaultRuntime, &str, &[u8]) -> Result<KasKoldBackupResult, String>;
 
 const BACKUP_HANDLERS: [(&str, BackupHandler); 7] = [
     ("words", recovery_words),
@@ -20,16 +17,29 @@ const BACKUP_HANDLERS: [(&str, BackupHandler); 7] = [
     ("stego", stego),
 ];
 
+/// UI state handles a KasKold backup reads and reports into.
+pub(super) struct BackupInputs {
+    pub(super) kind: UseStateHandle<String>,
+    pub(super) secret: UseStateHandle<String>,
+    pub(super) carrier: UseStateHandle<Vec<u8>>,
+    pub(super) result: UseStateHandle<String>,
+    pub(super) status: UseStateHandle<String>,
+    pub(super) busy: UseStateHandle<bool>,
+}
+
 pub(super) fn backup_callback(
     profile: Profile,
     password: String,
-    kind: UseStateHandle<String>,
-    secret: UseStateHandle<String>,
-    carrier: UseStateHandle<Vec<u8>>,
-    result: UseStateHandle<String>,
-    status: UseStateHandle<String>,
-    busy: UseStateHandle<bool>,
+    inputs: BackupInputs,
 ) -> Callback<MouseEvent> {
+    let BackupInputs {
+        kind,
+        secret,
+        carrier,
+        result,
+        status,
+        busy,
+    } = inputs;
     Callback::from(move |_| {
         if *busy {
             return;
@@ -62,10 +72,12 @@ struct BackupTask {
 
 fn spawn_backup(task: BackupTask) {
     spawn_local(async move {
-        let response = match crate::controllers::account::reveal_recovery(&task.profile, &task.password).await {
-            Ok(recovery) => create_backup(&recovery, &task.kind, &task.secret, &task.carrier),
-            Err(error) => Err(error),
-        };
+        let response =
+            match crate::controllers::account::reveal_recovery(&task.profile, &task.password).await
+            {
+                Ok(recovery) => create_backup(&recovery, &task.kind, &task.secret, &task.carrier),
+                Err(error) => Err(error),
+            };
         match response {
             Ok(value) => show_backup(value, &task.result, &task.status),
             Err(error) => task.status.set(error),
@@ -98,7 +110,10 @@ fn recovery_words(
 ) -> Result<KasKoldBackupResult, String> {
     text_backup(
         "kaskold-recovery-words.txt",
-        runtime.backup_recovery_phrase().map_err(runtime_error)?.to_string(),
+        runtime
+            .backup_recovery_phrase()
+            .map_err(runtime_error)?
+            .to_string(),
     )
 }
 
@@ -122,7 +137,10 @@ fn compact_seedqr(
     byte_backup(
         "kaskold-compact-seedqr.bin",
         "application/octet-stream",
-        runtime.backup_compact_seedqr().map_err(runtime_error)?.to_vec(),
+        runtime
+            .backup_compact_seedqr()
+            .map_err(runtime_error)?
+            .to_vec(),
     )
 }
 
@@ -133,7 +151,10 @@ fn account_xprv(
 ) -> Result<KasKoldBackupResult, String> {
     text_backup(
         "kaskold-account-xprv.txt",
-        runtime.backup_account_xprv().map_err(runtime_error)?.to_string(),
+        runtime
+            .backup_account_xprv()
+            .map_err(runtime_error)?
+            .to_string(),
     )
 }
 
@@ -159,7 +180,9 @@ fn portable_xprv(
     byte_backup(
         "kaskold-xprv-backup.kwp",
         "application/octet-stream",
-        runtime.portable_xprv_backup(credential).map_err(runtime_error)?,
+        runtime
+            .portable_xprv_backup(credential)
+            .map_err(runtime_error)?,
     )
 }
 
@@ -175,7 +198,9 @@ fn stego(
     byte_backup(
         "kaskold-steganographic-backup.jpg",
         "image/jpeg",
-        runtime.stego_backup(carrier, credential).map_err(runtime_error)?,
+        runtime
+            .stego_backup(carrier, credential)
+            .map_err(runtime_error)?,
     )
 }
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import subprocess
 import sys
 
 from windows.quality_gate_support import (
@@ -65,6 +66,9 @@ def run() -> int:
     rc = ensure_wasm_target(APP_ROOT, toolchain, env)
     if rc:
         return rc
+    rc = ensure_wasm_clang(env)
+    if rc:
+        return rc
     rc = run_gate(
         gate("cargo check --manifest-path crates/ghost-wasm/Cargo.toml --target wasm32-unknown-unknown --lib", "cargo", "check", "--manifest-path", "crates/ghost-wasm/Cargo.toml", "--target", WASM_TARGET, "--lib"),
         env,
@@ -100,6 +104,8 @@ def run() -> int:
         gate("cargo test --manifest-path crates/ghost-wasm/Cargo.toml --all-features --doc --no-fail-fast", "cargo", "test", "--manifest-path", "crates/ghost-wasm/Cargo.toml", "--all-features", "--doc", "--no-fail-fast"),
         gate("cargo clippy --manifest-path crates/ghost-wasm/Cargo.toml --target wasm32-unknown-unknown --all-targets -- -D warnings", "cargo", "clippy", "--manifest-path", "crates/ghost-wasm/Cargo.toml", "--target", WASM_TARGET, "--all-targets", "--", "-D", "warnings"),
         gate("cargo clippy --manifest-path crates/ghost-wasm/Cargo.toml --target wasm32-unknown-unknown --all-targets --all-features -- -D warnings", "cargo", "clippy", "--manifest-path", "crates/ghost-wasm/Cargo.toml", "--target", WASM_TARGET, "--all-targets", "--all-features", "--", "-D", "warnings"),
+        gate("cargo clippy --manifest-path e2e/harness/Cargo.toml --all-targets -- -D warnings", "cargo", "clippy", "--manifest-path", "e2e/harness/Cargo.toml", "--all-targets", "--", "-D", "warnings"),
+        gate("cargo test --manifest-path e2e/harness/Cargo.toml --all-targets --no-fail-fast", "cargo", "test", "--manifest-path", "e2e/harness/Cargo.toml", "--all-targets", "--no-fail-fast"),
     )
     rc = run_many(tests, env)
     if rc:
@@ -108,6 +114,23 @@ def run() -> int:
     if rc:
         return rc
     return run_coverage(env)
+
+
+def ensure_wasm_clang(env: dict[str, str]) -> int:
+    """secp256k1-sys/ring compile C for wasm32; bind the shared clang bootstrap."""
+    if env.get("CC_wasm32_unknown_unknown"):
+        return 0
+    script = REPO_ROOT / "scripts" / "tooling" / "ensure-wasm-clang.ps1"
+    result = subprocess.run(
+        ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script)],
+        capture_output=True, text=True, check=False,
+    )
+    lines = [line for line in result.stdout.splitlines() if "|" in line]
+    if result.returncode or not lines:
+        print(f"ERROR: WebAssembly clang bootstrap failed: {result.stderr.strip()}", file=sys.stderr)
+        return result.returncode or 1
+    env["CC_wasm32_unknown_unknown"], env["AR_wasm32_unknown_unknown"] = lines[-1].split("|", 1)
+    return 0
 
 
 def run_coverage(env: dict[str, str]) -> int:

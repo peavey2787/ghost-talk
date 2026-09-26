@@ -1,0 +1,31 @@
+[package]
+name = "ghost-realtime"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.98"
+license = "GPL-2.0-or-later"
+description = "Ghost Talk realtime carrier contract: GTR1 framing, replay identity, topics, route policy and the p2p-net transport boundary"
+repository = "https://github.com/peavey2787/ghost-talk"
+homepage = "https://github.com/peavey2787/ghost-talk"
+readme = "README.md"
+keywords = ["realtime", "p2p", "voice", "kaspa", "libp2p"]
+categories = ["network-programming"]
+publish = false
+
+[features]
+# `p2p-net` adds the native/browser NodeHandle helpers (game-peer routing and
+# the Ghost Talk node configuration). Consumers that only need the wire
+# contract, such as the reference application's Kaspa-pinned WASM graph,
+# disable default features so p2p-net's WASM ABI family never enters their lock.
+default = ["p2p-net"]
+p2p-net = ["dep:p2p-net"]
+
+[dependencies]
+blake3 = "1"
+hex = "0.4"
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+p2p-net = { git = "https://github.com/peavey2787/p2p-net", rev = "1c0af490ef3f00aa945943d4a9a2e8dbbd767b2c", optional = true }
+
+[dev-dependencies]
+serde_json = "1"

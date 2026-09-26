@@ -32,7 +32,12 @@ pub(in crate::native::browser_host) fn leave(args: &Value) -> Result<Value, Stri
                 .sessions
                 .get(peer)
                 .map(|binding| binding.sid.clone())
-                .or_else(|| runtime.routes.get(peer).and_then(|route| route.session_sid.clone())))
+                .or_else(|| {
+                    runtime
+                        .routes
+                        .get(peer)
+                        .and_then(|route| route.session_sid.clone())
+                }))
         })?;
         if current.as_deref() != Some(expected) {
             return Err("stale chat leave no longer matches the active KKTP session".into());

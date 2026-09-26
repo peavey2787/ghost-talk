@@ -4,8 +4,8 @@ mod catalog;
 mod live;
 mod podcast;
 mod profile;
-mod relay;
 mod recording_sink;
+mod relay;
 mod rtmp;
 mod rtmp_sink;
 
@@ -13,8 +13,10 @@ pub use catalog::BroadcastCatalog;
 pub use live::{BroadcastFrame, BroadcastPipeline, BroadcastSink, SinkFailure};
 pub use podcast::{PodcastEpisode, PodcastShow};
 pub use profile::{CreatorProfile, StationProfile};
-pub use relay::{encode_relay_frame, validate_relay_url, RelayControl, RELAY_FRAME_MAGIC, RELAY_PROTOCOL_VERSION};
 pub use recording_sink::FileRecordingSink;
+pub use relay::{
+    encode_relay_frame, validate_relay_url, RelayControl, RELAY_FRAME_MAGIC, RELAY_PROTOCOL_VERSION,
+};
 pub use rtmp::{validate_rtmp_configuration, RtmpDestination, RtmpSecret, RtmpTransport};
 pub use rtmp_sink::FfmpegRtmpSink;
 

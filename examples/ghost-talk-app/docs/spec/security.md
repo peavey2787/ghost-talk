@@ -11,7 +11,7 @@
 - Replay/duplicate delivery is idempotent.
 - Durable checkpoint never advances past uncommitted carrier/event state.
 - KNS mapping changes are visible; GTCD is address-signature verified by the full integration build.
-- DotK directory/index data is never accepted as ownership proof. The index supplies only candidate `ownerType + owner`; directory-supplied payment/deed addresses, scripts, and registry metadata are ignored. Mainnet `.k` resolution pins the registry/deed deployment, derives the deed locally, verifies the exact bond/script and registry `covenant_id` directly through the active Rusty-Kaspa v2.0.1 wRPC endpoint, and rechecks that the same outpoint is still live before returning a recipient address.
+- DotK directory/index data is never accepted as ownership proof. The index supplies only candidate `ownerType + owner`; directory-supplied payment/deed addresses, scripts, and registry metadata are ignored. Mainnet `.k` resolution pins the registry/deed deployment, derives the deed locally, verifies the exact bond/script and registry `covenant_id` directly through the active wRPC endpoint via Kaspa Portal, and rechecks that the same outpoint is still live before returning a recipient address.
 - Kaspa-only voice spending is explicit and bounded.
 - Only `ghost-hydra` imports HYDRA; only `ghost-kaspa` imports Portal; Kinesis has no runtime edge.
 - Encryption is mandatory; steganography and routing privacy are independent optional properties.

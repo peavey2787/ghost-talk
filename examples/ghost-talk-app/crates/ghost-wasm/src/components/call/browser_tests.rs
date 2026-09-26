@@ -5,9 +5,9 @@ use wasm_bindgen_test::*;
 use yew::prelude::*;
 
 use super::{presentation, CallEvent, CallManager};
-use ghost_p2p::P2pRouteState;
 use crate::components::browser_test_support::{click, settle, test_root};
 use crate::model::CallPhase;
+use ghost_p2p::P2pRouteState;
 
 wasm_bindgen_test_configure!(run_in_browser);
 

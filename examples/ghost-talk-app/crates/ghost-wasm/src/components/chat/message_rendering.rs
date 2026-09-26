@@ -27,11 +27,20 @@ pub(crate) fn render_voice_message(
     timestamp: String,
 ) -> Html {
     let src = format!("data:{mime};base64,{data}");
-    html! {<div class={classes!("voice-message",message_side(message))}><audio controls=true src={src}></audio><small class="message-time">{timestamp}</small><small class={classes!("message-state",message.send_state.clone().unwrap_or_default())}>{message.send_state.clone().unwrap_or_default()}</small></div>}
+    html! {<div class={classes!("voice-message",message_side(message))}><audio controls=true src={src}></audio><small class="message-time">{timestamp}</small>{render_carrier(message)}<small class={classes!("message-state",message.send_state.clone().unwrap_or_default())}>{message.send_state.clone().unwrap_or_default()}</small></div>}
 }
 
 pub(crate) fn render_text_message(message: &Message, timestamp: String) -> Html {
-    html! {<p class={classes!(message_side(message),(message.send_state.as_deref()==Some("failed")).then_some("failed-message"))}>{message.body.clone()}<small class="message-time">{timestamp}</small>{render_message_state(message)}</p>}
+    html! {<p class={classes!(message_side(message),(message.send_state.as_deref()==Some("failed")).then_some("failed-message"),(!message.stored_on_kaspa()).then_some("ephemeral-message"))}>{message.body.clone()}<small class="message-time">{timestamp}</small>{render_carrier(message)}{render_message_state(message)}</p>}
+}
+
+/// Ephemeral p2p-net messages are visibly marked: they were never stored on
+/// Kaspa and cannot be recovered from chain history.
+pub(crate) fn render_carrier(message: &Message) -> Html {
+    if message.stored_on_kaspa() {
+        return Html::default();
+    }
+    html! {<small class="message-carrier" title="Delivered directly over p2p-net. Not stored on Kaspa; it cannot be recovered from chain history.">{"p2p · not stored on Kaspa"}</small>}
 }
 
 pub(crate) fn render_message_state(message: &Message) -> Html {

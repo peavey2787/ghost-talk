@@ -144,6 +144,7 @@ fn merge_settings(before: &Settings, after: &Settings, latest: &Settings) -> Set
     }
     field!(route);
     field!(stego);
+    field!(text_route);
     field!(contacts_backup_kaspa);
     field!(backup_messages_kaspa);
     field!(require_send_password);
@@ -152,6 +153,8 @@ fn merge_settings(before: &Settings, after: &Settings, latest: &Settings) -> Set
     field!(public_username);
     field!(public_description);
     field!(public_interests);
+    field!(p2p_bootstrap_peers);
+    field!(p2p_relay_peers);
     merged
 }
 

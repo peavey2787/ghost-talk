@@ -76,7 +76,9 @@ async fn monitor_snapshot(args: &Value) -> Result<Value, String> {
     let addresses = public.all_addresses().cloned().collect::<Vec<_>>();
     let utxos = portal.current_utxos(&addresses).await?;
     let balance = utxos.iter().try_fold(0u64, |total, utxo| {
-        total.checked_add(utxo.amount).ok_or_else(|| "wallet balance overflow".to_string())
+        total
+            .checked_add(utxo.amount)
+            .ok_or_else(|| "wallet balance overflow".to_string())
     })?;
     let daa = portal.current_virtual_daa_score().await?;
     let active_addresses = funded_addresses(&addresses, &utxos)?;
@@ -101,7 +103,7 @@ fn funded_addresses(
     let mut funded = Vec::new();
     for address in addresses {
         let script = PortalFacade::script_pubkey_for_address(address)?;
-        if funded_scripts.iter().any(|candidate| *candidate == script.as_slice()) {
+        if funded_scripts.contains(&script.as_slice()) {
             funded.push(address.clone());
         }
     }

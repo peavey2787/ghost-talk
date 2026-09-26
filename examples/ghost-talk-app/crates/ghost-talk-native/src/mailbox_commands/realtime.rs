@@ -26,31 +26,15 @@ pub async fn mailbox_send_realtime_carrier(
     let carrier = BASE64
         .decode(carrier_b64.as_bytes())
         .map_err(|_| "GTR1 realtime carrier is not valid base64".to_string())?;
-    let decoded = ghost_protocol::Gtr1Envelope::decode(&carrier).map_err(|error| error.to_string())?;
+    let decoded =
+        ghost_realtime::Gtr1Envelope::decode(&carrier).map_err(|error| error.to_string())?;
 
-    let expected_destination = {
-        let runtime = hydra_state.runtime(&profile_id)?;
-        let runtime = runtime.lock().await;
-        if decoded.sender_hex() != runtime.identity_id {
-            return Err("GTR1 realtime carrier sender is not the unlocked local HYDRA identity".into());
-        }
-        let binding = runtime
-            .kktp_sessions
-            .get(&contact_id)
-            .ok_or_else(|| "realtime carrier has no active KKTP session".to_string())?;
-        if binding.state != crate::hydra_commands::KktpSessionState::Active
-            || binding.sid != decoded.sid_hex()
-        {
-            return Err("GTR1 realtime carrier SID does not match the active KKTP session".into());
-        }
-        authenticated_destination(
-            &runtime,
-            &contact_id,
-            "realtime carrier has no authenticated Kaspa peer route",
-        )?
-    };
+    let expected_destination =
+        session_destination(&hydra_state, &profile_id, &contact_id, &decoded).await?;
     if destination != expected_destination {
-        return Err("realtime carrier destination does not match the authenticated peer route".into());
+        return Err(
+            "realtime carrier destination does not match the authenticated peer route".into(),
+        );
     }
 
     let prepared = crate::hydra_commands::fragment_realtime_carrier(&carrier)?;
@@ -70,4 +54,33 @@ pub async fn mailbox_send_realtime_carrier(
     )?;
     let result = outbound.send(&destination, &payloads, true).await?;
     Ok(mailbox_send_result(result, false, None))
+}
+
+/// The authenticated peer route for the exact active KKTP session whose SID
+/// and local HYDRA sender the sealed carrier names.
+async fn session_destination(
+    hydra_state: &crate::hydra_commands::HydraRuntimeState,
+    profile_id: &str,
+    contact_id: &str,
+    decoded: &ghost_realtime::Gtr1Envelope,
+) -> Result<String, String> {
+    let runtime = hydra_state.runtime(profile_id)?;
+    let runtime = runtime.lock().await;
+    if decoded.sender_hex() != runtime.identity_id {
+        return Err("GTR1 realtime carrier sender is not the unlocked local HYDRA identity".into());
+    }
+    let binding = runtime
+        .kktp_sessions
+        .get(contact_id)
+        .ok_or_else(|| "realtime carrier has no active KKTP session".to_string())?;
+    if binding.state != crate::hydra_commands::KktpSessionState::Active
+        || binding.sid != decoded.sid_hex()
+    {
+        return Err("GTR1 realtime carrier SID does not match the active KKTP session".into());
+    }
+    authenticated_destination(
+        &runtime,
+        contact_id,
+        "realtime carrier has no authenticated Kaspa peer route",
+    )
 }

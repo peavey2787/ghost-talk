@@ -2,6 +2,7 @@ mod view;
 pub(crate) use view::ChatView;
 mod chat_actions;
 mod composer;
+mod direct_send;
 mod lifecycle;
 mod message_rendering;
 pub(crate) mod reaction_ui;

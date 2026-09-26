@@ -1,23 +1,4 @@
-use crate::model::{CallPhase, CallRecord, Chat, Contact, Room, WalletRecord};
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct CallViewModel {
-    pub(crate) peer_label: String,
-    pub(crate) phase: CallPhase,
-    pub(crate) muted: bool,
-    pub(crate) error: Option<String>,
-}
-
-impl From<&CallRecord> for CallViewModel {
-    fn from(call: &CallRecord) -> Self {
-        Self {
-            peer_label: call.peer_label.clone(),
-            phase: call.phase,
-            muted: call.muted,
-            error: call.error.clone(),
-        }
-    }
-}
+use crate::model::{Chat, Contact, Room, WalletRecord};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct ThreadViewModel {

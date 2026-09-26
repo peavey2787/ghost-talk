@@ -1,16 +1,17 @@
 use crate::model::{CallRecord, Chat, Profile, ProfilePatch};
-use ghost_p2p::{P2pNetTransport, P2pRouteState};
 use ghost_domain::call::{CallEvent, CallManager};
+use ghost_p2p::{P2pNetTransport, P2pRouteState};
 use ghost_talk_wasm::{BrowserVoiceReceiver, BrowserVoiceSender};
 use std::{cell::RefCell, collections::HashSet, rc::Rc};
 use yew::prelude::*;
 
 #[cfg(all(test, target_arch = "wasm32"))]
 mod browser_tests;
-mod p2p_route;
+mod direct_text;
 pub(crate) mod identity;
 mod manager;
 mod media;
+mod p2p_route;
 mod presentation;
 mod room_voice;
 mod signaling;
@@ -18,6 +19,7 @@ mod termination;
 mod transport;
 
 use crate::controllers::call::RealtimeSender;
+pub(crate) use direct_text::{DirectTextContext, DirectTextRequest};
 pub use manager::{CallButton, LiveCallManager};
 
 #[derive(Clone)]
@@ -54,6 +56,13 @@ pub(crate) struct RoomVoiceContext {
     pub(crate) leave: Callback<()>,
     pub(crate) broadcast_session: Option<String>,
     pub(crate) set_broadcast_session: Callback<Option<String>>,
+}
+
+impl CallRuntime {
+    /// Clone the shared p2p-net handle so no UI borrow is held across awaits.
+    fn p2p(&self) -> P2pNetTransport {
+        self.p2p.borrow().clone()
+    }
 }
 
 fn publish_profile(runtime: &CallRuntime, profile: Profile, patch: ProfilePatch) {
@@ -103,16 +112,6 @@ fn can_start_call(chat: &Chat) -> bool {
         && !chat
             .incoming_request()
             .is_some_and(|request| request.state == "pending" && request.call_id.is_none())
-}
-
-fn can_use_realtime(chat: &Chat) -> bool {
-    chat.bootstrap_complete()
-        && chat.session_sid().is_some()
-        && chat.peer_hydra_handle().is_some()
-        && chat.peer_kaspa_address().is_some()
-        && !chat.archived()
-        && !chat.left()
-        && !chat.peer_left()
 }
 
 fn close_media(runtime: &CallRuntime) {

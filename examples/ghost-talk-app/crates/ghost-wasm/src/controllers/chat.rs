@@ -8,6 +8,8 @@ pub(crate) use patches::{chat_profile_transition, chat_store_transition, chat_wa
 pub(crate) use requests::{
     accept_request, add_contact_patch, incoming_request_state_patch, toggle_archive_patch,
 };
+mod direct;
+pub(crate) use direct::record_direct_text;
 pub(crate) use send::{execute_send, prepare_send};
 
 pub(crate) fn begin_session(

@@ -10,8 +10,10 @@ use web_sys::HtmlSelectElement;
 use yew::prelude::*;
 mod room_content;
 mod security;
+mod voice;
 use room_content::{render_room_composer, render_room_messages, render_room_roster};
 use security::room_security_state;
+use voice::render_room_voice;
 
 pub(crate) fn decline_bootstrap_callback(
     profile: Profile,
@@ -216,6 +218,7 @@ pub(crate) fn render_room_chat(
             {render_room_header(props, ui, actions, room, is_owner)}
             {render_pending_acceptance(ui, actions, room)}
             {render_room_messages(props, ui, room)}
+            {render_room_voice(ui, room)}
             {render_room_composer(ui, actions, room)}
             {render_room_roster(props, ui, actions, room, is_owner)}
         </div>

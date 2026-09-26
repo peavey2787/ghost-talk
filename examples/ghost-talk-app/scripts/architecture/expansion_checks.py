@@ -254,7 +254,7 @@ def check_kaskold_compatibility_and_ui_contracts() -> None:
     sdk_manifest = text(root / "external" / "kaskold" / "kaskold-sdk" / "Cargo.toml")
     protocol_manifest = text(root / "external" / "kaskold" / "kaskold-protocol" / "Cargo.toml")
     for manifest in (sdk_manifest, protocol_manifest):
-        if '=0.2.100' not in manifest.replace(" ", "") or '=0.3.77' not in manifest.replace(" ", ""):
+        if '=0.2.108' not in manifest.replace(" ", "") or '=0.3.85' not in manifest.replace(" ", ""):
             fail("vendored KasKold WASM bindings must stay aligned with Ghost Talk's pinned wasm-bindgen/js-sys family")
     root_manifest = text(root / "Cargo.toml")
     for crate in ("hot-wallet", "kaskold-protocol", "kaskold-sdk", "offline-signer", "shared-signer", "vault-runtime"):
@@ -276,7 +276,8 @@ def check_kaskold_compatibility_and_ui_contracts() -> None:
         fail("Web KasKold restore/backup/signer flows must consume the official vendored facades")
     restore_ui = text(APP_CRATES / "ghost-wasm" / "src" / "components" / "account" / "kaskold_restore.rs")
     backup_ui = text(APP_CRATES / "ghost-wasm" / "src" / "components" / "account" / "kaskold.rs")
-    send_ui = text(APP_CRATES / "ghost-wasm" / "src" / "components" / "account" / "wallet" / "send.rs")
+    wallet_ui = APP_CRATES / "ghost-wasm" / "src" / "components" / "account" / "wallet"
+    send_ui = text(wallet_ui / "send.rs") + text(wallet_ui / "send" / "signer.rs")
     if "Import from KasKold" not in restore_ui or "Import from KasKold" in backup_ui:
         fail("KasKold import must appear only in the identity restore flow")
     if "KasKold-compatible backup" not in backup_ui or "Use Signer" not in send_ui:

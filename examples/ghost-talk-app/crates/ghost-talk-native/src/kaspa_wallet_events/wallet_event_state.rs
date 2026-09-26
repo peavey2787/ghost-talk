@@ -1,10 +1,6 @@
-pub(crate) use kaspa_wrpc_client::prelude::*;
-pub(crate) use std::{
-    collections::{BTreeMap, HashMap},
-    sync::Arc,
-};
+pub(crate) use kaspa_portal::primitives::utxo::UtxoEntry;
+pub(crate) use std::collections::{BTreeMap, HashMap};
 pub(crate) use tokio::sync::{broadcast, oneshot};
-pub(crate) use workflow_core::channel::Channel;
 
 pub(crate) const EVENT_FANOUT: usize = 256;
 
@@ -42,61 +38,8 @@ impl Drop for WalletEventStream {
     }
 }
 
-pub(crate) fn wallet_subscription_scopes(addresses: &[RpcAddress]) -> (Scope, Scope) {
-    (
-        Scope::UtxosChanged(UtxosChangedScope::new(addresses.to_vec())),
-        Scope::VirtualDaaScoreChanged(VirtualDaaScoreChangedScope {}),
-    )
-}
-
-pub(crate) async fn stop_all_wallet_subscriptions(
-    client: &KaspaRpcClient,
-    listener_id: &mut Option<ListenerId>,
-    addresses: &[RpcAddress],
-) {
-    let Some(id) = listener_id.take() else {
-        return;
-    };
-    let (utxo_scope, daa_scope) = wallet_subscription_scopes(addresses);
-    // Best-effort cleanup: even if the socket is already down, always unregister
-    // the listener so a reconnect starts from one clean subscription owner.
-    let _ = client.stop_notify(id, utxo_scope).await;
-    let _ = client.stop_notify(id, daa_scope).await;
-    let _ = client.unregister_listener(id).await;
-}
-
-pub(crate) async fn start_all_wallet_subscriptions(
-    client: &KaspaRpcClient,
-    notifications: &Channel<Notification>,
-    listener_id: &mut Option<ListenerId>,
-    addresses: &[RpcAddress],
-) -> Result<(), String> {
-    stop_all_wallet_subscriptions(client, listener_id, addresses).await;
-    let id = client.register_new_listener(ChannelConnection::new(
-        "ghost-talk-wallet-events",
-        notifications.sender.clone(),
-        ChannelType::Persistent,
-    ));
-    let (utxo_scope, daa_scope) = wallet_subscription_scopes(addresses);
-    if let Err(error) = client.start_notify(id, utxo_scope.clone()).await {
-        let _ = client.unregister_listener(id).await;
-        return Err(error.to_string());
-    }
-    if let Err(error) = client.start_notify(id, daa_scope).await {
-        let _ = client.stop_notify(id, utxo_scope).await;
-        let _ = client.unregister_listener(id).await;
-        return Err(error.to_string());
-    }
-    *listener_id = Some(id);
-    Ok(())
-}
-
-pub(crate) fn outpoint_key(entry: &RpcUtxosByAddressesEntry) -> String {
-    // RpcTransactionOutpoint's Debug representation is stable within the
-    // process and contains both transaction id and output index. We only need
-    // a collision-free runtime key for reconciling the startup set with the
-    // same typed outpoints arriving on UtxosChanged notifications.
-    format!("{:?}", entry.outpoint)
+pub(crate) fn outpoint_key(entry: &UtxoEntry) -> String {
+    format!("{}:{}", entry.tx_id, entry.index)
 }
 
 #[derive(Clone, Debug)]
@@ -105,43 +48,72 @@ pub(crate) struct TrackedUtxo {
     pub(crate) address: Option<String>,
 }
 
-pub(crate) fn apply_entry(
-    set: &mut HashMap<String, TrackedUtxo>,
-    entry: &RpcUtxosByAddressesEntry,
-) {
-    set.insert(
-        outpoint_key(entry),
-        TrackedUtxo {
-            amount: entry.utxo_entry.amount,
-            address: entry.address.as_ref().map(ToString::to_string),
-        },
-    );
+/// Wallet UTXO set keyed by outpoint. Addresses are derived from the locking
+/// script because Kaspa notifications identify outputs by script.
+pub(crate) struct UtxoTracker {
+    prefix: &'static str,
+    pub(crate) set: HashMap<String, TrackedUtxo>,
 }
 
-pub(crate) fn remove_entry(
-    set: &mut HashMap<String, TrackedUtxo>,
-    entry: &RpcUtxosByAddressesEntry,
-) {
-    set.remove(&outpoint_key(entry));
+impl UtxoTracker {
+    pub(crate) fn new(network: &str) -> Self {
+        let prefix = if network.trim().eq_ignore_ascii_case("mainnet") {
+            "kaspa"
+        } else {
+            "kaspatest"
+        };
+        Self {
+            prefix,
+            set: HashMap::new(),
+        }
+    }
+
+    pub(crate) fn address(&self, entry: &UtxoEntry) -> Option<String> {
+        script_address(&entry.script_public_key, self.prefix)
+    }
+
+    pub(crate) fn apply(&mut self, entry: &UtxoEntry) {
+        let tracked = TrackedUtxo {
+            amount: entry.amount,
+            address: self.address(entry),
+        };
+        self.set.insert(outpoint_key(entry), tracked);
+    }
+
+    pub(crate) fn remove(&mut self, entry: &UtxoEntry) {
+        self.set.remove(&outpoint_key(entry));
+    }
+}
+
+fn script_address(script: &[u8], prefix: &str) -> Option<String> {
+    use kaspa_portal::primitives::address::{encode_p2pk_address, encode_p2sh_address};
+    match script {
+        [0x20, key @ .., 0xac] if key.len() == 32 => {
+            Some(encode_p2pk_address(key.try_into().ok()?, prefix))
+        }
+        [0xaa, 0x20, hash @ .., 0x87] if hash.len() == 32 => {
+            Some(encode_p2sh_address(hash.try_into().ok()?, prefix))
+        }
+        _ => None,
+    }
 }
 
 pub(crate) fn observed_transactions(
-    entries: &[RpcUtxosByAddressesEntry],
+    tracker: &UtxoTracker,
+    entries: &[UtxoEntry],
 ) -> Vec<ObservedWalletTransaction> {
     let mut observed = BTreeMap::<String, ObservedWalletTransaction>::new();
     for entry in entries {
-        let transaction_id = entry.outpoint.transaction_id.to_string();
-        let address = entry.address.as_ref().map(ToString::to_string);
         let item =
             observed
-                .entry(transaction_id.clone())
+                .entry(entry.tx_id.clone())
                 .or_insert_with(|| ObservedWalletTransaction {
-                    transaction_id,
-                    block_daa_score: entry.utxo_entry.block_daa_score,
+                    transaction_id: entry.tx_id.clone(),
+                    block_daa_score: entry.block_daa_score,
                     addresses: Vec::new(),
                 });
-        item.block_daa_score = item.block_daa_score.max(entry.utxo_entry.block_daa_score);
-        if let Some(address) = address {
+        item.block_daa_score = item.block_daa_score.max(entry.block_daa_score);
+        if let Some(address) = tracker.address(entry) {
             if !item.addresses.contains(&address) {
                 item.addresses.push(address);
             }
@@ -150,12 +122,22 @@ pub(crate) fn observed_transactions(
     observed.into_values().collect()
 }
 
+pub(crate) fn changed_transaction_ids(entries: &[UtxoEntry]) -> Vec<String> {
+    let mut ids = entries
+        .iter()
+        .map(|entry| entry.tx_id.clone())
+        .collect::<Vec<_>>();
+    ids.sort();
+    ids.dedup();
+    ids
+}
+
 pub(crate) fn emit_utxo_set(
     events: &broadcast::Sender<WalletNodeEvent>,
-    set: &HashMap<String, TrackedUtxo>,
-    changed_transaction_ids: Vec<String>,
-    observed_transactions: Vec<ObservedWalletTransaction>,
+    tracker: &UtxoTracker,
+    changed: &[UtxoEntry],
 ) {
+    let set = &tracker.set;
     let balance_sompi = set
         .values()
         .fold(0u64, |sum, entry| sum.saturating_add(entry.amount));
@@ -169,20 +151,55 @@ pub(crate) fn emit_utxo_set(
         balance_sompi,
         utxo_count: set.len(),
         active_addresses,
-        changed_transaction_ids,
-        observed_transactions,
+        changed_transaction_ids: changed_transaction_ids(changed),
+        observed_transactions: observed_transactions(tracker, changed),
     });
 }
 
-pub(crate) fn parse_event_addresses(addresses: &[String]) -> Result<Vec<RpcAddress>, String> {
-    addresses
-        .iter()
-        .map(|value| RpcAddress::try_from(value.as_str()).map_err(|error| error.to_string()))
-        .collect()
-}
-
 mod connection;
-pub(crate) use connection::{
-    announce_reconnecting, changed_transaction_ids, connect_event_client, create_event_client,
-    handle_rpc_state,
-};
+pub(crate) use connection::{announce_reconnecting, connect_and_subscribe};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn entry(script: Vec<u8>, amount: u64) -> UtxoEntry {
+        UtxoEntry {
+            tx_id: "ab".repeat(32),
+            index: 1,
+            amount,
+            script_public_key: script,
+            block_daa_score: 9,
+            covenant_id: None,
+        }
+    }
+
+    #[test]
+    fn tracker_derives_p2pk_addresses_and_balances() {
+        let mut script = vec![0x20];
+        script.extend_from_slice(&[7; 32]);
+        script.push(0xac);
+        let mut tracker = UtxoTracker::new("testnet-10");
+        let utxo = entry(script, 42);
+        tracker.apply(&utxo);
+        let address = tracker
+            .set
+            .values()
+            .next()
+            .unwrap()
+            .address
+            .clone()
+            .unwrap();
+        assert!(address.starts_with("kaspatest:q"));
+        let observed = observed_transactions(&tracker, std::slice::from_ref(&utxo));
+        assert_eq!(observed[0].addresses, vec![address]);
+        tracker.remove(&utxo);
+        assert!(tracker.set.is_empty());
+    }
+
+    #[test]
+    fn unknown_scripts_have_no_address() {
+        let tracker = UtxoTracker::new("mainnet");
+        assert!(tracker.address(&entry(vec![0x51], 1)).is_none());
+    }
+}

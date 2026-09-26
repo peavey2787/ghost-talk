@@ -1,5 +1,6 @@
 use crate::model::{
-    HydraMailboxResult, HydraRealtimeEnvelope, HydraSessionBindingProjection, MailboxSendResult, Profile,
+    HydraMailboxResult, HydraRealtimeEnvelope, HydraSessionBindingProjection, MailboxSendResult,
+    Profile,
 };
 
 mod acceptance;
@@ -43,14 +44,8 @@ pub(crate) async fn send_realtime_carrier(
     destination: &str,
     carrier_b64: &str,
 ) -> Result<MailboxSendResult, String> {
-    crate::native::send_realtime_carrier(
-        profile,
-        password,
-        contact_id,
-        destination,
-        carrier_b64,
-    )
-    .await
+    crate::native::send_realtime_carrier(profile, password, contact_id, destination, carrier_b64)
+        .await
 }
 
 pub(crate) async fn send_call_contact_request(

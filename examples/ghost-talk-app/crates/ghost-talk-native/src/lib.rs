@@ -41,8 +41,9 @@ use kaspa_gateway::KaspaGatewayState;
 use mailbox_commands::{
     mailbox_retry_handshake_finish, mailbox_send_call_signal, mailbox_send_contact_accept,
     mailbox_send_contact_request, mailbox_send_control, mailbox_send_delivery_ack,
-    mailbox_send_message, mailbox_send_realtime_carrier, mailbox_send_recovery_offer, mailbox_send_session_end,
-    wallet_monitor_start, wallet_monitor_stop, wallet_monitor_update_public, MonitorState,
+    mailbox_send_message, mailbox_send_realtime_carrier, mailbox_send_recovery_offer,
+    mailbox_send_session_end, wallet_monitor_start, wallet_monitor_stop,
+    wallet_monitor_update_public, MonitorState,
 };
 use media_commands::{
     kaspa_archive_plan, kaspa_archive_publish, media_fetch_verified, media_import_local,
@@ -78,9 +79,9 @@ where
 }
 
 use wallet_commands::{
-    derivation_presets, wallet_consolidate, wallet_create, wallet_gather_history, wallet_import,
-    wallet_broadcast_signer_send, wallet_lock, wallet_next_receive, wallet_prepare_signer_send,
-    wallet_reveal_recovery, wallet_send, wallet_unlock,
+    derivation_presets, wallet_broadcast_signer_send, wallet_consolidate, wallet_create,
+    wallet_gather_history, wallet_import, wallet_lock, wallet_next_receive,
+    wallet_prepare_signer_send, wallet_reveal_recovery, wallet_send, wallet_unlock,
     WalletRuntimeState,
 };
 

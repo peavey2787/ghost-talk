@@ -51,4 +51,3 @@ fn standalone_browser_accepts_kaspa_resolver_node_descriptor() {
     .expect("Kaspa resolver NodeDescriptor URL");
     assert_eq!(endpoint, "wss://node.example.org/wrpc/borsh");
 }
-

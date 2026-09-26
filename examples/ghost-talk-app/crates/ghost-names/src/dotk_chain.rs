@@ -1,6 +1,4 @@
-use std::str::FromStr;
-
-use kaspa_wrpc_client::prelude::*;
+use kaspa_portal::{primitives::utxo::UtxoEntry, KaspaPortal};
 
 use crate::dotk_deed::{DerivedDeed, DOTK_REGISTRY};
 
@@ -14,41 +12,30 @@ pub(crate) async fn verify_live_deed_wrpc(
     if endpoint.is_empty() {
         return Err("dot.k verification requires the active Kaspa wRPC endpoint".into());
     }
-    let network_id = NetworkId::from_str("mainnet").map_err(|error| error.to_string())?;
-    let client = KaspaRpcClient::new_with_args(
-        WrpcEncoding::Borsh,
-        Some(endpoint),
-        None,
-        Some(network_id),
-        None,
-    )
-    .map_err(|error| format!("could not create dot.k Kaspa verifier: {error}"))?;
-    let options = ConnectOptions {
-        block_async_connect: true,
-        ..Default::default()
-    };
-    client.connect(Some(options)).await.map_err(|error| {
-        format!("could not connect dot.k verifier to the active Kaspa node: {error}")
-    })?;
-
-    let result = verify_connected_deed(&client, derived).await;
-    let _ = client.disconnect().await;
+    let portal = KaspaPortal::builder()
+        .network(kaspa_portal::primitives::NetworkId::Mainnet)
+        .endpoint(endpoint)
+        .connect()
+        .await
+        .map_err(|error| {
+            format!("could not connect dot.k verifier to the active Kaspa node: {error}")
+        })?;
+    let result = verify_connected_deed(&portal, derived).await;
+    let _ = portal.disconnect();
     result
 }
 
 async fn verify_connected_deed(
-    client: &KaspaRpcClient,
+    portal: &KaspaPortal,
     derived: &DerivedDeed,
 ) -> Result<(String, u64), String> {
-    let address = RpcAddress::try_from(derived.deed_address.as_str())
-        .map_err(|error| format!("derived dot.k deed address is invalid: {error}"))?;
-    let first = get_deed_utxos(client, &address, "deed UTXO").await?;
+    let first = get_deed_utxos(portal, derived, "deed UTXO").await?;
 
     for entry in first.iter().take(MAX_DEED_UTXOS) {
         let Some((txid, index)) = candidate_outpoint(entry, derived) else {
             continue;
         };
-        let fresh = get_deed_utxos(client, &address, "deed freshness").await?;
+        let fresh = get_deed_utxos(portal, derived, "deed freshness").await?;
         if live_outpoint_exists(&fresh, &txid, index, derived) {
             return Ok((txid, index));
         }
@@ -57,49 +44,40 @@ async fn verify_connected_deed(
 }
 
 async fn get_deed_utxos(
-    client: &KaspaRpcClient,
-    address: &RpcAddress,
+    portal: &KaspaPortal,
+    derived: &DerivedDeed,
     label: &str,
-) -> Result<Vec<RpcUtxosByAddressesEntry>, String> {
-    client
-        .get_utxos_by_addresses(vec![address.clone()])
+) -> Result<Vec<UtxoEntry>, String> {
+    portal
+        .chain()
+        .map_err(|error| error.to_string())?
+        .utxos(&derived.deed_address)
         .await
         .map_err(|error| format!("dot.k {label} query failed: {error}"))
 }
 
-fn candidate_outpoint(
-    row: &RpcUtxosByAddressesEntry,
-    derived: &DerivedDeed,
-) -> Option<(String, u64)> {
-    let entry = &row.utxo_entry;
-    let covenant = entry.covenant_id.as_ref()?.to_string();
-    let script_hex = hex::encode(entry.script_public_key.script());
-    let txid = row.outpoint.transaction_id.to_string();
-    let index = u64::from(row.outpoint.index);
-    let address_matches = row
-        .address
-        .as_ref()
-        .is_none_or(|address| address.to_string() == derived.deed_address);
-
+/// A deed outpoint must carry the registry covenant id, the exact bond, and
+/// the derived P2SH lock. Covenant-tagged outputs cannot be coinbase outputs,
+/// so the registry id alone rules those out.
+fn candidate_outpoint(entry: &UtxoEntry, derived: &DerivedDeed) -> Option<(String, u64)> {
+    let covenant = entry.covenant_id.as_deref()?;
     if entry.amount != derived.bond
-        || entry.is_coinbase
-        || covenant != DOTK_REGISTRY
-        || script_hex != derived.script_public_key
-        || !address_matches
+        || !covenant.eq_ignore_ascii_case(DOTK_REGISTRY)
+        || hex::encode(&entry.script_public_key) != derived.script_public_key
     {
         return None;
     }
-    Some((txid, index))
+    Some((entry.tx_id.clone(), u64::from(entry.index)))
 }
 
 fn live_outpoint_exists(
-    entries: &[RpcUtxosByAddressesEntry],
+    entries: &[UtxoEntry],
     txid: &str,
     index: u64,
     derived: &DerivedDeed,
 ) -> bool {
-    entries.iter().any(|row| {
-        candidate_outpoint(row, derived).is_some_and(|(candidate_txid, candidate_index)| {
+    entries.iter().any(|entry| {
+        candidate_outpoint(entry, derived).is_some_and(|(candidate_txid, candidate_index)| {
             candidate_txid == txid && candidate_index == index
         })
     })
@@ -110,15 +88,40 @@ mod tests {
     use super::*;
     use crate::dotk_deed::derive_deed;
 
-    #[test]
-    fn v2_rpc_model_is_required_for_covenant_proof() {
-        let deed = derive_deed(
+    fn deed() -> DerivedDeed {
+        derive_deed(
             "21millioncoven",
             0,
             "079ab96f3b42f1b3667010e6d855172bb8e905e3369fe5ad57b662c4bc365449",
         )
-        .unwrap();
-        assert_eq!(deed.bond, 100_000_000);
-        assert_eq!(DOTK_REGISTRY.len(), 64);
+        .unwrap()
+    }
+
+    fn entry(derived: &DerivedDeed, covenant: Option<&str>) -> UtxoEntry {
+        UtxoEntry {
+            tx_id: "11".repeat(32),
+            index: 2,
+            amount: derived.bond,
+            script_public_key: hex::decode(&derived.script_public_key).unwrap(),
+            block_daa_score: 1,
+            covenant_id: covenant.map(str::to_owned),
+        }
+    }
+
+    #[test]
+    fn deed_outpoint_requires_registry_covenant_bond_and_script() {
+        let derived = deed();
+        assert_eq!(derived.bond, 100_000_000);
+        let good = entry(&derived, Some(DOTK_REGISTRY));
+        assert_eq!(
+            candidate_outpoint(&good, &derived),
+            Some(("11".repeat(32), 2))
+        );
+        assert!(candidate_outpoint(&entry(&derived, None), &derived).is_none());
+        assert!(candidate_outpoint(&entry(&derived, Some(&"00".repeat(32))), &derived).is_none());
+        let mut wrong_bond = good.clone();
+        wrong_bond.amount -= 1;
+        assert!(candidate_outpoint(&wrong_bond, &derived).is_none());
+        assert!(live_outpoint_exists(&[good], &"11".repeat(32), 2, &derived));
     }
 }

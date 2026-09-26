@@ -5,13 +5,18 @@ use serde_json::Value;
 
 use super::{
     kaspa::profile_portal,
-    support::util::{decimal, option_endpoint, require_password, required, required_str, supported_network, to_value},
+    support::util::{
+        decimal, option_endpoint, require_password, required, required_str, supported_network,
+        to_value,
+    },
     WALLET_SECRETS,
 };
 
 pub(super) async fn invoke(command: &str, args: &Value) -> Result<Value, String> {
     match command {
-        "wallet_send" | "wallet_consolidate" | "wallet_gather_history" => invoke_network(command, args).await,
+        "wallet_send" | "wallet_consolidate" | "wallet_gather_history" => {
+            invoke_network(command, args).await
+        }
         _ => invoke_local(command, args),
     }
 }
@@ -24,7 +29,6 @@ fn invoke_local(command: &str, args: &Value) -> Result<Value, String> {
         _ => invoke_local_state(command, args),
     }
 }
-
 
 fn invoke_local_state(command: &str, args: &Value) -> Result<Value, String> {
     match command {
@@ -50,7 +54,8 @@ fn create(args: &Value) -> Result<Value, String> {
     let passphrase = required_str(args, "passphrase")?;
     let account_path = required_str(args, "accountPath")?;
     let network = supported_network(required_str(args, "network")?)?;
-    let (secret, created) = ghost_kaspa::wallet::generate_wallet(passphrase, account_path, &network)?;
+    let (secret, created) =
+        ghost_kaspa::wallet::generate_wallet(passphrase, account_path, &network)?;
     ghost_kaspa::wallet::validate_public_projection(&secret, &created.public)?;
     to_value(WalletCreateResponse {
         sealed: ghost_storage::seal_json(password, &secret, "wallet vault")?,
@@ -66,7 +71,8 @@ fn import(args: &Value) -> Result<Value, String> {
     let passphrase = required_str(args, "passphrase")?;
     let account_path = required_str(args, "accountPath")?;
     let network = supported_network(required_str(args, "network")?)?;
-    let (secret, public) = ghost_kaspa::wallet::import_wallet(mnemonic, passphrase, account_path, &network)?;
+    let (secret, public) =
+        ghost_kaspa::wallet::import_wallet(mnemonic, passphrase, account_path, &network)?;
     ghost_kaspa::wallet::validate_public_projection(&secret, &public)?;
     to_value(WalletImportResponse {
         sealed: ghost_storage::seal_json(password, &secret, "wallet vault")?,
@@ -116,7 +122,8 @@ async fn send(args: &Value) -> Result<Value, String> {
     let amount = decimal(required_str(args, "amountSompi")?, "amount")?;
     let fee = decimal(required_str(args, "feeSompi")?, "fee")?;
     let portal = profile_portal(profile_id, &public, option_endpoint(args, "wrpcEndpoint")).await?;
-    let sent = ghost_kaspa::wallet::send(&portal, &secret, &public, destination, amount, fee).await?;
+    let sent =
+        ghost_kaspa::wallet::send(&portal, &secret, &public, destination, amount, fee).await?;
     to_value(project_broadcast(sent))
 }
 
@@ -135,7 +142,9 @@ async fn gather_history(args: &Value) -> Result<Value, String> {
     let projection: WalletProjection = required(args, "public")?;
     let public = WalletPublic::from_projection(&projection);
     let priority: Vec<String> = required(args, "priorityAddresses")?;
-    super::runtime::history::gather(&public, option_endpoint(args, "restEndpoint"), &priority).await.and_then(to_value)
+    super::runtime::history::gather(&public, option_endpoint(args, "restEndpoint"), &priority)
+        .await
+        .and_then(to_value)
 }
 
 fn open_and_validate(args: &Value) -> Result<WalletSecret, String> {
@@ -151,15 +160,22 @@ fn open_and_validate(args: &Value) -> Result<WalletSecret, String> {
 
 fn outbound_secret(args: &Value) -> Result<WalletSecret, String> {
     let profile_id = required_str(args, "profileId")?;
-    let reuse = args.get("reuseUnlocked").and_then(Value::as_bool).unwrap_or(false);
+    let reuse = args
+        .get("reuseUnlocked")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
     if reuse {
-        if let Some(secret) = WALLET_SECRETS.with(|secrets| secrets.borrow().get(profile_id).cloned()) {
+        if let Some(secret) =
+            WALLET_SECRETS.with(|secrets| secrets.borrow().get(profile_id).cloned())
+        {
             return Ok(secret);
         }
     }
     let secret = open_and_validate(args)?;
     WALLET_SECRETS.with(|secrets| {
-        secrets.borrow_mut().insert(profile_id.to_owned(), secret.clone());
+        secrets
+            .borrow_mut()
+            .insert(profile_id.to_owned(), secret.clone());
     });
     Ok(secret)
 }

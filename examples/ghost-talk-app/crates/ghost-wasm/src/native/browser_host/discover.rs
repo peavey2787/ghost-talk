@@ -57,15 +57,9 @@ async fn publish(args: &Value) -> Result<Value, String> {
     )?;
     let payload = descriptor.encode()?;
     let portal = profile_portal(&input.profile_id, &public, input.wrpc_endpoint.as_deref()).await?;
-    let result = ghost_kaspa::wallet::send_payload(
-        &portal,
-        &secret,
-        &public,
-        &stable_address,
-        0,
-        &payload,
-    )
-    .await?;
+    let result =
+        ghost_kaspa::wallet::send_payload(&portal, &secret, &public, &stable_address, 0, &payload)
+            .await?;
     to_value(PublishedGhostDescriptor {
         kaspa_address: stable_address,
         transaction_id: Some(result.transaction_id),

@@ -1,5 +1,5 @@
-use super::{prevent_submit, spawn_local, DiscoverProps, Profile, ProfilePatch};
 use super::avatar_editor::AvatarCropEditor;
+use super::{prevent_submit, spawn_local, DiscoverProps, Profile, ProfilePatch};
 use web_sys::{HtmlInputElement, HtmlTextAreaElement};
 use yew::prelude::*;
 

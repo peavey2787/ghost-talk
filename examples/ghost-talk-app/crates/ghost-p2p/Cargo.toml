@@ -5,14 +5,19 @@ edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 
+# Browser adapter for the shared `ghost_realtime::GhostP2pTransport` contract,
+# driving p2p-net's browser node in process.
 [dependencies]
-ghost-protocol = { path = "../ghost-protocol" }
+ghost-realtime.workspace = true
 serde.workspace = true
-blake3.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-p2p-net = { git = "https://github.com/peavey2787/p2p-net", branch = "main" }
+js-sys.workspace = true
+p2p-net.workspace = true
+serde-wasm-bindgen = "0.6"
+serde_json.workspace = true
 wasm-bindgen.workspace = true
 wasm-bindgen-futures.workspace = true
-serde-wasm-bindgen = "0.6"
-js-sys.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

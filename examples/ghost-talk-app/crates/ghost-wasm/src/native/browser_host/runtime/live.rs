@@ -1,14 +1,29 @@
 use ghost_api::{MailboxEvent, WalletLiveEvent};
 use ghost_kaspa::{LiveBlockEvent, LiveTransactionObservation, PortalFacade};
-use kaspa_wrpc_client::prelude::*;
-use std::{cell::RefCell, collections::HashMap, str::FromStr, sync::Arc};
+use kaspa_portal::network::{wrpc::block_added::OwnedBlockAddedNotification, NetworkApi};
+use std::{cell::Cell, cell::RefCell, collections::HashMap, rc::Rc};
 use wasm_bindgen_futures::spawn_local;
-use workflow_core::channel::Channel;
 
+use crate::native::browser_host::support::debug;
+
+const RECONNECT_DELAY_MS: u32 = 3_000;
+
+/// One BlockAdded stream per profile over its own Portal notification socket.
+/// The socket is replaced in place when it drops, so the stream survives
+/// public-node disconnects.
 struct BrowserLiveStream {
-    client: Arc<KaspaRpcClient>,
-    listener_id: ListenerId,
+    portal: Rc<RefCell<PortalFacade>>,
     endpoint: String,
+    alive: Rc<Cell<bool>>,
+}
+
+/// What the notification task needs to reopen its socket.
+struct StreamTarget {
+    profile_id: String,
+    network: String,
+    endpoint: String,
+    portal: Rc<RefCell<PortalFacade>>,
+    alive: Rc<Cell<bool>>,
 }
 
 thread_local! {
@@ -25,63 +40,44 @@ pub(in crate::native::browser_host) async fn start(
     }
     stop(profile_id).await;
     let endpoint = portal.endpoint()?;
-    let (client, notifications, listener_id) = connect_block_stream(&public.network, &endpoint).await?;
-    remember_stream(profile_id, &endpoint, client.clone(), listener_id);
-    spawn_notification_task(profile_id.to_owned(), public.network.clone(), client, notifications);
+    let (stream, api) = open_stream(&public.network, &endpoint).await?;
+    let target = StreamTarget {
+        profile_id: profile_id.to_owned(),
+        network: public.network.clone(),
+        endpoint: endpoint.clone(),
+        portal: Rc::new(RefCell::new(stream)),
+        alive: Rc::new(Cell::new(true)),
+    };
+    LIVE_STREAMS.with(|streams| {
+        streams.borrow_mut().insert(
+            profile_id.to_owned(),
+            BrowserLiveStream {
+                portal: Rc::clone(&target.portal),
+                endpoint,
+                alive: Rc::clone(&target.alive),
+            },
+        );
+    });
+    spawn_local(run_stream(target, api));
     Ok(())
 }
 
-async fn connect_block_stream(
-    network: &str,
-    endpoint: &str,
-) -> Result<(Arc<KaspaRpcClient>, Channel<Notification>, ListenerId), String> {
-    let network_id = NetworkId::from_str(network).map_err(|error| error.to_string())?;
-    let client = Arc::new(KaspaRpcClient::new_with_args(
-        WrpcEncoding::Borsh,
-        Some(endpoint),
-        None,
-        Some(network_id),
-        None,
-    ).map_err(|error| error.to_string())?);
-    client.connect(Some(ConnectOptions {
-        block_async_connect: true,
-        ..Default::default()
-    })).await.map_err(|error| format!("Kaspa BlockAdded WebSocket connect failed: {error}"))?;
-    let notifications = Channel::<Notification>::unbounded();
-    let listener_id = client.register_new_listener(ChannelConnection::new(
-        "ghost-talk-web-live-blocks",
-        notifications.sender.clone(),
-        ChannelType::Persistent,
-    ));
-    client.start_notify(listener_id, Scope::BlockAdded(BlockAddedScope {})).await
-        .map_err(|error| format!("Kaspa BlockAdded subscribe failed: {error}"))?;
-    Ok((client, notifications, listener_id))
-}
-
-fn remember_stream(
-    profile_id: &str,
-    endpoint: &str,
-    client: Arc<KaspaRpcClient>,
-    listener_id: ListenerId,
-) {
-    LIVE_STREAMS.with(|streams| {
-        streams.borrow_mut().insert(profile_id.to_owned(), BrowserLiveStream {
-            client,
-            listener_id,
-            endpoint: endpoint.to_owned(),
-        });
-    });
+async fn open_stream(network: &str, endpoint: &str) -> Result<(PortalFacade, NetworkApi), String> {
+    let stream = PortalFacade::connect(network, endpoint).await?;
+    let api = stream.network_api()?;
+    if let Err(error) = api.subscribe_block_added().await {
+        stream.disconnect();
+        return Err(format!("Kaspa BlockAdded subscribe failed: {error}"));
+    }
+    Ok((stream, api))
 }
 
 pub(in crate::native::browser_host) async fn stop(profile_id: &str) {
     let stream = LIVE_STREAMS.with(|streams| streams.borrow_mut().remove(profile_id));
-    let Some(stream) = stream else { return };
-    let _ = stream
-        .client
-        .stop_notify(stream.listener_id, Scope::BlockAdded(BlockAddedScope {}))
-        .await;
-    let _ = stream.client.unregister_listener(stream.listener_id).await;
-    let _ = stream.client.disconnect().await;
+    if let Some(stream) = stream {
+        stream.alive.set(false);
+        stream.portal.borrow().disconnect();
+    }
 }
 
 fn live_matches(profile_id: &str, portal: &PortalFacade) -> Result<bool, String> {
@@ -94,59 +90,97 @@ fn live_matches(profile_id: &str, portal: &PortalFacade) -> Result<bool, String>
     }))
 }
 
-fn spawn_notification_task(
-    profile_id: String,
-    network: String,
-    client: Arc<KaspaRpcClient>,
-    notifications: Channel<Notification>,
-) {
-    spawn_local(async move {
-        while let Ok(notification) = notifications.receiver.recv().await {
-            if !stream_is_current(&profile_id, &client) {
-                break;
-            }
-            let Notification::BlockAdded(added) = notification else {
-                continue;
-            };
-            let event = live_block_event(&added.block);
-            handle_live_block(&profile_id, &network, event);
+/// Deliver blocks until the stream is stopped, reopening a dropped socket.
+async fn run_stream(target: StreamTarget, mut api: NetworkApi) {
+    let mut blocks = 0u64;
+    while target.alive.get() {
+        let closed = pump_blocks(&target, &api, &mut blocks).await;
+        if !target.alive.get() {
+            return;
         }
-    });
+        debug::record(
+            "warn",
+            "kaspa",
+            "live-stream-closed",
+            format!("blocks={blocks} {closed}"),
+        );
+        match reopen(&target).await {
+            Some(next) => api = next,
+            None => return,
+        }
+    }
 }
 
-fn stream_is_current(profile_id: &str, client: &Arc<KaspaRpcClient>) -> bool {
-    LIVE_STREAMS.with(|streams| {
-        streams
-            .borrow()
-            .get(profile_id)
-            .is_some_and(|stream| Arc::ptr_eq(&stream.client, client))
-    })
+async fn pump_blocks(target: &StreamTarget, api: &NetworkApi, blocks: &mut u64) -> String {
+    loop {
+        let block = match api.next_block_added().await {
+            Ok(block) => block,
+            Err(error) => return error.to_string(),
+        };
+        if !target.alive.get() {
+            return "stopped".into();
+        }
+        *blocks += 1;
+        let event = live_block_event(block);
+        trace_block(*blocks, &event);
+        handle_live_block(&target.profile_id, &target.network, event);
+    }
 }
 
-fn live_block_event(block: &RpcBlock) -> LiveBlockEvent {
-    let block_hash = block
-        .verbose_data
-        .as_ref()
-        .map(|verbose| verbose.hash.to_string())
-        .unwrap_or_else(|| format!("daa-{}", block.header.daa_score));
-    let daa_score = block.header.daa_score;
+/// Reopen the socket with a fixed backoff; `None` once the stream is stopped.
+async fn reopen(target: &StreamTarget) -> Option<NetworkApi> {
+    while target.alive.get() {
+        gloo_timers::future::TimeoutFuture::new(RECONNECT_DELAY_MS).await;
+        if !target.alive.get() {
+            return None;
+        }
+        match open_stream(&target.network, &target.endpoint).await {
+            Ok((stream, api)) => return adopt(target, stream, api),
+            Err(error) => debug::record("warn", "kaspa", "live-stream-reopen-failed", error),
+        }
+    }
+    None
+}
+
+/// Swap in a reopened socket, unless the stream was stopped meanwhile.
+fn adopt(target: &StreamTarget, stream: PortalFacade, api: NetworkApi) -> Option<NetworkApi> {
+    if !target.alive.get() {
+        stream.disconnect();
+        return None;
+    }
+    target.portal.replace(stream).disconnect();
+    debug::record("info", "kaspa", "live-stream-reopened", String::new());
+    Some(api)
+}
+
+/// Record carrier-bearing blocks (and a periodic heartbeat) for protocol debug.
+fn trace_block(blocks: u64, event: &LiveBlockEvent) {
+    if event.observations.is_empty() && blocks % 600 != 1 {
+        return;
+    }
+    let details = format!(
+        "blocks={blocks} daa={} carriers={}",
+        event.daa_score,
+        event.observations.len()
+    );
+    debug::record("info", "kaspa", "live-block", details);
+}
+
+fn live_block_event(block: OwnedBlockAddedNotification) -> LiveBlockEvent {
+    let block_hash = block.block_hash;
+    let daa_score = block.daa_score;
     let transaction_count = block.transactions.len();
     let observations = block
         .transactions
-        .iter()
+        .into_iter()
         .enumerate()
-        .filter_map(|(index, transaction)| {
-            ghost_kaspa::is_live_ghost_carrier(&transaction.payload).then(|| LiveTransactionObservation {
-                txid: transaction
-                    .verbose_data
-                    .as_ref()
-                    .map(|verbose| verbose.transaction_id.to_string())
-                    .unwrap_or_else(|| {
-                        ghost_kaspa::fallback_live_event_id(&block_hash, index, &transaction.payload)
-                    }),
-                daa_score,
-                payload: transaction.payload.clone(),
-            })
+        .filter(|(_, transaction)| ghost_kaspa::is_live_ghost_carrier(&transaction.payload))
+        .map(|(index, transaction)| LiveTransactionObservation {
+            txid: transaction.transaction_id.unwrap_or_else(|| {
+                ghost_kaspa::fallback_live_event_id(&block_hash, index, &transaction.payload)
+            }),
+            daa_score,
+            payload: transaction.payload,
         })
         .collect();
     LiveBlockEvent {

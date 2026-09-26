@@ -73,6 +73,7 @@ fn composer_harness() -> Html {
         mask_messages: use_state(|| false),
         show_advanced: use_state(|| false),
         messages_ref: use_node_ref(),
+        direct: None,
     };
     let chat = ghost_chat::ChatService::new_basic("chat-c".into(), "C".into());
     let send = Callback::from(|body: String| SENDS.with(|events| events.borrow_mut().push(body)));

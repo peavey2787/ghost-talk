@@ -1,5 +1,6 @@
-use kaspa_addresses::{Address, Prefix, Version};
-use kaspa_txscript::{extract_script_pub_key_address, pay_to_script_hash_script};
+use kaspa_portal::primitives::address::{
+    encode_address_for_network, script_hash, AddressType, KaspaNetwork, MAX_ADDR_LEN,
+};
 use serde::Deserialize;
 
 pub const DOTK_REGISTRY: &str = "ee2128c03dfac7f6d74734bb3c879bd999434c47a55945b8a6daae2a1e4a21de";
@@ -77,14 +78,17 @@ pub(crate) fn derive_deed(
     }
     let state = active_state(name, owner_type, &owner)?;
     redeem[deployment.state_offset..deployment.state_offset + STATE_LEN].copy_from_slice(&state);
-    let script = pay_to_script_hash_script(&redeem);
-    let deed = extract_script_pub_key_address(&script, Prefix::Mainnet)
-        .map_err(|_| "could not derive dot.k deed address".to_string())?;
+    let hash = script_hash(&redeem);
+    // Standard P2SH lock: OP_BLAKE2B OP_DATA32 <hash> OP_EQUAL.
+    let mut script = Vec::with_capacity(35);
+    script.extend_from_slice(&[0xaa, 0x20]);
+    script.extend_from_slice(&hash);
+    script.push(0x87);
     Ok(DerivedDeed {
         name: name.to_string(),
         address,
-        deed_address: deed.to_string(),
-        script_public_key: hex::encode(script.script()),
+        deed_address: mainnet_address(&hash, AddressType::P2sh)?,
+        script_public_key: hex::encode(script),
         bond: deployment.bond,
     })
 }
@@ -94,9 +98,9 @@ fn owner_address(owner_type: u8, owner: &[u8], owner_hex: &str) -> Result<Option
         0 => {
             secp256k1::XOnlyPublicKey::from_slice(owner)
                 .map_err(|_| "dot.k Schnorr owner key is invalid".to_string())?;
-            Some(Address::new(Prefix::Mainnet, Version::PubKey, owner))
+            Some(mainnet_address(owner, AddressType::P2pk)?)
         }
-        3 => Some(Address::new(Prefix::Mainnet, Version::ScriptHash, owner)),
+        3 => Some(mainnet_address(owner, AddressType::P2sh)?),
         4 => covenant_owner(owner_hex)?,
         0x85 | 0x86 => {
             let mut compressed = Vec::with_capacity(33);
@@ -104,18 +108,24 @@ fn owner_address(owner_type: u8, owner: &[u8], owner_hex: &str) -> Result<Option
             compressed.extend_from_slice(owner);
             secp256k1::PublicKey::from_slice(&compressed)
                 .map_err(|_| "dot.k ECDSA owner key is invalid".to_string())?;
-            Some(Address::new(
-                Prefix::Mainnet,
-                Version::PubKeyECDSA,
-                &compressed,
-            ))
+            Some(mainnet_address(&compressed, AddressType::P2pkEcdsa)?)
         }
         _ => return Err("unsupported dot.k owner type".into()),
     };
-    Ok(address.map(|value| value.to_string()))
+    Ok(address)
 }
 
-fn covenant_owner(owner_hex: &str) -> Result<Option<Address>, String> {
+fn mainnet_address(payload: &[u8], kind: AddressType) -> Result<String, String> {
+    let mut out = [0u8; MAX_ADDR_LEN];
+    let len = encode_address_for_network(payload, kind, KaspaNetwork::Mainnet, &mut out);
+    std::str::from_utf8(&out[..len])
+        .ok()
+        .filter(|text| !text.is_empty())
+        .map(str::to_owned)
+        .ok_or_else(|| "could not encode dot.k address".to_string())
+}
+
+fn covenant_owner(owner_hex: &str) -> Result<Option<String>, String> {
     if owner_hex.eq_ignore_ascii_case(DOTK_REGISTRY) {
         return Err("dot.k covenant owner cannot be the registry itself".into());
     }

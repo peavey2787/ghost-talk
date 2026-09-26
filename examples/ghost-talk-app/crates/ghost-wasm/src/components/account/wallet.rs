@@ -1,8 +1,6 @@
 use super::super::form::status_view;
 use super::wallet_history::gather_history_callback;
-use crate::{
-    model::{Profile, ProfilePatch, WalletSnapshot},
-};
+use crate::model::{Profile, ProfilePatch, WalletSnapshot};
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 mod amount;

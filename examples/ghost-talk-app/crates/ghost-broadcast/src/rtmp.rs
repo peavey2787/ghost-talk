@@ -57,7 +57,6 @@ impl RtmpDestination {
     }
 }
 
-
 pub fn validate_rtmp_configuration(
     server: Option<&str>,
     stream_key: Option<&str>,
@@ -69,10 +68,7 @@ pub fn validate_rtmp_configuration(
         (Some(_), None) => Err("RTMP stream key is required".into()),
         (None, Some(_)) => Err("RTMP server is required when a stream key is provided".into()),
         (Some(server), Some(stream_key)) => {
-            RtmpDestination::new(
-                server.to_owned(),
-                RtmpSecret::new(stream_key.to_owned())?,
-            )?;
+            RtmpDestination::new(server.to_owned(), RtmpSecret::new(stream_key.to_owned())?)?;
             Ok(())
         }
     }
@@ -98,10 +94,14 @@ mod tests {
     #[test]
     fn configuration_requires_a_complete_valid_pair() {
         assert!(validate_rtmp_configuration(None, None).is_ok());
-        assert!(validate_rtmp_configuration(Some("rtmps://stream.example/live"), Some("key")).is_ok());
+        assert!(
+            validate_rtmp_configuration(Some("rtmps://stream.example/live"), Some("key")).is_ok()
+        );
         assert!(validate_rtmp_configuration(Some("rtmps://stream.example/live"), None).is_err());
         assert!(validate_rtmp_configuration(None, Some("key")).is_err());
-        assert!(validate_rtmp_configuration(Some("https://stream.example/live"), Some("key")).is_err());
+        assert!(
+            validate_rtmp_configuration(Some("https://stream.example/live"), Some("key")).is_err()
+        );
     }
 
     #[test]

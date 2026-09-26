@@ -1,9 +1,8 @@
+use ghost_api::BroadcastStartRequest;
 use ghost_broadcast::{
     validate_relay_url, validate_rtmp_configuration, validate_session_id, BroadcastFrame,
-    BroadcastPipeline, FfmpegRtmpSink,
-    FileRecordingSink, RtmpDestination, RtmpSecret,
+    BroadcastPipeline, FfmpegRtmpSink, FileRecordingSink, RtmpDestination, RtmpSecret,
 };
-use ghost_api::BroadcastStartRequest;
 use ghost_talk::{VoiceChunk, VoiceCodec};
 use std::{collections::BTreeMap, fs, path::PathBuf, sync::Mutex};
 use tauri::{AppHandle, State};
@@ -54,21 +53,34 @@ pub fn broadcast_start(
 }
 
 fn validate_config(request: &BroadcastStartRequest) -> Result<BroadcastConfig, String> {
-    validate_rtmp_configuration(request.rtmp_server.as_deref(), request.rtmp_stream_key.as_deref())?;
+    validate_rtmp_configuration(
+        request.rtmp_server.as_deref(),
+        request.rtmp_stream_key.as_deref(),
+    )?;
     let relay = validated_relay(request)?;
     let direct_rtmp = validate_rtmp_destination(request)?;
-    if cfg!(any(target_os = "android", target_os = "ios")) && relay.is_none() && direct_rtmp.is_some() {
+    if cfg!(any(target_os = "android", target_os = "ios"))
+        && relay.is_none()
+        && direct_rtmp.is_some()
+    {
         return Err("Android/iOS live RTMP requires a Ghost Talk broadcast relay".into());
     }
     let rtmp = relay.is_none().then_some(direct_rtmp).flatten();
     if !request.record_local && rtmp.is_none() && relay.is_none() {
         return Err("broadcast requires local recording, direct RTMP, or a relay sink".into());
     }
-    Ok(BroadcastConfig { record_local: request.record_local, rtmp })
+    Ok(BroadcastConfig {
+        record_local: request.record_local,
+        rtmp,
+    })
 }
 
 fn validated_relay(request: &BroadcastStartRequest) -> Result<Option<&str>, String> {
-    let relay = request.relay_url.as_deref().map(str::trim).filter(|value| !value.is_empty());
+    let relay = request
+        .relay_url
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
     if let Some(url) = relay {
         validate_relay_url(url)?;
     }

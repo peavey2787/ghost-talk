@@ -17,7 +17,8 @@ ghost-core = { path = "../ghost-core" }
 ghost-domain = { path = "../ghost-domain" }
 ghost-protocol = { path = "../ghost-protocol" }
 ghost-p2p = { path = "../ghost-p2p" }
-ghost-realtime = { path = "../ghost-realtime" }
+ghost-realtime = { path = "../../../../crates/ghost-realtime", default-features = false }
+ghost-voice = { path = "../../../../crates/ghost-voice" }
 ghost-contacts = { path = "../ghost-contacts" }
 ghost-chat = { path = "../ghost-chat" }
 ghost-rooms = { path = "../ghost-rooms" }
@@ -50,16 +51,14 @@ rand = "0.8"
 getrandom = { version = "0.2.17", features = ["js"] }
 getrandom_v03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
 getrandom_v04 = { package = "getrandom", version = "0.4", features = ["wasm_js"] }
-# Rusty-Kaspa's wRPC client selects rustls/ring; its own WASM wrapper enables this
-# ring feature so SystemRandom is backed by Web Crypto on wasm32-unknown-unknown.
-ring = { version = "0.17", features = ["wasm32_unknown_unknown_js"] }
 # Yew 0.22 uses implicit-clone 0.6 and indexmap 2.11+, which overlaps
 # Rusty-Kaspa's indexmap ^2.1 requirement. Pin one concrete 2.x package so
 # Yew, implicit-clone, and Kaspa share the same IndexMap type identity.
 implicit-clone = { version = "=0.6.0", features = ["map"] }
 indexmap = "=2.14.2"
-kaspa-wrpc-client = { version = "2.0.1", git = "https://github.com/kaspanet/rusty-kaspa", rev = "cfafeb4c093fa37a303f1b9f19c58f986b870ce3" }
-workflow-core = "0.18.0"
+# ring 0.17 (via libp2p/rustls) needs its Web Crypto entropy backend in browsers.
+ring = { version = "0.17", features = ["wasm32_unknown_unknown_js"] }
+kaspa-portal = { git = "https://github.com/peavey2787/kaspa-portal.git", rev = "fd644f6a8755bb86f19c7c44707acadcfa484575", features = ["wasm"] }
 yew = { version = "=0.22.0", features = ["csr"] }
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"

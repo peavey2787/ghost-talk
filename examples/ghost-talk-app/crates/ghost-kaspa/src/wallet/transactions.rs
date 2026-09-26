@@ -1,4 +1,8 @@
-use super::{account_key, sign_pskb, WalletPublic, WalletSecret, MAILBOX_OUTPUT_SOMPI};
+use super::{
+    account_key,
+    planning::{plan_signed_send, PlannedSend, SendRequest},
+    WalletPublic, WalletSecret, MAILBOX_OUTPUT_SOMPI,
+};
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
 
@@ -36,25 +40,16 @@ async fn prepare_send(
 ) -> Result<PreparedSend, String> {
     let account = account_key(secret)?;
     let plan_started = Instant::now();
-    let wire = portal
-        .plan_send_with_payload(
-            public.portal_wallet(),
-            destination,
-            amount_sompi,
-            requested_fee_sompi,
-            &[],
-        )
-        .await?;
+    let request = SendRequest {
+        destination,
+        amount_sompi,
+        requested_fee_sompi,
+        payload: &[],
+    };
+    let PlannedSend { signed, analysis } =
+        plan_signed_send(portal, public, &account, request).await?;
     let utxo_plan_ms = plan_started.elapsed().as_millis() as u64;
     let analysis_started = Instant::now();
-    let signed = sign_pskb(&wire, &public.network, &account)?;
-    let analysis = portal.analyze(&signed).await?;
-    if !analysis.mass_valid || !analysis.fee_sufficient {
-        return Err(
-            "Portal 1.0.1 payload-aware planner produced a transaction that failed final fee/mass policy"
-                .into(),
-        );
-    }
     Ok(PreparedSend {
         signed,
         fee_sompi: analysis.fee_sompi.to_string(),
@@ -64,6 +59,21 @@ async fn prepare_send(
 }
 
 pub async fn send(
+    portal: &crate::PortalFacade,
+    secret: &WalletSecret,
+    public: &WalletPublic,
+    destination: &str,
+    amount_sompi: u64,
+    requested_fee_sompi: u64,
+) -> Result<KaspaBroadcastResult, String> {
+    let fee = requested_fee_sompi;
+    super::conflict::retry_on_spent_conflict(|| {
+        send_once(portal, secret, public, destination, amount_sompi, fee)
+    })
+    .await
+}
+
+async fn send_once(
     portal: &crate::PortalFacade,
     secret: &WalletSecret,
     public: &WalletPublic,
@@ -158,25 +168,32 @@ pub(crate) async fn send_payload_with_change_policy(
     if payload.is_empty() {
         return Err("mailbox payload must not be empty".into());
     }
+    let (fee, change) = (requested_fee_sompi, advance_change);
+    super::conflict::retry_on_spent_conflict(|| {
+        send_payload_once(portal, secret, public, destination, fee, payload, change)
+    })
+    .await
+}
+
+async fn send_payload_once(
+    portal: &crate::PortalFacade,
+    secret: &WalletSecret,
+    public: &WalletPublic,
+    destination: &str,
+    requested_fee_sompi: u64,
+    payload: &[u8],
+    advance_change: bool,
+) -> Result<KaspaBroadcastResult, String> {
     let account = account_key(secret)?;
     let mut public = public.clone();
-    let wire = portal
-        .plan_send_with_payload(
-            public.portal_wallet(),
-            destination,
-            MAILBOX_OUTPUT_SOMPI,
-            requested_fee_sompi,
-            payload,
-        )
-        .await?;
-    let signed = sign_pskb(&wire, &public.network, &account)?;
-    let analysis = portal.analyze(&signed).await?;
-    if !analysis.mass_valid || !analysis.fee_sufficient {
-        return Err(
-            "Portal 1.0.1 payload-aware planner produced a mailbox transaction that failed final fee/mass policy"
-                .into(),
-        );
-    }
+    let request = SendRequest {
+        destination,
+        amount_sompi: MAILBOX_OUTPUT_SOMPI,
+        requested_fee_sompi,
+        payload,
+    };
+    let PlannedSend { signed, analysis } =
+        plan_signed_send(portal, &public, &account, request).await?;
     let transaction_id = portal.broadcast_signed_pskb(&signed).await?;
     if advance_change {
         // Never turn a successful broadcast into an error merely because there is
@@ -189,103 +206,4 @@ pub(crate) async fn send_payload_with_change_policy(
         public,
         timings: None,
     })
-}
-
-enum ConsolidationStep {
-    Broadcast(KaspaBroadcastResult),
-    Replan(u64),
-}
-
-async fn consolidation_step(
-    portal: &crate::PortalFacade,
-    secret: &WalletSecret,
-    public: &WalletPublic,
-    fee_sompi: u64,
-) -> Result<ConsolidationStep, String> {
-    let account = account_key(secret)?;
-    let wire = portal
-        .plan_consolidation(public.portal_wallet(), fee_sompi)
-        .await?;
-    let signed = sign_pskb(&wire, &public.network, &account)?;
-    let analysis = portal.analyze(&signed).await?;
-    if !analysis.mass_valid {
-        return Err(format!(
-            "Consolidation exceeds Kaspa mass policy (compute={}, transient={}, storage={})",
-            analysis.compute_mass, analysis.transient_mass, analysis.storage_mass
-        ));
-    }
-    if let Some(recommended) = consolidation_replan_fee(
-        fee_sompi,
-        analysis.fee_sufficient,
-        analysis.minimum_fee_sompi,
-        analysis.recommended_fee_sompi,
-    )? {
-        return Ok(ConsolidationStep::Replan(recommended));
-    }
-    let transaction_id = portal.broadcast_signed_pskb(&signed).await?;
-    Ok(ConsolidationStep::Broadcast(KaspaBroadcastResult {
-        transaction_id,
-        fee_sompi: analysis.fee_sompi.to_string(),
-        public: public.clone(),
-        timings: None,
-    }))
-}
-
-pub(super) fn consolidation_replan_fee(
-    current_fee_sompi: u64,
-    fee_sufficient: bool,
-    minimum_fee_sompi: u64,
-    recommended_fee_sompi: u64,
-) -> Result<Option<u64>, String> {
-    if fee_sufficient {
-        return Ok(None);
-    }
-    let next = recommended_fee_sompi.max(minimum_fee_sompi);
-    if next <= current_fee_sompi {
-        return Err(format!(
-            "Portal rejected consolidation fee policy even at {} sompi",
-            current_fee_sompi
-        ));
-    }
-    Ok(Some(next))
-}
-
-pub async fn consolidate(
-    portal: &crate::PortalFacade,
-    secret: &WalletSecret,
-    public: &WalletPublic,
-    requested_fee_sompi: u64,
-) -> Result<KaspaBroadcastResult, String> {
-    const MAX_FEE_PASSES: usize = 3;
-    let mut fee_sompi = requested_fee_sompi;
-    for _ in 0..MAX_FEE_PASSES {
-        match consolidation_step(portal, secret, public, fee_sompi).await? {
-            ConsolidationStep::Broadcast(result) => return Ok(result),
-            ConsolidationStep::Replan(recommended) => fee_sompi = recommended,
-        }
-    }
-    Err("Consolidation fee planning did not converge on the current node policy".into())
-}
-
-#[cfg(test)]
-mod fee_policy_tests {
-    use super::consolidation_replan_fee;
-
-    #[test]
-    fn consolidation_replan_uses_toccata_floor() {
-        assert_eq!(
-            consolidation_replan_fee(100, false, 150, 125).unwrap(),
-            Some(150)
-        );
-        assert_eq!(
-            consolidation_replan_fee(100, false, 125, 175).unwrap(),
-            Some(175)
-        );
-    }
-
-    #[test]
-    fn consolidation_replan_stops_when_fee_is_sufficient_or_cannot_advance() {
-        assert_eq!(consolidation_replan_fee(100, true, 150, 175).unwrap(), None);
-        assert!(consolidation_replan_fee(175, false, 150, 175).is_err());
-    }
 }

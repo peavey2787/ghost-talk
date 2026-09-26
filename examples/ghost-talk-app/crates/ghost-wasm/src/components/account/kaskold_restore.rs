@@ -58,10 +58,7 @@ fn file_accept(kind: &str) -> &'static str {
     }
 }
 
-fn select_kind(
-    kind: UseStateHandle<String>,
-    status: UseStateHandle<String>,
-) -> Callback<Event> {
+fn select_kind(kind: UseStateHandle<String>, status: UseStateHandle<String>) -> Callback<Event> {
     Callback::from(move |event: Event| {
         kind.set(event.target_unchecked_into::<HtmlSelectElement>().value());
         status.set(String::new());
@@ -92,7 +89,10 @@ fn import_callback(
         match result {
             Ok(words) => {
                 props.mnemonic.set(words);
-                status.set("KasKold recovery imported. Review the 24 words and restore the Ghost Talk ID.".into());
+                status.set(
+                    "KasKold recovery imported. Review the 24 words and restore the Ghost Talk ID."
+                        .into(),
+                );
             }
             Err(error) => status.set(error),
         }
@@ -100,13 +100,8 @@ fn import_callback(
     })
 }
 
-type RestoreHandler = fn(
-    &mut vault_runtime::VaultRuntime,
-    &str,
-    &[u8],
-    &str,
-    &str,
-) -> Result<(), String>;
+type RestoreHandler =
+    fn(&mut vault_runtime::VaultRuntime, &str, &[u8], &str, &str) -> Result<(), String>;
 
 const RESTORE_HANDLERS: [(&str, RestoreHandler); 5] = [
     ("mnemonic", restore_mnemonic),

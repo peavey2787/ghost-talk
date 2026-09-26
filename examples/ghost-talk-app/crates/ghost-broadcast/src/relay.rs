@@ -45,7 +45,10 @@ pub fn validate_relay_url(value: &str) -> Result<(), String> {
     if value.starts_with("wss://") || is_local_ws(value) {
         Ok(())
     } else {
-        Err("broadcast relay must use wss:// (ws:// is allowed only for localhost development)".into())
+        Err(
+            "broadcast relay must use wss:// (ws:// is allowed only for localhost development)"
+                .into(),
+        )
     }
 }
 
@@ -55,8 +58,13 @@ fn is_local_ws(value: &str) -> bool {
         || value.starts_with("ws://[::1]")
 }
 
-pub fn encode_relay_frame(sequence: u64, timestamp_ms: u64, encoded: &[u8]) -> Result<Vec<u8>, String> {
-    let len = u32::try_from(encoded.len()).map_err(|_| "broadcast relay frame is too large".to_string())?;
+pub fn encode_relay_frame(
+    sequence: u64,
+    timestamp_ms: u64,
+    encoded: &[u8],
+) -> Result<Vec<u8>, String> {
+    let len = u32::try_from(encoded.len())
+        .map_err(|_| "broadcast relay frame is too large".to_string())?;
     let mut out = Vec::with_capacity(25 + encoded.len());
     out.extend_from_slice(RELAY_FRAME_MAGIC);
     out.push(RELAY_PROTOCOL_VERSION);

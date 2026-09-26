@@ -77,7 +77,6 @@ pub fn derive_public(secret: &WalletSecret) -> Result<WalletPublic, String> {
     .map(|(_, public)| public)
 }
 
-
 /// Verify that a public wallet view belongs to the encrypted/derived secret and
 /// that both derivation cursors remain inside the committed lookahead window.
 pub fn validate_public_projection(

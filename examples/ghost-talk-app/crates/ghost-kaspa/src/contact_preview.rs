@@ -45,7 +45,10 @@ fn validate_identity(identity_id: &str) -> Result<(), String> {
     }
 }
 
-fn project_request(request: GhostContactRequest, envelope: &[u8]) -> HydraIncomingRequestProjection {
+fn project_request(
+    request: GhostContactRequest,
+    envelope: &[u8],
+) -> HydraIncomingRequestProjection {
     let peer_hydra_id = request.sender.hydra_identity_id.clone();
     HydraIncomingRequestProjection {
         request_id: request.request_id,
@@ -54,11 +57,16 @@ fn project_request(request: GhostContactRequest, envelope: &[u8]) -> HydraIncomi
         peer_label: request.sender.display_name,
         peer_hydra_id,
         signed_request_hex: hex::encode(envelope),
-        room_invite: request.room_invite.map(|invite| ghost_chat::RoomInviteMeta {
-            room_id: invite.room_id,
-            room_name: invite.room_name,
-        }),
-        call_id: request.call_invite.as_ref().map(|invite| invite.call_id.clone()),
+        room_invite: request
+            .room_invite
+            .map(|invite| ghost_chat::RoomInviteMeta {
+                room_id: invite.room_id,
+                room_name: invite.room_name,
+            }),
+        call_id: request
+            .call_invite
+            .as_ref()
+            .map(|invite| invite.call_id.clone()),
         call_action: request.call_invite.map(|invite| invite.action),
     }
 }

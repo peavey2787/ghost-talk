@@ -26,4 +26,3 @@ pub struct WalletNetworkOptions {
     #[serde(default)]
     pub wrpc_endpoint: Option<String>,
 }
-

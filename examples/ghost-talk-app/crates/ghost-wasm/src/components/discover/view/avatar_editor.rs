@@ -101,9 +101,8 @@ fn preview(
             offset_x,
             offset_y,
         );
-        let style = format!(
-            "left:{left:.3}px;top:{top:.3}px;width:{width:.3}px;height:{height:.3}px"
-        );
+        let style =
+            format!("left:{left:.3}px;top:{top:.3}px;width:{width:.3}px;height:{height:.3}px");
         return html! { <img class="avatar-crop-image" src={source.data_url.clone()} {style} alt="Avatar crop preview" draggable="false"/> };
     }
     html! { <crate::components::avatar::Avatar label={props.label.clone()} reference={props.current.clone()} size={160}/> }

@@ -120,10 +120,10 @@ def check_shared_parity_owners() -> None:
 def check_browser_host_compile_contracts() -> None:
     api = text(APP_CRATES / "ghost-api" / "src" / "lib.rs")
     browser = APP_CRATES / "ghost-wasm" / "src" / "native" / "browser_host"
-    kasia = text(browser / "interop" / "kasia.rs")
+    kasia = text(browser / "interop" / "kasia.rs") + text(browser / "interop" / "kasia" / "indexer.rs")
     backup = text(browser / "backup.rs")
     credentials = text(browser / "support" / "credentials.rs")
-    mailbox = text(browser / "runtime" / "mailbox.rs")
+    mailbox = text(browser / "runtime" / "mailbox.rs") + text(browser / "runtime" / "mailbox" / "request.rs")
     media = text(browser / "media.rs")
     native = text(APP_CRATES / "ghost-wasm" / "src" / "native.rs")
     relay = text(APP_CRATES / "ghost-wasm" / "src" / "controllers" / "broadcast" / "relay.rs")
@@ -131,7 +131,7 @@ def check_browser_host_compile_contracts() -> None:
     for token in ("BroadcastStartRequest", "derivation_presets"):
         if token not in api:
             fail(f"ghost-api root must re-export browser-host dependency `{token}`")
-    for token in ("fn decrypt_context", "fn decrypt_handshake", "super::super::support::debug::record"):
+    for token in ("fn decrypt_context", "fn decrypt_handshake", "debug::record"):
         if token not in kasia:
             fail(f"standalone Web Kasia adapter is missing compile contract `{token}`")
     if "ghost_api::validate_profile_backup_inputs" not in backup:
@@ -151,9 +151,9 @@ def check_browser_host_compile_contracts() -> None:
         browser / "support" / "util.rs": ("required_str", "required", "to_value", "open_wallet_secret"),
         browser / "support" / "storage.rs": ("local_storage",),
         browser / "runtime" / "history.rs": ("gather", "backup_payloads"),
-        browser / "runtime" / "direct.rs": ("register_routes", "binding", "seal", "open", "leave", "rejoin"),
         browser / "runtime" / "live.rs": ("start", "stop"),
-        browser / "runtime" / "session.rs": ("set_identity", "clear", "debug_value"),
+        browser / "runtime" / "session.rs": ("set_identity", "clear"),
+        browser / "runtime" / "session" / "debug.rs": ("debug_value",),
     }
     for path, helpers in required_helpers.items():
         source = text(path)

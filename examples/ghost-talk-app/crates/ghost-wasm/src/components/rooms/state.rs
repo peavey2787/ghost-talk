@@ -35,6 +35,7 @@ pub(crate) struct RoomsUi {
     pub(crate) ban_amount: UseStateHandle<String>,
     pub(crate) ban_unit: UseStateHandle<String>,
     pub(crate) accepted_bootstrap_room: UseStateHandle<Option<(String, String)>>,
+    pub(crate) voice: Option<crate::components::call::RoomVoiceContext>,
 }
 
 #[derive(Clone)]
@@ -73,6 +74,7 @@ pub fn rooms_view(props: &RoomsProps) -> Html {
         ban_amount: use_state(|| "60".to_string()),
         ban_unit: use_state(|| "minutes".to_string()),
         accepted_bootstrap_room: use_state(|| None::<(String, String)>),
+        voice: use_context::<crate::components::call::RoomVoiceContext>(),
     };
 
     use_persisted_acceptance_effect(&props.profile, &ui);

@@ -36,5 +36,5 @@ sha2 = { version = "0.10", optional = true }
 blake2b_simd = { version = "1", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen = { version = "=0.2.100", optional = true }
-js-sys = { version = "=0.3.77", optional = true }
+wasm-bindgen = { version = "=0.2.108", optional = true }
+js-sys = { version = "=0.3.85", optional = true }

@@ -1,4 +1,5 @@
 use super::*;
+use ghost_kaspa::wallet::WalletPublic;
 
 fn wallet() -> WalletPublic {
     WalletPublic {

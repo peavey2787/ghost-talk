@@ -65,7 +65,8 @@ fn ordered_addresses(public: &WalletPublic, priority: &[String]) -> Vec<String> 
 }
 
 async fn fetch_address(base: &str, address: &str) -> Result<Vec<WalletHistoryEntry>, String> {
-    Ok(fetch_raw_address(base, address).await?
+    Ok(fetch_raw_address(base, address)
+        .await?
         .iter()
         .filter_map(|entry| project_entry(address, entry))
         .collect())
@@ -76,13 +77,22 @@ pub(in crate::native::browser_host) async fn raw_payloads(
     address: &str,
 ) -> Result<BTreeMap<String, Vec<u8>>, String> {
     let values = fetch_raw_address(ghost_core::kaspa_rest_base(network), address).await?;
-    Ok(values.into_iter().filter_map(|value| {
-        let id = value.get("transaction_id")
-            .or_else(|| value.get("transactionId"))?.as_str()?.to_owned();
-        let payload = value.get("payload").and_then(Value::as_str)
-            .and_then(|payload| hex::decode(payload).ok()).unwrap_or_default();
-        Some((id, payload))
-    }).collect())
+    Ok(values
+        .into_iter()
+        .filter_map(|value| {
+            let id = value
+                .get("transaction_id")
+                .or_else(|| value.get("transactionId"))?
+                .as_str()?
+                .to_owned();
+            let payload = value
+                .get("payload")
+                .and_then(Value::as_str)
+                .and_then(|payload| hex::decode(payload).ok())
+                .unwrap_or_default();
+            Some((id, payload))
+        })
+        .collect())
 }
 
 pub(in crate::native::browser_host) async fn backup_payloads(
@@ -93,12 +103,23 @@ pub(in crate::native::browser_host) async fn backup_payloads(
     let mut out = Vec::new();
     for address in addresses {
         for value in fetch_raw_address(ghost_core::kaspa_rest_base(network), address).await? {
-            let block_time = value.get("block_time").or_else(|| value.get("blockTime")).and_then(json_u64);
-            if !block_time.is_some_and(|time| time <= cutoff_ms) { continue; }
-            let blue = value.get("accepting_block_blue_score")
-                .or_else(|| value.get("acceptingBlockBlueScore")).and_then(json_u64).unwrap_or_default();
-            let payload = value.get("payload").and_then(Value::as_str)
-                .and_then(|payload| hex::decode(payload).ok()).unwrap_or_default();
+            let block_time = value
+                .get("block_time")
+                .or_else(|| value.get("blockTime"))
+                .and_then(json_u64);
+            if !block_time.is_some_and(|time| time <= cutoff_ms) {
+                continue;
+            }
+            let blue = value
+                .get("accepting_block_blue_score")
+                .or_else(|| value.get("acceptingBlockBlueScore"))
+                .and_then(json_u64)
+                .unwrap_or_default();
+            let payload = value
+                .get("payload")
+                .and_then(Value::as_str)
+                .and_then(|payload| hex::decode(payload).ok())
+                .unwrap_or_default();
             out.push((blue, payload));
         }
     }
@@ -113,17 +134,26 @@ async fn fetch_raw_address(base: &str, address: &str) -> Result<Vec<Value>, Stri
         let url = history_url(base, address, before);
         let response = fetch(&url).await?;
         if !response.ok() {
-            return Err(format!("history endpoint returned HTTP {}", response.status()));
+            return Err(format!(
+                "history endpoint returned HTTP {}",
+                response.status()
+            ));
         }
-        let next = response.headers().get("x-next-page-before")
+        let next = response
+            .headers()
+            .get("x-next-page-before")
             .map_err(crate::native::invoke::js_error)?
             .and_then(|value| value.parse::<u64>().ok());
         let text = JsFuture::from(response.text().map_err(crate::native::invoke::js_error)?)
-            .await.map_err(crate::native::invoke::js_error)?
-            .as_string().ok_or("history response was not text")?;
+            .await
+            .map_err(crate::native::invoke::js_error)?
+            .as_string()
+            .ok_or("history response was not text")?;
         let entries: Vec<Value> = serde_json::from_str(&text)
             .map_err(|error| format!("invalid history response: {error}"))?;
-        if entries.is_empty() { break; }
+        if entries.is_empty() {
+            break;
+        }
         out.extend(entries);
         let Some(next_before) = next else { break };
         if before == Some(next_before) {
@@ -145,9 +175,8 @@ async fn fetch(url: &str) -> Result<Response, String> {
 
 fn history_url(base: &str, address: &str, before: Option<u64>) -> String {
     let base = base.trim_end_matches('/');
-    let mut url = format!(
-        "{base}/addresses/{address}/full-transactions-page?limit=100&acceptance=accepted"
-    );
+    let mut url =
+        format!("{base}/addresses/{address}/full-transactions-page?limit=100&acceptance=accepted");
     if let Some(before) = before {
         url.push_str("&before=");
         url.push_str(&before.to_string());

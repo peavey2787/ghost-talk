@@ -61,7 +61,6 @@ pub async fn wallet_send(
     result.map(broadcast_projection)
 }
 
-
 fn outbound_secret(
     state: &WalletRuntimeState,
     profile_id: &str,

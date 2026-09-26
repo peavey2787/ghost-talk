@@ -2,7 +2,7 @@ use ghost_contacts::ContactService;
 use ghost_domain::identity::PeerBinding;
 
 use ghost_domain::call::{CallEvent, CallManager};
-use ghost_p2p::{GhostP2pTransport, P2pNetTransport, P2pRouteState, P2pStartConfig};
+use ghost_p2p::{P2pNetTransport, P2pRouteState};
 use ghost_talk_wasm::{BrowserVoiceReceiver, BrowserVoiceSender};
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
@@ -15,13 +15,12 @@ use crate::{
     random_id,
 };
 mod runtime_sync;
-use runtime_sync::{realtime_wallet_progress_callback, reset_call_owner, sync_profile_ref};
+use runtime_sync::{reset_call_owner, sync_profile_ref, use_realtime_sender};
 
 use super::{
     active_call, apply_call_command, can_start_call, close_media, media, p2p_route, presentation,
     signaling, termination, transport, CallContext, CallRuntime, RoomVoiceContext,
 };
-use crate::controllers::call::RealtimeSender;
 
 mod signal_processing;
 use signal_processing::process_signed_call_signal;
@@ -68,7 +67,8 @@ pub fn live_call_manager(props: &LiveCallManagerProps) -> Html {
     let render_epoch = use_state(|| 0u64);
     let runtime = use_call_runtime(props, render_epoch);
     use_call_event_effect(props, runtime.clone());
-    use_p2p_effect(props, runtime.clone());
+    p2p_route::use_p2p_effect(&props.profile, runtime.clone());
+    p2p_route::use_session_announce_effect(&props.profile, runtime.clone());
     use_realtime_effect(props, runtime.clone());
     use_connecting_effect(runtime.clone());
     let context = CallContext {
@@ -81,8 +81,10 @@ pub fn live_call_manager(props: &LiveCallManagerProps) -> Html {
     html! {
         <ContextProvider<CallContext> context={context}>
           <ContextProvider<RoomVoiceContext> context={room_voice}>
+          <ContextProvider<super::DirectTextContext> context={super::direct_text::context(&runtime)}>
             {for props.children.iter()}
             {presentation::call_modal(current, &runtime.p2p_state, &actions)}
+          </ContextProvider<super::DirectTextContext>>
           </ContextProvider<RoomVoiceContext>>
         </ContextProvider<CallContext>>
     }
@@ -107,28 +109,7 @@ fn use_call_runtime(
     let p2p_state = use_state(|| P2pRouteState::Unavailable);
     let p2p_subscriptions = use_mut_ref(std::collections::HashSet::<String>::new);
     let p2p_generation = use_mut_ref(|| 0u64);
-    let on_wallet_progress = realtime_wallet_progress_callback(
-        profile_ref.clone(),
-        render_epoch.clone(),
-        props.on_update.clone(),
-    );
-    let realtime_ref = use_mut_ref(|| {
-        RealtimeSender::new(
-            props.profile.clone(),
-            props.password.clone(),
-            p2p.clone(),
-            p2p_state.clone(),
-            on_wallet_progress.clone(),
-            props.on_error.clone(),
-        )
-    });
-    realtime_ref.borrow().sync(
-        profile_ref.borrow().clone(),
-        props.password.clone(),
-        on_wallet_progress,
-        props.on_error.clone(),
-    );
-    let realtime = realtime_ref.borrow().clone();
+    let realtime = use_realtime_sender(props, &profile_ref, &render_epoch, &p2p, &p2p_state);
     CallRuntime {
         profile_ref,
         call_manager,
@@ -201,89 +182,6 @@ fn start_call_callback(runtime: CallRuntime) -> Callback<Chat> {
 }
 
 #[hook]
-fn use_p2p_effect(props: &LiveCallManagerProps, runtime: CallRuntime) {
-    let network = props
-        .profile
-        .wallet
-        .as_ref()
-        .map(|wallet| wallet.public.network.clone());
-    let key = (
-        props.profile.id.clone(),
-        network.clone(),
-        props.profile.settings.route.clone(),
-    );
-    use_effect_with(key, move |(profile_id, network_id, route)| {
-        let generation = {
-            let mut value = runtime.p2p_generation.borrow_mut();
-            *value = value.wrapping_add(1);
-            *value
-        };
-        let enabled = route.eq_ignore_ascii_case("auto") && network_id.is_some();
-        if enabled {
-            runtime.p2p_state.set(P2pRouteState::Starting);
-            let runtime_for_start = runtime.clone();
-            let config = P2pStartConfig {
-                network_id: network_id.clone().expect("enabled p2p has a configured network"),
-                profile_id: profile_id.clone(),
-            };
-            spawn_local(async move {
-                let started = match runtime_for_start.p2p.try_borrow_mut() {
-                    Ok(mut p2p) => p2p.start(config).await,
-                    Err(_) => Err("p2p-net lifecycle is already busy".to_string()),
-                };
-                if *runtime_for_start.p2p_generation.borrow() != generation {
-                    // This start completed after its profile/network effect was
-                    // retired. A newer generation cannot have started while the
-                    // mutable p2p borrow above was held, so this node is stale.
-                    let old = runtime_for_start
-                        .p2p
-                        .try_borrow_mut()
-                        .ok()
-                        .map(|mut p2p| std::mem::take(&mut *p2p));
-                    if let Some(mut old) = old {
-                        let _ = old.shutdown().await;
-                    }
-                    return;
-                }
-                match started {
-                    Ok(_) => {
-                        runtime_for_start.p2p_state.set(P2pRouteState::Connecting);
-                        if p2p_route::spawn_event_loop(runtime_for_start.clone(), generation).is_err() {
-                            runtime_for_start.p2p_state.set(P2pRouteState::KaspaFallback);
-                            return;
-                        }
-                        p2p_route::announce_active_sessions(&runtime_for_start).await;
-                    }
-                    Err(_) => runtime_for_start.p2p_state.set(P2pRouteState::KaspaFallback),
-                }
-            });
-        } else {
-            runtime.p2p_state.set(P2pRouteState::Unavailable);
-        }
-
-        let runtime_for_cleanup = runtime.clone();
-        move || {
-            {
-                let mut value = runtime_for_cleanup.p2p_generation.borrow_mut();
-                *value = value.wrapping_add(1);
-            }
-            runtime_for_cleanup.p2p_subscriptions.borrow_mut().clear();
-            runtime_for_cleanup.p2p_state.set(P2pRouteState::Unavailable);
-            let old = runtime_for_cleanup
-                .p2p
-                .try_borrow_mut()
-                .ok()
-                .map(|mut p2p| std::mem::take(&mut *p2p));
-            if let Some(mut old) = old {
-                spawn_local(async move {
-                    let _ = old.shutdown().await;
-                });
-            }
-        }
-    });
-}
-
-#[hook]
 fn use_realtime_effect(props: &LiveCallManagerProps, runtime: CallRuntime) {
     let controls = props.realtime_controls.clone();
     let on_handled = props.on_control_handled.clone();
@@ -294,6 +192,14 @@ fn use_realtime_effect(props: &LiveCallManagerProps, runtime: CallRuntime) {
     );
     use_effect_with(key, move |_| {
         for control in controls.iter().cloned() {
+            if runtime.profile_ref.borrow().settings.debug_logging {
+                let kind = live_voice::body_kind(&control.body);
+                crate::controllers::debug::record(
+                    "realtime",
+                    "realtime-received",
+                    format!("carrier=kaspa kind={kind} chat={}", control.chat_id),
+                );
+            }
             if process_realtime_control(control.clone(), runtime.clone()) {
                 on_handled.emit(control.id);
             }

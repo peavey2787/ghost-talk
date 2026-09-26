@@ -1,6 +1,6 @@
-use ghost_protocol::REALTIME_INNER_PREFIX;
-use ghost_api::HydraRealtimeEnvelope;
 use base64::Engine as _;
+use ghost_api::HydraRealtimeEnvelope;
+use ghost_protocol::REALTIME_INNER_PREFIX;
 
 use super::super::{
     runtime_owner::HydraRuntimeState,
@@ -114,7 +114,7 @@ pub(crate) fn realtime_carrier(
     if envelope.len().saturating_add(68) > MAX_MAILBOX_ENVELOPE_BYTES {
         return Err("realtime HYDRA envelope exceeds the configured carrier limit".into());
     }
-    ghost_protocol::Gtr1Envelope::from_hex_ids(
+    ghost_realtime::Gtr1Envelope::from_hex_ids(
         &runtime.identity_id,
         message_id,
         &binding.sid,

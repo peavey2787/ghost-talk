@@ -1,4 +1,6 @@
-use ghost_api::{KasKoldBackupResult, KasKoldInventoryResult, KasKoldReviewResult, KasKoldSignResult};
+use ghost_api::{
+    KasKoldBackupResult, KasKoldInventoryResult, KasKoldReviewResult, KasKoldSignResult,
+};
 
 #[tauri::command]
 pub async fn kaskold_import_text(
@@ -49,13 +51,7 @@ pub async fn kaskold_backup(
     carrier: Vec<u8>,
 ) -> Result<KasKoldBackupResult, String> {
     crate::run_blocking("KasKold backup", move || {
-        ghost_kaskold::backup_inventory(
-            &password,
-            &sealed_inventory,
-            &kind,
-            &credential,
-            &carrier,
-        )
+        ghost_kaskold::backup_inventory(&password, &sealed_inventory, &kind, &credential, &carrier)
     })
     .await
 }

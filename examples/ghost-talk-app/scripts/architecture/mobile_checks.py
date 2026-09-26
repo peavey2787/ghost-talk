@@ -24,18 +24,6 @@ def check_mobile_application_contracts() -> None:
     native = APP_ROOT / "crates" / "ghost-talk-native"
     wasm = APP_ROOT / "crates" / "ghost-wasm"
 
-    workspace_manifest = require_file(APP_ROOT / "Cargo.toml")
-    native_manifest = require_file(native / "Cargo.toml")
-    kaspa_pin = "cfafeb4c093fa37a303f1b9f19c58f986b870ce3"
-    require(workspace_manifest, 'kaspa-hashes = { version = "2.0.1"', "mobile Rusty-Kaspa hash pin")
-    require(workspace_manifest, kaspa_pin, "reviewed Rusty-Kaspa v2.0.1 commit")
-    require(
-        native_manifest,
-        '[target.\'cfg(any(target_os = "android", target_os = "ios"))\'.dependencies]',
-        "mobile-only dependency boundary",
-    )
-    require(native_manifest, 'kaspa-hashes = { workspace = true, features = ["no-asm"] }', "portable mobile Kaspa hashes")
-
     configure = require_file(scripts / "mobile" / "configure.py")
     for permission in (
         "android.permission.RECORD_AUDIO",

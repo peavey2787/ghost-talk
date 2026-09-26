@@ -1,10 +1,10 @@
 use super::progress;
+use ghost_api::KaspaArchivePublishResult;
+use ghost_kaspa::wallet::{self, WalletSecret};
 use ghost_kaspa::{
     estimate_archive_chunk_fee, ArchiveInFlightChunk, ArchiveProgress, ArchivePublishRequest,
     ARCHIVE_CHUNK_BYTES,
 };
-use ghost_api::KaspaArchivePublishResult;
-use ghost_kaspa::wallet::{self, WalletSecret};
 use ghost_media::{
     content_hash, decode_archive_chunk, encode_archive_chunk, KaspaArchiveChunk,
     KaspaArchiveLocator, MediaLocation, MediaReference,
@@ -72,10 +72,9 @@ async fn ensure_cost_bound(
 ) -> Result<(), String> {
     let paid = state.paid_fee()?;
     let remaining = &chunks[state.completed.len()..];
-    let estimated = ghost_kaspa::archive_remaining_cost(
-        portal, secret, &state.public, address, remaining,
-    )
-    .await?;
+    let estimated =
+        ghost_kaspa::archive_remaining_cost(portal, secret, &state.public, address, remaining)
+            .await?;
     let projected = paid.saturating_add(u128::from(estimated));
     if request.max_cost_sompi == 0 || projected > u128::from(request.max_cost_sompi) {
         return Err(format!(

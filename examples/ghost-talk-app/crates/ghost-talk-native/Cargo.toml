@@ -20,9 +20,9 @@ serde_json.workspace = true
 ghost-talk.workspace = true
 ghost-core = { path = "../ghost-core" }
 ghost-protocol = { path = "../ghost-protocol" }
+ghost-realtime.workspace = true
 ghost-kaspa = { path = "../ghost-kaspa", features = ["upstream"] }
-kaspa-wrpc-client.workspace = true
-workflow-core.workspace = true
+kaspa-portal.workspace = true
 ghost-hydra = { path = "../ghost-hydra", features = ["native"] }
 ghost-storage = { path = "../ghost-storage" }
 ghost-history = { path = "../ghost-history" }
@@ -39,7 +39,3 @@ ghost-media = { path = "../ghost-media" }
 ghost-broadcast = { path = "../ghost-broadcast" }
 ghost-kasia = { path = "../ghost-kasia", features = ["native"] }
 ghost-indexer = { path = "../ghost-indexer" }
-[target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
-# Rusty-Kaspa's x86_64 Keccak assembly build script does not support mobile OS targets.
-# Keep the reviewed v2.0.1 package but force its portable implementation on Android/iOS.
-kaspa-hashes = { workspace = true, features = ["no-asm"] }

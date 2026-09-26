@@ -1,13 +1,13 @@
 use yew::prelude::*;
 
 use crate::{
-    components::form::{binary_file_input, text_input},
     components::account::identity::ActivatedProfile,
+    components::form::{binary_file_input, text_input},
 };
 
 mod actions;
 mod io;
-use actions::backup_callback;
+use actions::{backup_callback, BackupInputs};
 use io::{render_status, select_state};
 
 #[derive(Properties, PartialEq)]
@@ -51,7 +51,8 @@ pub(super) fn kaskold_backup(props: &KasKoldBackupProps) -> Html {
                     Html::default()
                 }}
                 <button disabled={*busy} onclick={backup_callback(
-                    props.session.profile.clone(), props.session.password.clone(), kind.clone(), secret.clone(), carrier.clone(), result.clone(), status.clone(), busy.clone()
+                    props.session.profile.clone(), props.session.password.clone(),
+                    BackupInputs { kind: kind.clone(), secret: secret.clone(), carrier: carrier.clone(), result: result.clone(), status: status.clone(), busy: busy.clone() }
                 )}>{if *busy {"Creating…"} else {"Create backup"}}</button>
             </div>
             {render_status(&status, &result)}

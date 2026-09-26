@@ -73,6 +73,7 @@ pub(super) fn render_advanced(props: &ChatProps, state: &ChatUiState, chat: &Cha
     html! {
         <div class="advanced-drawer">
             <label>{"Realtime route"}<select value={props.profile.settings.route.clone()} onchange={chat_setting_callback(props, "route")}><option value="Auto">{"Auto"}</option><option value="Kaspa only">{"Kaspa only"}</option></select></label>
+            <label>{"Text messages"}<select value={props.profile.settings.text_route.clone()} onchange={chat_setting_callback(props, "textRoute")}><option value="Kaspa">{"Kaspa (stored)"}</option><option value="P2P preferred">{"p2p-net preferred"}</option><option value="P2P only">{"p2p-net only"}</option></select></label>
             <label>{"Steganography"}<select value={props.profile.settings.stego.clone()} onchange={chat_setting_callback(props, "stego")}><option>{"Off"}</option><option>{"Deterministic"}</option><option>{"Fast Unicode"}</option><option>{"Fast Hybrid"}</option><option>{"Arithmetic"}</option></select></label>
             <small>{if chat.bootstrap_complete() {"🛡 Ghost PQ secure session active."} else {"🛡 Ghost PQ session establishing or inactive."}}</small>
             {render_kasia_compatibility(props, chat)}

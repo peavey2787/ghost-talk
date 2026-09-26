@@ -17,7 +17,9 @@ pub(crate) async fn start(
         rtmp_server,
         rtmp_stream_key,
         relay_url,
-    ).await {
+    )
+    .await
+    {
         relay::stop(session_id);
         return Err(error);
     }
@@ -31,12 +33,8 @@ pub(crate) async fn push(
     encoded: Vec<u8>,
 ) -> Result<(), String> {
     let relay_result = relay::push(session_id, sequence, timestamp_ms, &encoded);
-    let native_result = crate::native::push_broadcast(
-        session_id,
-        sequence,
-        timestamp_ms,
-        encoded,
-    ).await;
+    let native_result =
+        crate::native::push_broadcast(session_id, sequence, timestamp_ms, encoded).await;
     native_result.and(relay_result)
 }
 

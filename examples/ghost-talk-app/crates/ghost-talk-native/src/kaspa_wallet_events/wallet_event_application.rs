@@ -1,124 +1,125 @@
 use super::wallet_event_state::{
-    announce_reconnecting, apply_entry, broadcast, changed_transaction_ids, connect_event_client,
-    create_event_client, emit_utxo_set, handle_rpc_state, observed_transactions, oneshot,
-    parse_event_addresses, remove_entry, stop_all_wallet_subscriptions, Arc, Channel, HashMap,
-    KaspaRpcClient, ListenerId, NetworkId, Notification, RpcAddress, RpcState,
-    RpcUtxosByAddressesEntry, TrackedUtxo, WalletEventStream, WalletNodeEvent, EVENT_FANOUT,
+    announce_reconnecting, broadcast, connect_and_subscribe, emit_utxo_set, oneshot, UtxoTracker,
+    WalletEventStream, WalletNodeEvent, EVENT_FANOUT,
 };
-use std::str::FromStr;
-use workflow_core::channel::MultiplexerChannel;
-pub(crate) fn apply_utxo_change(
-    events: &broadcast::Sender<WalletNodeEvent>,
-    utxo_set: &mut HashMap<String, TrackedUtxo>,
-    removed: &[RpcUtxosByAddressesEntry],
-    added: &[RpcUtxosByAddressesEntry],
-) {
-    let transaction_ids = changed_transaction_ids(added);
-    for entry in removed {
-        remove_entry(utxo_set, entry);
-    }
-    for entry in added {
-        apply_entry(utxo_set, entry);
-    }
-    emit_utxo_set(
-        events,
-        utxo_set,
-        transaction_ids,
-        observed_transactions(added),
-    );
+use kaspa_portal::network::{wrpc::notification::Notification, NetworkApi};
+use std::time::Duration;
+
+const RECONNECT_DELAY: Duration = Duration::from_secs(3);
+
+struct WalletWatch {
+    network: String,
+    endpoint: String,
+    addresses: Vec<String>,
+    events: broadcast::Sender<WalletNodeEvent>,
 }
 
-pub(crate) fn handle_wallet_notification<E: std::fmt::Display>(
-    notification: Result<Notification, E>,
+pub(crate) fn apply_notification(
+    notification: Notification,
     events: &broadcast::Sender<WalletNodeEvent>,
-    utxo_set: &mut HashMap<String, TrackedUtxo>,
+    tracker: &mut UtxoTracker,
+) {
+    match notification {
+        Notification::UtxosChanged(change) => {
+            for entry in &change.removed {
+                tracker.remove(entry);
+            }
+            for entry in &change.added {
+                tracker.apply(entry);
+            }
+            emit_utxo_set(events, tracker, &change.added);
+        }
+        Notification::VirtualDaaScoreChanged(score) => {
+            let _ = events.send(WalletNodeEvent::VirtualDaaScoreChanged(score));
+        }
+        Notification::BlockAdded(_) => {}
+    }
+}
+
+/// Apply one stream result; false when the stream failed and must reconnect.
+pub(crate) fn deliver<E: std::fmt::Display>(
+    result: Result<Notification, E>,
+    events: &broadcast::Sender<WalletNodeEvent>,
+    tracker: &mut UtxoTracker,
 ) -> bool {
-    let notification = notification
-        .map_err(|error| {
+    match result {
+        Ok(notification) => {
+            apply_notification(notification, events, tracker);
+            true
+        }
+        Err(error) => {
             crate::debug_log::record(
                 "warn",
                 "kaspa",
                 "wallet-event-notification-closed",
                 error.to_string(),
             );
-            announce_reconnecting(events);
-        })
-        .ok();
-    let Some(notification) = notification else {
-        return false;
-    };
-    if let Notification::UtxosChanged(change) = notification {
-        apply_utxo_change(
-            events,
-            utxo_set,
-            change.removed.as_ref(),
-            change.added.as_ref(),
-        );
-        return true;
+            false
+        }
     }
-    if let Notification::VirtualDaaScoreChanged(change) = notification {
-        let _ = events.send(WalletNodeEvent::VirtualDaaScoreChanged(
-            change.virtual_daa_score,
-        ));
-    }
-    true
 }
 
-pub(crate) async fn run_wallet_event_loop(
-    client: Arc<KaspaRpcClient>,
-    notifications: Channel<Notification>,
-    events: broadcast::Sender<WalletNodeEvent>,
-    addresses: Vec<RpcAddress>,
-    mut shutdown_rx: oneshot::Receiver<()>,
-) {
-    let ctl = client.rpc_ctl().multiplexer().channel();
-    let mut listener_id: Option<ListenerId> = None;
-    let mut utxo_set = HashMap::<String, TrackedUtxo>::new();
-    connect_event_client(&client, &events).await;
-
-    while pump_wallet_event(
-        &client,
-        &ctl,
-        &notifications,
-        &events,
-        &addresses,
-        &mut listener_id,
-        &mut utxo_set,
-        &mut shutdown_rx,
-    )
-    .await
-    {}
-    stop_all_wallet_subscriptions(&client, &mut listener_id, &addresses).await;
-    let _ = client.disconnect().await;
-}
-
-#[expect(
-    clippy::too_many_arguments,
-    reason = "wallet event-loop state boundary"
-)]
-async fn pump_wallet_event(
-    client: &KaspaRpcClient,
-    ctl: &MultiplexerChannel<RpcState>,
-    notifications: &Channel<Notification>,
-    events: &broadcast::Sender<WalletNodeEvent>,
-    addresses: &[RpcAddress],
-    listener_id: &mut Option<ListenerId>,
-    utxo_set: &mut HashMap<String, TrackedUtxo>,
-    shutdown_rx: &mut oneshot::Receiver<()>,
-) -> bool {
+/// Next stream result, or `None` once shutdown is requested.
+async fn next_or_shutdown(
+    api: &NetworkApi,
+    shutdown: &mut oneshot::Receiver<()>,
+) -> Option<kaspa_portal::error::Result<Notification>> {
     tokio::select! {
-        _ = shutdown_rx => false,
-        state = ctl.receiver.recv() => handle_rpc_state(
-            state,
-            client,
-            notifications,
-            events,
-            listener_id,
-            addresses,
-            utxo_set,
-        ).await,
-        notification = notifications.receiver.recv() => {
-            handle_wallet_notification(notification, events, utxo_set)
+        _ = shutdown => None,
+        result = api.next_notification() => Some(result),
+    }
+}
+
+/// Pump notifications until shutdown (false) or a stream failure (true).
+async fn pump(
+    api: &NetworkApi,
+    watch: &WalletWatch,
+    tracker: &mut UtxoTracker,
+    shutdown: &mut oneshot::Receiver<()>,
+) -> bool {
+    while let Some(result) = next_or_shutdown(api, shutdown).await {
+        if !deliver(result, &watch.events, tracker) {
+            return true;
+        }
+    }
+    false
+}
+
+/// One connect/subscribe/pump cycle; true when the loop should reconnect.
+async fn run_cycle(
+    watch: &WalletWatch,
+    tracker: &mut UtxoTracker,
+    shutdown: &mut oneshot::Receiver<()>,
+) -> bool {
+    let connected = connect_and_subscribe(
+        &watch.network,
+        &watch.endpoint,
+        &watch.addresses,
+        &watch.events,
+        tracker,
+    )
+    .await;
+    match connected {
+        Ok((portal, api)) => {
+            let retry = pump(&api, watch, tracker, shutdown).await;
+            let _ = portal.disconnect();
+            retry
+        }
+        Err(error) => {
+            crate::debug_log::record("warn", "kaspa", "wallet-event-connect-failed", error);
+            true
+        }
+    }
+}
+
+async fn run_wallet_event_loop(watch: WalletWatch, mut shutdown: oneshot::Receiver<()>) {
+    let mut tracker = UtxoTracker::new(&watch.network);
+    while run_cycle(&watch, &mut tracker, &mut shutdown).await {
+        tracker.set.clear();
+        announce_reconnecting(&watch.events);
+        tokio::select! {
+            _ = &mut shutdown => return,
+            _ = tokio::time::sleep(RECONNECT_DELAY) => {}
         }
     }
 }
@@ -128,22 +129,113 @@ pub fn start(
     endpoint: Option<&str>,
     addresses: &[String],
 ) -> Result<WalletEventStream, String> {
-    let network_id = NetworkId::from_str(network).map_err(|error| error.to_string())?;
-    let addresses = parse_event_addresses(addresses)?;
-    let client = create_event_client(network_id, endpoint)?;
-    let notifications = Channel::<Notification>::unbounded();
+    let endpoint = endpoint
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .ok_or("wallet events require a concrete Kaspa wRPC endpoint")?;
+    kaspa_portal::primitives::NetworkId::parse(network)?;
     let (events, receiver) = broadcast::channel(EVENT_FANOUT);
     let (shutdown, shutdown_rx) = oneshot::channel::<()>();
-    let events_task = events.clone();
-    tauri::async_runtime::spawn(run_wallet_event_loop(
-        client,
-        notifications,
-        events_task,
-        addresses,
-        shutdown_rx,
-    ));
+    let watch = WalletWatch {
+        network: network.to_owned(),
+        endpoint: endpoint.to_owned(),
+        addresses: addresses.to_vec(),
+        events,
+    };
+    tauri::async_runtime::spawn(run_wallet_event_loop(watch, shutdown_rx));
     Ok(WalletEventStream {
         events: receiver,
         shutdown: Some(shutdown),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kaspa_portal::{
+        network::wrpc::{
+            block_added::OwnedBlockAddedNotification, notification::UtxosChangedNotification,
+        },
+        primitives::utxo::UtxoEntry,
+    };
+
+    fn utxo(index: u32, amount: u64) -> UtxoEntry {
+        let mut script = vec![0x20];
+        script.extend_from_slice(&[5; 32]);
+        script.push(0xac);
+        UtxoEntry {
+            tx_id: "cd".repeat(32),
+            index,
+            amount,
+            script_public_key: script,
+            block_daa_score: 3,
+            covenant_id: None,
+        }
+    }
+
+    fn empty_block() -> OwnedBlockAddedNotification {
+        OwnedBlockAddedNotification {
+            block_hash: "00".repeat(32),
+            daa_score: 1,
+            transactions: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn notifications_update_the_tracked_set_and_fan_out() {
+        let (events, mut receiver) = broadcast::channel(EVENT_FANOUT);
+        let mut tracker = UtxoTracker::new("testnet-10");
+        let added = UtxosChangedNotification {
+            added: vec![utxo(0, 7), utxo(1, 5)],
+            removed: Vec::new(),
+        };
+        assert!(deliver::<String>(
+            Ok(Notification::UtxosChanged(added)),
+            &events,
+            &mut tracker
+        ));
+        let removed = UtxosChangedNotification {
+            added: Vec::new(),
+            removed: vec![utxo(0, 7)],
+        };
+        apply_notification(Notification::UtxosChanged(removed), &events, &mut tracker);
+        apply_notification(
+            Notification::VirtualDaaScoreChanged(99),
+            &events,
+            &mut tracker,
+        );
+        apply_notification(
+            Notification::BlockAdded(empty_block()),
+            &events,
+            &mut tracker,
+        );
+        assert!(matches!(
+            receiver.try_recv(),
+            Ok(WalletNodeEvent::UtxoSet {
+                balance_sompi: 12,
+                utxo_count: 2,
+                ..
+            })
+        ));
+        assert!(matches!(
+            receiver.try_recv(),
+            Ok(WalletNodeEvent::UtxoSet {
+                balance_sompi: 5,
+                utxo_count: 1,
+                ..
+            })
+        ));
+        assert!(matches!(
+            receiver.try_recv(),
+            Ok(WalletNodeEvent::VirtualDaaScoreChanged(99))
+        ));
+        assert!(receiver.try_recv().is_err());
+    }
+
+    #[test]
+    fn stream_failures_request_a_reconnect() {
+        let (events, _receiver) = broadcast::channel(EVENT_FANOUT);
+        let mut tracker = UtxoTracker::new("mainnet");
+        assert!(!deliver(Err("socket closed"), &events, &mut tracker));
+    }
 }

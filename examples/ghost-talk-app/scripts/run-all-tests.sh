@@ -63,6 +63,10 @@ run cargo test --manifest-path crates/ghost-wasm/Cargo.toml --all-targets --all-
 run cargo test --manifest-path crates/ghost-wasm/Cargo.toml --doc --no-fail-fast
 run cargo test --manifest-path crates/ghost-wasm/Cargo.toml --doc --all-features --no-fail-fast
 
+# The E2E harness (dev wallet, funding, local relay) is its own workspace.
+run cargo clippy --manifest-path e2e/harness/Cargo.toml --all-targets -- -D warnings
+run cargo test --manifest-path e2e/harness/Cargo.toml --all-targets --no-fail-fast
+
 WASM_BROWSER="${GHOST_TALK_WASM_BROWSER:-firefox}"
 case "$WASM_BROWSER" in firefox|chrome) ;; *) echo "ERROR: GHOST_TALK_WASM_BROWSER must be firefox or chrome." >&2; exit 1 ;; esac
 run wasm-pack test --headless "--$WASM_BROWSER" crates/ghost-wasm

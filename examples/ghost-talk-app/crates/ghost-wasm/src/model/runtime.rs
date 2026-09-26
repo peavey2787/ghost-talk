@@ -4,8 +4,8 @@ use ghost_api::HydraContactAcceptedProjection;
 pub(crate) use ghost_api::{
     BackupContact, BackupMessage, BroadcastResult, DebugLogEntry, DebugLogSnapshot,
     HydraCallSignalProjection, HydraControlProjection, HydraMailboxResult, HydraRealtimeEnvelope,
-    HydraSessionBindingProjection, KasKoldBackupResult, PeerRouteRegistration, ProfileBackupPublishResult,
-    ProfileBackupRestoreResult, PublishedGhostDescriptor,
+    HydraSessionBindingProjection, KasKoldBackupResult, PeerRouteRegistration,
+    ProfileBackupPublishResult, ProfileBackupRestoreResult, PublishedGhostDescriptor,
 };
 
 #[derive(Clone, Debug, PartialEq)]

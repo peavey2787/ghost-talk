@@ -14,7 +14,10 @@ thread_local! {
     static DIRECTORIES: RefCell<HashMap<String, GhostProfileIndex>> = RefCell::new(HashMap::new());
 }
 
-pub(in crate::native::browser_host) fn invoke(command: &str, args: &Value) -> Result<Value, String> {
+pub(in crate::native::browser_host) fn invoke(
+    command: &str,
+    args: &Value,
+) -> Result<Value, String> {
     match command {
         "resolve_ghost_peer" => resolve_peer(args),
         "lookup_ghost_profile" => lookup_profile(args),
@@ -102,7 +105,14 @@ fn lookup_profile(args: &Value) -> Result<Value, String> {
 fn resolve_descriptor(
     network: &str,
     target: &str,
-) -> Result<(String, Option<ghost_protocol::GhostContactDescriptor>, Option<String>), String> {
+) -> Result<
+    (
+        String,
+        Option<ghost_protocol::GhostContactDescriptor>,
+        Option<String>,
+    ),
+    String,
+> {
     let index = directory(network);
     if ghost_kaspa::validate_destination(target).is_ok() {
         let latest = index.latest(target);
@@ -125,7 +135,9 @@ fn resolve_descriptor(
             Some(score.to_string()),
         )),
         [] => Err(format!("No live Ghost profile matches {target}")),
-        _ => Err(format!("Multiple live Ghost profiles match {target}; use a Kaspa address")),
+        _ => Err(format!(
+            "Multiple live Ghost profiles match {target}; use a Kaspa address"
+        )),
     }
 }
 
@@ -185,7 +197,8 @@ fn latest_public_profiles(
         if !observation.payload.starts_with(&ghost_protocol::GTCD_MAGIC) {
             continue;
         }
-        let Ok(candidate) = ghost_protocol::GhostContactDescriptor::decode(&observation.payload) else {
+        let Ok(candidate) = ghost_protocol::GhostContactDescriptor::decode(&observation.payload)
+        else {
             continue;
         };
         let Some((descriptor, score)) = index.latest(&candidate.kaspa_address) else {

@@ -1,0 +1,26 @@
+[package]
+name = "ghost-e2e-harness"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.98"
+license = "GPL-2.0-or-later"
+publish = false
+description = "Two-instance end-to-end harness: persistent funded dev wallet, instance wallets, and a local p2p-net relay"
+
+# Standalone workspace: it links native p2p-net (for the local relay) next to
+# the application's Kaspa wallet code, so it keeps its own lockfile.
+[workspace]
+
+[[bin]]
+name = "ghost-e2e"
+path = "src/main.rs"
+
+[dependencies]
+ghost-kaspa = { path = "../../crates/ghost-kaspa", features = ["upstream"] }
+ghost-realtime = { path = "../../../../crates/ghost-realtime" }
+p2p-net = { git = "https://github.com/peavey2787/p2p-net", rev = "1c0af490ef3f00aa945943d4a9a2e8dbbd767b2c" }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "signal"] }

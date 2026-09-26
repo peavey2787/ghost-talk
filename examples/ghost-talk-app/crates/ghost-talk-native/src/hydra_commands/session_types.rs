@@ -10,9 +10,9 @@ pub(crate) use aes_gcm::{Aes256Gcm, Nonce};
 pub(crate) use base64::engine::general_purpose::STANDARD as BASE64;
 pub(crate) use ghost_api::{
     HydraCallSignalProjection, HydraContactAcceptedProjection, HydraControlProjection,
-    HydraIncomingRequestProjection, HydraMailboxResult, HydraReady,
-    HydraRecoveryProjection, HydraRoomInviteProjection, HydraSessionBindingProjection,
-    HydraSessionEndedProjection, PeerRouteRegistration,
+    HydraIncomingRequestProjection, HydraMailboxResult, HydraReady, HydraRecoveryProjection,
+    HydraRoomInviteProjection, HydraSessionBindingProjection, HydraSessionEndedProjection,
+    PeerRouteRegistration,
 };
 pub(crate) use ghost_hydra::{HydraFacade, ReceivedProjection, StegoProfile};
 pub(crate) use ghost_kaspa::wallet::WalletPublic;

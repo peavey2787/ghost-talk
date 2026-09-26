@@ -1,4 +1,7 @@
-use crate::{wallet::{self, WalletPublic, WalletSecret}, PortalFacade};
+use crate::{
+    wallet::{self, WalletPublic, WalletSecret},
+    PortalFacade,
+};
 use ghost_media::{content_hash, KaspaArchiveChunk};
 use serde::{Deserialize, Serialize};
 
@@ -63,7 +66,9 @@ pub struct ArchiveProgress {
     pub in_flight: Option<ArchiveInFlightChunk>,
 }
 
-const fn archive_progress_version() -> u8 { ARCHIVE_PROGRESS_VERSION }
+const fn archive_progress_version() -> u8 {
+    ARCHIVE_PROGRESS_VERSION
+}
 
 impl ArchiveProgress {
     pub fn new(
@@ -108,7 +113,9 @@ impl ArchiveProgress {
         });
     }
 
-    pub fn clear_in_flight(&mut self) { self.in_flight = None; }
+    pub fn clear_in_flight(&mut self) {
+        self.in_flight = None;
+    }
 }
 
 pub fn validate_archive_size(size: u64) -> Result<(), String> {
@@ -130,7 +137,6 @@ pub async fn estimate_archive_chunk_fee(
     wallet::estimate_payload_fee(portal, secret, public, address, &payload).await
 }
 
-
 pub async fn archive_plan(
     portal: &PortalFacade,
     secret: &WalletSecret,
@@ -151,23 +157,14 @@ pub async fn archive_plan(
         ARCHIVE_CHUNK_BYTES,
     )
     .await?;
-    let tail_fee = archive_chunk_fee_if_needed(
-        portal,
-        secret,
-        public,
-        address,
-        tail > 0,
-        tail,
-    )
-    .await?;
+    let tail_fee =
+        archive_chunk_fee_if_needed(portal, secret, public, address, tail > 0, tail).await?;
     Ok(ghost_api::KaspaArchivePlan {
         total_bytes,
         chunks: chunks.min(u64::from(u32::MAX)) as u32,
         transactions: chunks.min(u64::from(u32::MAX)) as u32,
         estimated_fee_per_tx_sompi: full_fee.max(tail_fee),
-        estimated_cost_sompi: full_count
-            .saturating_mul(full_fee)
-            .saturating_add(tail_fee),
+        estimated_cost_sompi: full_count.saturating_mul(full_fee).saturating_add(tail_fee),
     })
 }
 

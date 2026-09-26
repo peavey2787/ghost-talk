@@ -32,17 +32,18 @@ sysinfo = { version = "0.39.6", default-features = false, features = ["system", 
 fs2 = "0.4.3"
 
 # HYDRA is external and every directly consumed HYDRA crate is pinned to one commit.
-hydra-msg = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "a8b4b317cef85edce9d0f0528bb53125ebf6333b" }
-hydra-core = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "a8b4b317cef85edce9d0f0528bb53125ebf6333b" }
-hydra-crypto = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "a8b4b317cef85edce9d0f0528bb53125ebf6333b" }
-hydra-stego = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "a8b4b317cef85edce9d0f0528bb53125ebf6333b" }
-hydra-group = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "a8b4b317cef85edce9d0f0528bb53125ebf6333b" }
-kaspa-portal = "1.0.1"
-# Official Rusty-Kaspa v2.0.1 (Toccata) release; covenant-aware RPC is required by DotK proof.
-kaspa-wrpc-client = { version = "2.0.1", git = "https://github.com/kaspanet/rusty-kaspa", rev = "cfafeb4c093fa37a303f1b9f19c58f986b870ce3" }
-kaspa-hashes = { version = "2.0.1", git = "https://github.com/kaspanet/rusty-kaspa", rev = "cfafeb4c093fa37a303f1b9f19c58f986b870ce3" }
-workflow-core = "0.18.0"
+hydra-msg = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "18dfb0e2ed78b657c86630e28db99a7f18978c22" }
+hydra-core = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "18dfb0e2ed78b657c86630e28db99a7f18978c22" }
+hydra-crypto = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "18dfb0e2ed78b657c86630e28db99a7f18978c22" }
+hydra-stego = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "18dfb0e2ed78b657c86630e28db99a7f18978c22" }
+hydra-group = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "18dfb0e2ed78b657c86630e28db99a7f18978c22" }
+kaspa-portal = { git = "https://github.com/peavey2787/kaspa-portal.git", rev = "fd644f6a8755bb86f19c7c44707acadcfa484575" }
 ghost-talk = { path = "../../crates/ghost-talk" }
+# Shared realtime/voice contract and the p2p-net transport it drives. Kaspa
+# Portal, HYDRA and p2p-net share one wasm-bindgen family, so all link together.
+ghost-realtime = { path = "../../crates/ghost-realtime" }
+p2p-net = { git = "https://github.com/peavey2787/p2p-net", rev = "1c0af490ef3f00aa945943d4a9a2e8dbbd767b2c" }
+ghost-voice = { path = "../../crates/ghost-voice" }
 
 [profile.dev.package."*"]
 opt-level = 3

@@ -133,6 +133,14 @@ pub async fn clear_debug_log() -> Result<(), String> {
     invoke_unit("debug_log_clear", json!({})).await
 }
 
+pub async fn record_debug(category: &str, event: &str, details: &str) -> Result<(), String> {
+    invoke_unit(
+        "debug_log_record",
+        json!({ "level": "info", "category": category, "event": event, "details": details }),
+    )
+    .await
+}
+
 pub async fn hydra_debug_state(profile_id: &str) -> Result<Value, String> {
     invoke("hydra_debug_state", json!({ "profileId": profile_id })).await
 }
@@ -156,7 +164,9 @@ where
 {
     wasm_bindgen_futures::spawn_local(async move {
         let Ok(root) = tauri_root() else { return };
-        let Ok(event_api) = property(&root, "event") else { return };
+        let Ok(event_api) = property(&root, "event") else {
+            return;
+        };
         if event_api.is_undefined() || event_api.is_null() {
             return;
         }
@@ -181,7 +191,9 @@ where
         ) else {
             return;
         };
-        let Ok(promise) = result.dyn_into::<Promise>() else { return };
+        let Ok(promise) = result.dyn_into::<Promise>() else {
+            return;
+        };
         if JsFuture::from(promise).await.is_ok() {
             closure.forget();
         }

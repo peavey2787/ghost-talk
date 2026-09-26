@@ -16,6 +16,34 @@ pub fn is_live_ghost_carrier(payload: &[u8]) -> bool {
         || (payload.len() >= 4
             && matches!(
                 &payload[..4],
-                b"GHST" | b"GTCD" | b"GTCR" | b"GTCA" | b"GTAK" | b"GTVA" | b"GTVL" | b"GTBK"
+                b"GHST"
+                    | b"GTCD"
+                    | b"GTCR"
+                    | b"GTCA"
+                    | b"GTAK"
+                    | b"GTVA"
+                    | b"GTVL"
+                    | b"GTBK"
+                    | b"GTR1"
             ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_live_ghost_carrier;
+
+    #[test]
+    fn realtime_and_mailbox_carriers_are_live_but_other_payloads_are_not() {
+        for carrier in [
+            &b"GTR1...."[..],
+            b"KKTP:ANCHOR:{}",
+            b"GHST....",
+            b"GTCR....",
+        ] {
+            assert!(is_live_ghost_carrier(carrier));
+        }
+        for other in [&b""[..], b"GTR", b"hello", b"GTR2...."] {
+            assert!(!is_live_ghost_carrier(other));
+        }
+    }
 }

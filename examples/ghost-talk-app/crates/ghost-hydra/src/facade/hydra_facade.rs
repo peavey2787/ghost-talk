@@ -1,9 +1,9 @@
+#[cfg(all(feature = "native", not(target_arch = "wasm32")))]
+use super::runtime::{acquire_native_profile_lease, recover_stale_native_profile_lock};
 use super::runtime::{
     application_context_digest, ContactProjection, Deserialize, HydraFacade, MlDsaVerificationKey,
     ReceivedProjection, Serialize, StegoProfile,
 };
-#[cfg(all(feature = "native", not(target_arch = "wasm32")))]
-use super::runtime::{acquire_native_profile_lease, recover_stale_native_profile_lock};
 
 #[cfg(feature = "upstream")]
 impl HydraFacade {

@@ -22,7 +22,7 @@ A literal `.k` input always receives a fresh chain proof. Contact aliases and th
 2. Read the candidate owner row from `https://api.dotk.name/v1/names/{bare-name}` (or the configured replacement index). Treat it as an untrusted hint.
 3. Read only `ownerType` and `owner` from that row. Ghost Talk does not trust or consume directory-supplied payment addresses, deed addresses, registry IDs, or scripts.
 4. Locally derive the v4 owner payment address, ACTIVE deed state, deed P2SH address, and exact script public key from the pinned deployment, normalized requested name, and candidate owner. Covenant-owned names deliberately have no payment/peer address and are rejected.
-5. Obtain the active mainnet wRPC endpoint from the shared `NodeSession`/Kaspa gateway and connect with the pinned Rusty-Kaspa v2.0.1 client.
+5. Obtain the active mainnet wRPC endpoint from the shared `NodeSession`/Kaspa gateway and query it through Kaspa Portal.
 6. Query the locally derived deed address through typed `get_utxos_by_addresses`. A candidate must be non-coinbase, exactly 1 KAS, use the locally derived script, and carry the locally pinned DotK registry `covenant_id` in the consensus UTXO entry.
 7. Query that deed address again and require the exact same outpoint to remain live. Only then return the locally derived Kaspa owner address.
 
@@ -36,7 +36,7 @@ The reviewed DotK mainnet deployment is embedded at `crates/ghost-names/src/dotk
 0696babcb5c47a965088597afe849147fa0ab2681a3972af8c9451a12e48b382
 ```
 
-Ghost Talk pins the Rusty-Kaspa wRPC client plus DotK address/script derivation dependencies to release commit `cfafeb4c093fa37a303f1b9f19c58f986b870ce3` (v2.0.1). This is the Toccata-capable release whose RPC UTXO model exposes `covenant_id`.
+Ghost Talk verifies deeds through Kaspa Portal, whose UTXO model exposes the Toccata `covenant_id`; deed P2SH scripts and addresses are derived with Portal address primitives.
 
 DotK verification no longer uses the Kaspire HTTP proof bridge. The live covenant proof is made directly against the endpoint selected by Ghost Talk's shared Kaspa session. Wallet planning, broadcast, subscriptions, carrier observation, and DotK proof therefore share the same configured network endpoint authority, while each subsystem keeps its own scoped client/lifecycle.
 

@@ -33,6 +33,7 @@ pub fn settings_view(props: &SettingsProps) -> Html {
       <section class="page">
         <div class="page-head"><div><h2>{"Settings"}</h2><p>{"Privacy, transport, wallet security, recovery, and Kaspa endpoints."}</p></div></div>
         {render_voice_settings(props, &state)}
+        {super::settings_p2p::render_p2p_settings(props)}
         {render_security_settings(props, &state)}
         {render_recovery(props, &state)}
         {render_backup_settings(props, &state)}
@@ -47,6 +48,7 @@ fn render_voice_settings(props: &SettingsProps, state: &SettingsState) -> Html {
     html! {
         <div class="card form-grid"><h3>{"Voice & messaging"}</h3>
           <label>{"Realtime route"}<select value={props.profile.settings.route.clone()} onchange={select_setting_callback(props, "route")}><option value="Auto">{"Auto — direct when possible, Kaspa fallback"}</option><option value="Kaspa only">{"Kaspa only"}</option></select></label>
+          <label>{"Text messages"}<select class="text-route" value={props.profile.settings.text_route.clone()} onchange={select_setting_callback(props, "textRoute")}><option value="Kaspa">{"Kaspa — stored permanently (default)"}</option><option value="P2P preferred">{"p2p-net when connected — not stored on Kaspa, Kaspa fallback"}</option><option value="P2P only">{"p2p-net only — never stored on Kaspa"}</option></select><small>{"p2p-net text needs Realtime route Auto and a connected peer. It is marked “not stored on Kaspa” and cannot be restored from chain history; it also costs no Kaspa fees."}</small></label>
           <label>{"HYDRA steganography"}<select value={props.profile.settings.stego.clone()} onchange={select_setting_callback(props, "stego")}><option>{"Off"}</option><option>{"Deterministic"}</option><option>{"Fast Unicode"}</option><option>{"Fast Hybrid"}</option><option>{"Arithmetic"}</option></select></label>
           <label class="toggle-row"><input type="checkbox" checked={props.profile.settings.auto_ignore_unknown_chats} onchange={toggle_setting_callback(props, state, "autoIgnoreUnknownChats")}/><span><b>{"Automatically ignore new chats from unknown people"}</b><small>{"Requests remain reviewable instead of interrupting you."}</small></span></label>
         </div>

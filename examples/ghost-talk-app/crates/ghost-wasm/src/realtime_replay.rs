@@ -9,21 +9,13 @@ thread_local! {
         RefCell::new(ghost_realtime::ReplayWindow::new(REPLAY_WINDOW_CAPACITY));
 }
 
-pub(crate) fn accept_gtr1(carrier: &ghost_protocol::Gtr1Envelope) -> bool {
-    WINDOW.with(|window| {
-        window
-            .borrow_mut()
-            .accept(ghost_realtime::ReplayKey::from_gtr1(carrier))
-    })
+pub(crate) fn accept_gtr1(carrier: &ghost_realtime::Gtr1Envelope) -> bool {
+    WINDOW.with(|window| window.borrow_mut().accept(carrier.identity()))
 }
 
 pub(crate) fn accept_fields(sender: &str, sid: &str, message_id: &str) -> bool {
-    let Ok(carrier) = ghost_protocol::Gtr1Envelope::from_hex_ids(
-        sender,
-        message_id,
-        sid,
-        vec![1],
-    ) else {
+    let Ok(carrier) = ghost_realtime::Gtr1Envelope::from_hex_ids(sender, message_id, sid, vec![1])
+    else {
         return false;
     };
     accept_gtr1(&carrier)

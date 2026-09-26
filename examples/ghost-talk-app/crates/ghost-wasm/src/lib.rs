@@ -13,9 +13,9 @@ mod controllers;
 #[cfg(target_arch = "wasm32")]
 mod live_voice;
 #[cfg(target_arch = "wasm32")]
-mod realtime_replay;
-#[cfg(target_arch = "wasm32")]
 mod native;
+#[cfg(target_arch = "wasm32")]
+mod realtime_replay;
 #[cfg(any(target_arch = "wasm32", test))]
 mod storage;
 #[cfg(target_arch = "wasm32")]

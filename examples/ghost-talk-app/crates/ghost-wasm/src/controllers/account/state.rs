@@ -9,12 +9,41 @@ pub(crate) fn update_setting(
     value: String,
 ) -> Result<ProfilePatch, String> {
     let mut settings = profile.settings.clone();
-    match field {
-        "route" => settings.route = value,
-        "stego" => settings.stego = value,
-        _ => return Err(format!("Unknown setting: {field}")),
+    if !apply_choice(&mut settings, field, &value) && !apply_peer_list(&mut settings, field, &value)
+    {
+        return Err(format!("Unknown setting: {field}"));
     }
     Ok(settings_patch(profile, settings))
+}
+
+fn apply_choice(settings: &mut Settings, field: &str, value: &str) -> bool {
+    let target = match field {
+        "route" => &mut settings.route,
+        "stego" => &mut settings.stego,
+        "textRoute" => &mut settings.text_route,
+        _ => return false,
+    };
+    *target = value.to_owned();
+    true
+}
+
+fn apply_peer_list(settings: &mut Settings, field: &str, value: &str) -> bool {
+    let target = match field {
+        "p2pRelayPeers" => &mut settings.p2p_relay_peers,
+        "p2pBootstrapPeers" => &mut settings.p2p_bootstrap_peers,
+        _ => return false,
+    };
+    *target = multiaddr_lines(value);
+    true
+}
+
+fn multiaddr_lines(value: &str) -> Vec<String> {
+    value
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_owned)
+        .collect()
 }
 
 pub(crate) fn update_boolean_setting(

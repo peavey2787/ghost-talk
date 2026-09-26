@@ -26,14 +26,8 @@ async fn prepare(args: &Value) -> Result<Value, String> {
         .get("options")
         .and_then(|value| endpoint_override(value, "wrpcEndpoint"));
     let portal = profile_portal(profile_id, &public, endpoint).await?;
-    let pskt = ghost_kaspa::wallet::prepare_signer_send(
-        &portal,
-        &public,
-        destination,
-        amount,
-        fee,
-    )
-    .await?;
+    let pskt = ghost_kaspa::wallet::prepare_signer_send(&portal, &public, destination, amount, fee)
+        .await?;
     to_value(pskt)
 }
 

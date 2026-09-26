@@ -15,7 +15,10 @@ thread_local! {
     static LOG: RefCell<BrowserDebugLog> = RefCell::new(BrowserDebugLog::default());
 }
 
-pub(in crate::native::browser_host) fn invoke(command: &str, args: &Value) -> Result<Value, String> {
+pub(in crate::native::browser_host) fn invoke(
+    command: &str,
+    args: &Value,
+) -> Result<Value, String> {
     match command {
         "debug_log_set_enabled" => set_enabled(args),
         "debug_log_snapshot" => snapshot(args),
@@ -25,7 +28,12 @@ pub(in crate::native::browser_host) fn invoke(command: &str, args: &Value) -> Re
     }
 }
 
-pub(in crate::native::browser_host) fn record(level: &str, category: &str, event: &str, details: impl Into<String>) {
+pub(in crate::native::browser_host) fn record(
+    level: &str,
+    category: &str,
+    event: &str,
+    details: impl Into<String>,
+) {
     LOG.with(|log| {
         let mut log = log.borrow_mut();
         if !log.enabled {
@@ -61,7 +69,10 @@ fn set_enabled(args: &Value) -> Result<Value, String> {
 }
 
 fn snapshot(args: &Value) -> Result<Value, String> {
-    let since = args.get("sinceSequence").and_then(Value::as_u64).unwrap_or(0);
+    let since = args
+        .get("sinceSequence")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
     LOG.with(|log| {
         let log = log.borrow();
         serde_json::to_value(DebugLogSnapshot {
@@ -93,6 +104,11 @@ fn record_command(args: &Value) -> Result<Value, String> {
             .and_then(Value::as_str)
             .ok_or_else(|| format!("browser command argument {name} is missing or not a string"))
     };
-    record(field("level")?, field("category")?, field("event")?, field("details")?);
+    record(
+        field("level")?,
+        field("category")?,
+        field("event")?,
+        field("details")?,
+    );
     Ok(Value::Null)
 }

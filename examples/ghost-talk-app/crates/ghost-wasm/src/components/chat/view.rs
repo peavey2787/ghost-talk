@@ -40,6 +40,7 @@ pub(crate) struct ChatUiState {
     pub(crate) mask_messages: UseStateHandle<bool>,
     pub(crate) show_advanced: UseStateHandle<bool>,
     pub(crate) messages_ref: NodeRef,
+    pub(crate) direct: Option<crate::components::call::DirectTextContext>,
 }
 
 #[component(ChatView)]
@@ -54,6 +55,7 @@ pub fn chat_view(props: &ChatProps) -> Html {
         mask_messages: use_state(|| false),
         show_advanced: use_state(|| false),
         messages_ref: use_node_ref(),
+        direct: use_context::<crate::components::call::DirectTextContext>(),
     };
     let selected = selected_chat(props);
     use_selected_chat_status_reset(selected.as_ref(), state.status.clone());

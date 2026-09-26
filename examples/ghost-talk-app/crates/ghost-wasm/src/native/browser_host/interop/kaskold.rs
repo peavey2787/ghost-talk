@@ -2,7 +2,10 @@ use serde_json::Value;
 
 use super::super::support::util::{required, required_str, to_value};
 
-pub(in crate::native::browser_host) fn invoke(command: &str, args: &Value) -> Result<Value, String> {
+pub(in crate::native::browser_host) fn invoke(
+    command: &str,
+    args: &Value,
+) -> Result<Value, String> {
     match command {
         "kaskold_import_text" => import_text(args),
         "kaskold_import_bytes" => import_bytes(args),
@@ -10,7 +13,6 @@ pub(in crate::native::browser_host) fn invoke(command: &str, args: &Value) -> Re
         _ => invoke_signing(command, args),
     }
 }
-
 
 fn invoke_signing(command: &str, args: &Value) -> Result<Value, String> {
     match command {
@@ -27,7 +29,9 @@ fn import_text(args: &Value) -> Result<Value, String> {
         &sealed,
         required_str(args, "kind")?,
         required_str(args, "value")?,
-        args.get("passphrase").and_then(Value::as_str).unwrap_or_default(),
+        args.get("passphrase")
+            .and_then(Value::as_str)
+            .unwrap_or_default(),
     )?)
 }
 
@@ -39,19 +43,28 @@ fn import_bytes(args: &Value) -> Result<Value, String> {
         &sealed,
         required_str(args, "kind")?,
         &data,
-        args.get("credential").and_then(Value::as_str).unwrap_or_default(),
+        args.get("credential")
+            .and_then(Value::as_str)
+            .unwrap_or_default(),
     )?)
 }
 
 fn backup(args: &Value) -> Result<Value, String> {
     let sealed: Vec<u8> = required(args, "sealedInventory")?;
-    let carrier: Vec<u8> = args.get("carrier").cloned().map(serde_json::from_value).transpose()
-        .map_err(|error| error.to_string())?.unwrap_or_default();
+    let carrier: Vec<u8> = args
+        .get("carrier")
+        .cloned()
+        .map(serde_json::from_value)
+        .transpose()
+        .map_err(|error| error.to_string())?
+        .unwrap_or_default();
     to_value(ghost_kaskold::backup_inventory(
         required_str(args, "password")?,
         &sealed,
         required_str(args, "kind")?,
-        args.get("credential").and_then(Value::as_str).unwrap_or_default(),
+        args.get("credential")
+            .and_then(Value::as_str)
+            .unwrap_or_default(),
         &carrier,
     )?)
 }

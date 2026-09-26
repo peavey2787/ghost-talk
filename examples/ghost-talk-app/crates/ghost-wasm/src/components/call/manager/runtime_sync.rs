@@ -1,3 +1,4 @@
+use crate::controllers::call::RealtimeSender;
 use crate::model::{Profile, ProfilePatch, WalletProjection};
 use ghost_domain::call::CallManager;
 use std::{cell::RefCell, rc::Rc};
@@ -40,4 +41,38 @@ pub(super) fn realtime_wallet_progress_callback(
         render_epoch.set((*render_epoch).wrapping_add(1));
         on_update.emit(patch);
     })
+}
+
+/// One realtime sender per call runtime, kept in sync with the live profile.
+#[hook]
+pub(super) fn use_realtime_sender(
+    props: &super::LiveCallManagerProps,
+    profile_ref: &Rc<RefCell<Profile>>,
+    render_epoch: &UseStateHandle<u64>,
+    p2p: &Rc<RefCell<ghost_p2p::P2pNetTransport>>,
+    p2p_state: &UseStateHandle<ghost_p2p::P2pRouteState>,
+) -> RealtimeSender {
+    let on_wallet_progress = realtime_wallet_progress_callback(
+        profile_ref.clone(),
+        render_epoch.clone(),
+        props.on_update.clone(),
+    );
+    let realtime_ref = use_mut_ref(|| {
+        RealtimeSender::new(
+            props.profile.clone(),
+            props.password.clone(),
+            p2p.clone(),
+            p2p_state.clone(),
+            on_wallet_progress.clone(),
+            props.on_error.clone(),
+        )
+    });
+    realtime_ref.borrow().sync(
+        profile_ref.borrow().clone(),
+        props.password.clone(),
+        on_wallet_progress,
+        props.on_error.clone(),
+    );
+    let realtime = realtime_ref.borrow().clone();
+    realtime
 }

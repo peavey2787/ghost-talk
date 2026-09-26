@@ -119,10 +119,7 @@ def check_transport_ownership(files: list[Path]) -> None:
         if forbidden_transport.search(clean):
             fail(f"application-owned transport mechanics reappeared: {rel(path)}")
 
-    p2p_adapter = text(APP_CRATES / "ghost-p2p" / "src" / "wasm.rs")
-    if "p2p_net::wasm::WasmNode" not in p2p_adapter:
-        fail("Ghost browser p2p adapter does not delegate to p2p-net WasmNode")
-    realtime_sender = text(WASM / "controllers" / "call" / "realtime.rs")
+    realtime_sender = text(WASM / "controllers" / "call" / "realtime" / "job.rs")
     if "seal_realtime(" not in realtime_sender or "send_realtime_carrier(" not in realtime_sender:
         fail("realtime sender does not preserve the seal-once GTR1 fallback boundary")
     forbidden = re.compile(r"\.(?:begin_session|establish_session|mark_transport_restore|set_transport_restore_message_id|merge_resumed_transport|clear_transport_restore|complete_bootstrap|reset_transport|rejoin_with_session|rejoin_without_session|set_session_role)\(")

@@ -17,7 +17,9 @@ pub(super) struct AvatarSource {
 
 pub(super) async fn avatar_source(file: web_sys::File) -> Result<AvatarSource, String> {
     let content_type = file.type_();
-    let buffer = JsFuture::from(file.array_buffer()).await.map_err(js_error)?;
+    let buffer = JsFuture::from(file.array_buffer())
+        .await
+        .map_err(js_error)?;
     let bytes = Uint8Array::new(&buffer).to_vec();
     if bytes.is_empty() {
         return Err("Selected avatar image is empty.".into());
@@ -44,7 +46,9 @@ pub(super) async fn crop_and_import(
     context
         .draw_image_with_html_image_element_and_dw_and_dh(&image, dx, dy, width, height)
         .map_err(js_error)?;
-    let data_url = canvas.to_data_url_with_type("image/png").map_err(js_error)?;
+    let data_url = canvas
+        .to_data_url_with_type("image/png")
+        .map_err(js_error)?;
     let encoded = data_url
         .split_once(',')
         .map(|(_, body)| body)
@@ -81,7 +85,14 @@ fn crop_geometry(
     if width <= 0.0 || height <= 0.0 {
         return Err("Avatar image has invalid dimensions.".into());
     }
-    Ok(geometry(width, height, f64::from(CROP_SIZE), zoom, offset_x, offset_y))
+    Ok(geometry(
+        width,
+        height,
+        f64::from(CROP_SIZE),
+        zoom,
+        offset_x,
+        offset_y,
+    ))
 }
 
 async fn load_image(source: &str) -> Result<HtmlImageElement, String> {

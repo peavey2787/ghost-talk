@@ -103,10 +103,26 @@ pub struct DerivationPresetInfo {
 
 pub fn derivation_presets() -> Vec<DerivationPresetInfo> {
     [
-        ("Kaspa Standard (CLI / Kaspium / KasWare / OneKey / Tangem)", Some("m/44'/111111'/0'"), "BIP44 account root; receive /0/index and change /1/index."),
-        ("Kaspa account #1", Some("m/44'/111111'/1'"), "Second standard Kaspa BIP44 account."),
-        ("Kaspa account #2", Some("m/44'/111111'/2'"), "Third standard Kaspa BIP44 account."),
-        ("Custom account path", None, "Enter an account-level BIP32 path. Ghost Talk appends /0/index and /1/index."),
+        (
+            "Kaspa Standard (CLI / Kaspium / KasWare / OneKey / Tangem)",
+            Some("m/44'/111111'/0'"),
+            "BIP44 account root; receive /0/index and change /1/index.",
+        ),
+        (
+            "Kaspa account #1",
+            Some("m/44'/111111'/1'"),
+            "Second standard Kaspa BIP44 account.",
+        ),
+        (
+            "Kaspa account #2",
+            Some("m/44'/111111'/2'"),
+            "Third standard Kaspa BIP44 account.",
+        ),
+        (
+            "Custom account path",
+            None,
+            "Enter an account-level BIP32 path. Ghost Talk appends /0/index and /1/index.",
+        ),
     ]
     .into_iter()
     .map(|(label, path, note)| DerivationPresetInfo {

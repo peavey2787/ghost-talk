@@ -1,14 +1,15 @@
 mod call_signal;
 mod canonical_json;
+mod direct_text;
 mod events;
 mod kktp_codec;
 mod kktp_types;
 mod kktp_validation_types;
-mod realtime;
 #[cfg(test)]
 mod protocol_tests;
 #[cfg(test)]
 mod reaction_protocol_tests;
+mod realtime;
 #[cfg(test)]
 mod realtime_tests;
 
@@ -16,9 +17,9 @@ pub use call_signal::GhostCallSignal;
 pub use canonical_json::canonical_json;
 pub use events::{
     fragment, CarrierFrame, ChatEvent, EventKind, GhostCallInviteContext, GhostContactDescriptor,
-    GhostContactRequest, GhostRoomInviteContext, EVENT_VERSION,
-    GHOST_KKTP_VERSION, GHST_DATA_MAX, GHST_HEADER, GHST_MAGIC, GHST_VERSION, GTACK_MAGIC,
-    GTCD_MAGIC, GTCD_VERSION, GTCR_MAGIC, GTVA_MAGIC, KKTP_ANCHOR_PREFIX, KKTP_MESSAGE_PREFIX,
+    GhostContactRequest, GhostRoomInviteContext, EVENT_VERSION, GHOST_KKTP_VERSION, GHST_DATA_MAX,
+    GHST_HEADER, GHST_MAGIC, GHST_VERSION, GTACK_MAGIC, GTCD_MAGIC, GTCD_VERSION, GTCR_MAGIC,
+    GTVA_MAGIC, KKTP_ANCHOR_PREFIX, KKTP_MESSAGE_PREFIX,
 };
 pub use kktp_codec::{kktp_anchor_type, kktp_mailbox_id, validate_kktp_message_id};
 pub use kktp_types::{
@@ -40,9 +41,8 @@ pub fn is_ghost_payload(payload: &[u8]) -> bool {
 }
 
 pub use realtime::{
-    session_topic, session_topic_id, CallControlV1, Gtr1Envelope, OpusFrameV1,
-    RealtimeBodyV1, RealtimeCapability, RealtimeProtocolError, RoomPresenceV1,
-    TransportAnnounceV1, VoiceBatchV1, GTR1_HEADER_LEN, GTR1_MAGIC, REALTIME_INNER_PREFIX,
-    MAX_OPUS_FRAME_BYTES, MAX_P2P_DIAL_ADDRESSES, MAX_P2P_DIAL_ADDRESS_BYTES,
-    MAX_REALTIME_CIPHERTEXT_BYTES, MAX_VOICE_BATCH_FRAMES,
+    RealtimeBodyV1, RealtimeCapability, RealtimeProtocolError, TransportAnnounceV1,
+    MAX_P2P_DIAL_ADDRESSES, MAX_P2P_DIAL_ADDRESS_BYTES, REALTIME_INNER_PREFIX,
 };
+
+pub use direct_text::{DirectTextV1, DIRECT_TEXT_PREFIX, MAX_DIRECT_TEXT_BYTES};

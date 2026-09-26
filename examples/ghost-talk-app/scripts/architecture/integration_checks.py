@@ -33,7 +33,6 @@ def check_dotk_integration() -> None:
     recipient = text(WASM / "components" / "recipient_input.rs")
     workspace_manifest = text(APP_ROOT / "Cargo.toml")
     registry = "ee2128c03dfac7f6d74734bb3c879bd999434c47a55945b8a6daae2a1e4a21de"
-    rusty_kaspa_v201 = "cfafeb4c093fa37a303f1b9f19c58f986b870ce3"
     if registry not in deed or "DOTK_BOND_SOMPI: u64 = 100_000_000" not in deed:
         fail("DotK resolver must pin the reviewed registry covenant and 1-KAS deed bond")
     if "derive_deed" not in dotk or "verify_live_deed_wrpc" not in dotk:
@@ -42,37 +41,28 @@ def check_dotk_integration() -> None:
     if any(token in dotk for token in directory_authority_tokens):
         fail("DotK directory/index may provide owner discovery only; address/deed/registry authority must remain local/on-chain")
     required_chain_proof = (
-        "KaspaRpcClient::new_with_args",
-        "get_utxos_by_addresses",
+        "KaspaPortal::builder",
+        ".utxos(",
         "covenant_id",
         "DOTK_REGISTRY",
         "live_outpoint_exists",
-        "RpcUtxosByAddressesEntry",
+        "UtxoEntry",
     )
     if any(token not in chain for token in required_chain_proof):
         fail("DotK resolution is missing direct Toccata wRPC covenant proof or live-outpoint freshness checks")
     forbidden_bridge_tokens = ("kaspire.kaslab.space", "GHOST_DOTK_PROOF_NODE_URL")
     if any(token in dotk or token in chain for token in forbidden_bridge_tokens):
         fail("DotK proof must use the active Kaspa wRPC node, not an external proof bridge")
-    if rusty_kaspa_v201 not in workspace_manifest or 'kaspa-wrpc-client = { version = "2.0.1"' not in workspace_manifest:
-        fail("Ghost Talk must pin its direct Kaspa wRPC client to reviewed Rusty-Kaspa v2.0.1")
-    names_manifest = text(APP_CRATES / "ghost-names" / "Cargo.toml")
-    for dependency in ("kaspa-addresses", "kaspa-txscript"):
-        if dependency not in names_manifest or rusty_kaspa_v201 not in names_manifest:
-            fail(f"DotK {dependency} must be pinned to the same Rusty-Kaspa v2.0.1 release")
-    if 'kaspa-wrpc-client = "0.15.0"' in workspace_manifest:
-        fail("pre-Toccata kaspa-wrpc-client 0.15.0 must not remain in the Ghost Talk workspace")
     for manifest in REPO_ROOT.glob("**/Cargo.toml"):
         if any(part in {"target", "vendor", "external"} for part in manifest.parts):
             continue
-        cargo = text(manifest)
-        if re.search(r'kaspa-(?:wrpc-client|addresses|txscript)\s*=.*(?:0\.15\.|1\.)', cargo):
-            fail(f"pre-Toccata direct Rusty-Kaspa dependency remains: {rel(manifest)}")
+        if re.search(r'(?m)^\s*kaspa-(?:wrpc-client|addresses|txscript|hashes|consensus-core|rpc-core)\s*[=.]', text(manifest)):
+            fail(f"direct Rusty-Kaspa dependency remains (Kaspa access goes through Kaspa Portal): {rel(manifest)}")
 
-    kaspa_source = APP_CRATES / "ghost-kaspa" / "src" / "wallet" / "transactions.rs"
-    kaspa_wallet = text(kaspa_source)
-    if 'kaspa-portal = "1.0.1"' not in workspace_manifest:
-        fail("Ghost Talk must use the reviewed Toccata-aware kaspa-portal 1.0.1 planner")
+    wallet_dir = APP_CRATES / "ghost-kaspa" / "src" / "wallet"
+    kaspa_wallet = "".join(text(wallet_dir / name) for name in ("planning.rs", "consolidation.rs"))
+    if not re.search(r'kaspa-portal = \{ git = "https://github.com/peavey2787/kaspa-portal.git", rev = "[0-9a-f]{40}" \}', workspace_manifest):
+        fail("Ghost Talk must pin Kaspa Portal (>= 1.1.0 notification API) to one reviewed revision")
     fee_tokens = ("analysis.fee_sufficient", ".minimum_fee_sompi", ".recommended_fee_sompi")
     if any(token not in kaspa_wallet for token in fee_tokens):
         fail("wallet/consolidation flow must enforce Portal's Toccata-aware fee analysis and replan floor")
@@ -201,7 +191,7 @@ def check_native_frontend_contract() -> None:
     browser_live = text(
         APP_CRATES / "ghost-wasm" / "src" / "native" / "browser_host" / "runtime" / "live.rs"
     )
-    for token in ("Scope::BlockAdded", '"ghost://wallet-live"', '"ghost://directory-live"'):
+    for token in ("subscribe_block_added", '"ghost://wallet-live"', '"ghost://directory-live"'):
         if token not in browser_live and token != '"ghost://directory-live"':
             fail(f"standalone Web live Kaspa pipeline is missing `{token}`")
     browser_peer = text(

@@ -109,8 +109,10 @@ fn start_callback(ui: LiveUi, context: RoomVoiceContext) -> Callback<MouseEvent>
         let key = normalized_optional(&ui.rtmp_key);
         let relay = normalized_optional(&ui.relay_url);
         if !record_local && server.is_none() && relay.is_none() {
-            ui.status
-                .set("Enable local recording, configure RTMP/RTMPS, or configure a broadcast relay.".into());
+            ui.status.set(
+                "Enable local recording, configure RTMP/RTMPS, or configure a broadcast relay."
+                    .into(),
+            );
             return;
         }
         let session_id = match crate::random_id() {

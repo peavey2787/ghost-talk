@@ -105,6 +105,12 @@ pub(crate) fn send_body_callback(
     state: &ChatUiState,
     chat: Chat,
 ) -> Callback<String> {
+    let durable = durable_send_callback(props, state, chat.clone());
+    super::direct_send::route_text(props, state, chat, durable)
+}
+
+/// Kaspa-anchored KKTP send (the durable default).
+fn durable_send_callback(props: &ChatProps, state: &ChatUiState, chat: Chat) -> Callback<String> {
     let profile = props.profile.clone();
     let password = props.password.clone();
     let status = state.status.clone();

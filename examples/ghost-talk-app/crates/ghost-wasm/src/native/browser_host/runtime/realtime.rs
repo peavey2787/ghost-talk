@@ -3,11 +3,11 @@ use ghost_api::{HydraMailboxResult, HydraRealtimeEnvelope, ReceivedProjection};
 use ghost_hydra::StegoProfile;
 use serde_json::Value;
 
+use super::super::support::util::{required_str, to_value};
 use super::{
     secure_transport::{require_active_binding, with_hydra_runtime},
     session::{self, SessionState},
 };
-use super::super::support::util::{required_str, to_value};
 
 pub(in crate::native::browser_host) fn seal(args: &Value) -> Result<Value, String> {
     let profile = required_str(args, "profileId")?;
@@ -40,14 +40,9 @@ pub(in crate::native::browser_host) fn seal(args: &Value) -> Result<Value, Strin
             .next()
             .ok_or_else(|| "realtime HYDRA send produced no envelope".to_string())
     })?;
-    let carrier = ghost_protocol::Gtr1Envelope::from_hex_ids(
-        &identity,
-        message_id,
-        &sid,
-        envelope,
-    )
-    .and_then(|carrier| carrier.encode())
-    .map_err(|error| error.to_string())?;
+    let carrier = ghost_realtime::Gtr1Envelope::from_hex_ids(&identity, message_id, &sid, envelope)
+        .and_then(|carrier| carrier.encode())
+        .map_err(|error| error.to_string())?;
     to_value(HydraRealtimeEnvelope {
         carrier_b64: BASE64.encode(carrier),
         session_sid: sid,
@@ -60,32 +55,30 @@ pub(in crate::native::browser_host) fn open(args: &Value) -> Result<Value, Strin
     let bytes = BASE64
         .decode(required_str(args, "carrierB64")?)
         .map_err(|_| "GTR1 realtime carrier is not valid base64".to_string())?;
-    let carrier = ghost_protocol::Gtr1Envelope::decode(&bytes).map_err(|error| error.to_string())?;
-    let sender = carrier.sender_hex();
-    let sid = carrier.sid_hex();
-    let message_id = carrier.message_id_hex();
+    to_value(open_carrier(profile, &bytes)?)
+}
 
-    let route = session::with(profile, |runtime| {
-        let binding = runtime
-            .sessions
-            .get(&sender)
-            .ok_or_else(|| "realtime carrier has no active KKTP binding".to_string())?;
-        if binding.state != SessionState::Active || binding.sid != sid || runtime.blocked.contains(&sender) {
-            return Err("realtime carrier SID does not match the active KKTP session".into());
-        }
-        Ok(runtime.routes.get(&sender).cloned())
-    })?;
-
+/// Open one sealed GTR1 carrier, whichever carrier (p2p-net or Kaspa) brought it.
+pub(in crate::native::browser_host) fn open_carrier(
+    profile: &str,
+    bytes: &[u8],
+) -> Result<HydraMailboxResult, String> {
+    let carrier = ghost_realtime::Gtr1Envelope::decode(bytes).map_err(|error| error.to_string())?;
+    let (sender, sid) = (carrier.sender_hex(), carrier.sid_hex());
+    let route = active_route(profile, &sender, &sid)?;
+    let result = HydraMailboxResult {
+        peer_address: route.as_ref().map(|value| value.kaspa_address.clone()),
+        peer_label: route.as_ref().map(|value| value.display_name.clone()),
+        message_id: Some(carrier.message_id_hex()),
+        ..Default::default()
+    };
     let received = with_hydra_runtime(profile, |hydra| {
         hydra.receive(&carrier.ciphertext, StegoProfile::Off)
     })?;
     let Some(received) = received else {
-        return to_value(HydraMailboxResult {
-            peer_address: route.as_ref().map(|value| value.kaspa_address.clone()),
-            peer_label: route.as_ref().map(|value| value.display_name.clone()),
-            message_id: Some(message_id),
+        return Ok(HydraMailboxResult {
             discard: true,
-            ..Default::default()
+            ..result
         });
     };
     if received.from != sender {
@@ -97,16 +90,30 @@ pub(in crate::native::browser_host) fn open(args: &Value) -> Result<Value, Strin
         .strip_prefix(&expected)
         .ok_or_else(|| "realtime HYDRA inner SID binding is invalid".to_string())?
         .to_owned();
-    to_value(HydraMailboxResult {
+    Ok(HydraMailboxResult {
         received: Some(ReceivedProjection {
             from: sender,
             plaintext: body,
             content_type: None,
             session_sid: Some(sid),
         }),
-        peer_address: route.as_ref().map(|value| value.kaspa_address.clone()),
-        peer_label: route.as_ref().map(|value| value.display_name.clone()),
-        message_id: Some(message_id),
-        ..Default::default()
+        ..result
+    })
+}
+
+/// Realtime is admitted only for the exact active, unblocked KKTP session.
+fn active_route(profile: &str, sender: &str, sid: &str) -> Result<Option<session::Route>, String> {
+    session::with(profile, |runtime| {
+        let binding = runtime
+            .sessions
+            .get(sender)
+            .ok_or_else(|| "realtime carrier has no active KKTP binding".to_string())?;
+        if binding.state != SessionState::Active
+            || binding.sid != sid
+            || runtime.blocked.contains(sender)
+        {
+            return Err("realtime carrier SID does not match the active KKTP session".into());
+        }
+        Ok(runtime.routes.get(sender).cloned())
     })
 }

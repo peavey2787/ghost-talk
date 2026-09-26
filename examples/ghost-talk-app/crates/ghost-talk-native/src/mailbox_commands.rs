@@ -1,5 +1,5 @@
-mod send_state;
 mod realtime;
+mod send_state;
 pub(crate) use send_state::MonitorState;
 mod contact;
 mod control;
@@ -15,8 +15,8 @@ pub(crate) use gateway::{
 };
 use handshake::handshake_send;
 pub(crate) use handshake_send::mailbox_send_message;
-pub(crate) use realtime::mailbox_send_realtime_carrier;
 use monitor::{delivery_ack, gateway};
+pub(crate) use realtime::mailbox_send_realtime_carrier;
 pub(crate) use recovery_control::{
     mailbox_retry_handshake_finish, mailbox_send_control, mailbox_send_recovery_offer,
 };

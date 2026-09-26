@@ -97,7 +97,7 @@ CRITICAL_FILES = {
 CRITICAL_FUNCTIONS = {
     ((APP_ROOT / "crates/ghost-runtime/src/wallet.rs").resolve(), "merge_progress"),
     ((APP_ROOT / "crates/ghost-runtime/src/wallet.rs").resolve(), "reconcile"),
-    ((APP_ROOT / "crates/ghost-kaspa/src/wallet/transactions.rs").resolve(), "consolidation_replan_fee"),
+    ((APP_ROOT / "crates/ghost-kaspa/src/wallet/consolidation.rs").resolve(), "consolidation_replan_fee"),
     ((APP_ROOT / "crates/ghost-talk-native/src/persistence/profile_merge.rs").resolve(), "merge_profile_patch"),
 }
 

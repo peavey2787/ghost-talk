@@ -75,7 +75,6 @@ pub async fn send_kaspa(
     })).await
 }
 
-
 pub async fn prepare_signer_send(
     profile: &Profile,
     destination: &str,

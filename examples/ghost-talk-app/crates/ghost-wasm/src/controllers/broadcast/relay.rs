@@ -1,5 +1,8 @@
 use ghost_broadcast::{encode_relay_frame, validate_relay_url, RelayControl, SinkFailure};
-use std::{cell::RefCell, collections::{HashMap, VecDeque}};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, VecDeque},
+};
 use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{Event, WebSocket};
 
@@ -40,13 +43,16 @@ pub(super) fn start(
         if relays.contains_key(session_id) {
             return Err("broadcast relay session already exists".into());
         }
-        relays.insert(session_id.to_owned(), RelaySession {
-            socket,
-            pending: VecDeque::new(),
-            pending_bytes: 0,
-            failure: None,
-            _handlers: handlers,
-        });
+        relays.insert(
+            session_id.to_owned(),
+            RelaySession {
+                socket,
+                pending: VecDeque::new(),
+                pending_bytes: 0,
+                failure: None,
+                _handlers: handlers,
+            },
+        );
         Ok(())
     })
 }
@@ -87,7 +93,8 @@ pub(super) fn stop(session_id: &str) -> Vec<SinkFailure> {
                 }
             }
         } else if session.pending_bytes > 0 && session.failure.is_none() {
-            session.failure = Some("broadcast relay closed before queued frames were delivered".into());
+            session.failure =
+                Some("broadcast relay closed before queued frames were delivered".into());
         }
         let _ = session.socket.close();
         session.failure.into_iter().map(relay_failure).collect()
@@ -108,11 +115,7 @@ fn handlers(
     vec![open, error, close]
 }
 
-fn on_open(
-    session_id: &str,
-    socket: &WebSocket,
-    start_json: String,
-) -> Closure<dyn FnMut(Event)> {
+fn on_open(session_id: &str, socket: &WebSocket, start_json: String) -> Closure<dyn FnMut(Event)> {
     let id = session_id.to_owned();
     let socket = socket.clone();
     Closure::new(move |_event: Event| {
@@ -148,7 +151,9 @@ fn flush_pending(session_id: &str, socket: &WebSocket) {
 
 fn send_or_queue(session: &mut RelaySession, frame: Vec<u8>) -> Result<(), String> {
     match session.socket.ready_state() {
-        WebSocket::OPEN => session.socket.send_with_u8_array(&frame)
+        WebSocket::OPEN => session
+            .socket
+            .send_with_u8_array(&frame)
             .map_err(|_| "broadcast relay frame send failed".to_string()),
         WebSocket::CONNECTING => queue_frame(session, frame),
         _ => Err("broadcast relay is not connected".into()),
@@ -174,7 +179,10 @@ fn set_failure(session_id: &str, message: &str) {
 }
 
 fn relay_failure(error: String) -> SinkFailure {
-    SinkFailure { sink: "relay".into(), error }
+    SinkFailure {
+        sink: "relay".into(),
+        error,
+    }
 }
 
 fn normalized(value: Option<&str>) -> Option<&str> {

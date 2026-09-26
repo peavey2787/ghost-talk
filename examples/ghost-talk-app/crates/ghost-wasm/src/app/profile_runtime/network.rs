@@ -95,10 +95,16 @@ fn browser_monitor_connected(state: &AppState, failures: &mut u32) {
 
 fn browser_monitor_failed(state: &AppState, failures: &mut u32, error: String) {
     *failures = failures.saturating_add(1);
-    let status = if *failures == 1 { "connecting" } else { "reconnecting" };
+    let status = if *failures == 1 {
+        "connecting"
+    } else {
+        "reconnecting"
+    };
     state.network_status.set(status.into());
     state.reconnect_attempts.set(*failures);
-    state.app_status.set(format!("Kaspa Web connection: {error}"));
+    state
+        .app_status
+        .set(format!("Kaspa Web connection: {error}"));
 }
 
 fn browser_monitor_delay_ms(failures: u32) -> u32 {

@@ -1,9 +1,9 @@
 #[cfg(all(feature = "upstream", not(target_arch = "wasm32")))]
 use super::carriers::LiveBlockEvent;
 #[cfg(all(feature = "upstream", not(target_arch = "wasm32")))]
-use crate::{is_live_ghost_carrier, fallback_live_event_id};
-#[cfg(all(feature = "upstream", not(target_arch = "wasm32")))]
 use crate::LiveTransactionObservation;
+#[cfg(all(feature = "upstream", not(target_arch = "wasm32")))]
+use crate::{fallback_live_event_id, is_live_ghost_carrier};
 
 #[cfg(feature = "upstream")]
 pub type PortalMassAnalysis = kaspa_portal::transaction::mass::TransactionAnalysis;
@@ -39,6 +39,19 @@ impl PortalFacade {
             .await
             .map_err(|error| error.to_string())?;
         Ok(Self { portal })
+    }
+
+    /// Portal network API for live notification subscriptions.
+    pub fn network_api(&self) -> Result<kaspa_portal::network::NetworkApi, String> {
+        self.portal
+            .network()
+            .cloned()
+            .map_err(|error| error.to_string())
+    }
+
+    /// Close this facade's persistent transport.
+    pub fn disconnect(&self) {
+        let _ = self.portal.disconnect();
     }
 
     pub fn endpoint(&self) -> Result<String, String> {

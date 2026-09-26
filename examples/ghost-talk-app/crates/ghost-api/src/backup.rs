@@ -48,7 +48,6 @@ pub struct ProfileBackupRestoreResult {
     pub archive: ProfileBackupArchive,
 }
 
-
 const MAX_BACKUP_CONTACTS: usize = 4096;
 const MAX_BACKUP_MESSAGES: usize = 10_000;
 

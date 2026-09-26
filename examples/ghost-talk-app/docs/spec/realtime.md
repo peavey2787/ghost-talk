@@ -4,9 +4,10 @@ Ghost Talk realtime traffic is defined independently of its carrier. KKTP v2 rem
 
 ## Ownership
 
-- `ghost-protocol` owns `GTR1`, `RealtimeBodyV1`, transport announcements, Opus batches, and deterministic session-topic derivation.
-- `ghost-realtime` owns carrier selection and the bounded cross-carrier replay key `(sender_hydra_id, sid, message_id)`.
-- `ghost-p2p` owns authenticated SID/HYDRA/P2P-PeerId bindings. A transport PeerId is never a Ghost identity.
+- `ghost-realtime` (SDK) owns `GTR1`, the cross-carrier replay identity `(sender, message_id, session_id)`, canonical topics including SID-derived session topics, carrier selection, the text carrier policy, and SID/HYDRA/P2P-PeerId bindings. A transport PeerId is never a Ghost identity.
+- `ghost-voice` (SDK) owns the 1:1 call and Room voice packet formats.
+- `ghost-protocol` owns the transport announcement body (`RealtimeBodyV1`), direct p2p text (`DirectTextV1`), and the inner SID binding prefix.
+- `ghost-p2p` is the browser adapter that drives p2p-net's `WasmNode`.
 - `ghost-hydra` remains the cryptographic identity/session authority.
 - Kaspa remains the durable carrier and final fallback.
 - p2p-net is the target direct/realtime implementation boundary. Ghost application code must not grow a second libp2p, relay, NAT, DCUtR, ICE, STUN, or WebRTC implementation.
@@ -25,15 +26,9 @@ The version-1 binary layout is preserved for compatibility:
 
 `ghost-protocol::Gtr1Envelope` is the only encoder/decoder. Consumers must reject truncated carriers, wrong magic, empty ciphertext, oversized ciphertext, wrong/retired SID, and mismatched authenticated sender before dispatching application bodies.
 
-## Shared realtime bodies
+## Realtime bodies
 
-`RealtimeBodyV1` defines the reusable Ghost/Kinesis realtime vocabulary:
-
-- transport announce / acknowledgement;
-- call request / accept / decline / hangup;
-- `VoiceBatchV1` raw Opus batches;
-- room presence;
-- room voice.
+Sealed realtime bodies are one of: a transport announcement or acknowledgement (`RealtimeBodyV1`), a live call packet or Room voice packet (`ghost-voice`), or ephemeral direct text (`DirectTextV1`).
 
 Transport announcements carry only a P2P PeerId, bounded dial addresses, and capabilities. They inherit authentication from the already-active KKTP/HYDRA session; they do not introduce a second signature scheme.
 
@@ -68,6 +63,10 @@ Kaspa only
 ```
 
 Direct transport details such as TCP, QUIC, relay, DCUtR, WebSocket, or WebRTC-direct belong inside p2p-net and must not be exposed as Ghost Talk route choices.
+
+## Text carrier
+
+Chat text is anchored on Kaspa by default: it is durable and recoverable from chain history. A profile may choose **p2p-net preferred** (p2p-net while connected, otherwise Kaspa) or **p2p-net only** (never stored on Kaspa; not sent without a connected route). p2p-net text is sealed by the same authenticated HYDRA session, is excluded from Kaspa backups, and every such message is marked "p2p · not stored on Kaspa". Together with Auto, this keeps Kaspa usage to the signed signalling and fallback traffic.
 
 ## Implementation status
 

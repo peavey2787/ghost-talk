@@ -4,7 +4,10 @@ use super::util::required_str;
 
 const PROFILE_STATE_KEY: &str = "ghost-talk.profile-state.v1";
 
-pub(in crate::native::browser_host) fn invoke(command: &str, args: &Value) -> Result<Value, String> {
+pub(in crate::native::browser_host) fn invoke(
+    command: &str,
+    args: &Value,
+) -> Result<Value, String> {
     match command {
         "profile_state_load" => profile_state_load(),
         "profile_state_save" => profile_state_save(args),
@@ -39,7 +42,11 @@ pub(in crate::native::browser_host) fn local_storage() -> Result<web_sys::Storag
 fn js_error(action: &str, value: wasm_bindgen::JsValue) -> String {
     let detail = value
         .as_string()
-        .or_else(|| js_sys::JSON::stringify(&value).ok().and_then(|text| text.as_string()))
+        .or_else(|| {
+            js_sys::JSON::stringify(&value)
+                .ok()
+                .and_then(|text| text.as_string())
+        })
         .unwrap_or_else(|| "JavaScript error".into());
     format!("could not {action}: {detail}")
 }

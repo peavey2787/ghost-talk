@@ -125,7 +125,7 @@ fn dispatch_message_envelope(
     if envelope.starts_with(&ghost_protocol::GTACK_MAGIC) {
         return handle_delivery_ack_carrier(runtime, envelope, identity_id);
     }
-    if envelope.starts_with(&ghost_protocol::GTR1_MAGIC) {
+    if envelope.starts_with(&ghost_realtime::GTR1_MAGIC) {
         return handle_realtime_carrier(runtime, envelope);
     }
     Ok(discard_result())

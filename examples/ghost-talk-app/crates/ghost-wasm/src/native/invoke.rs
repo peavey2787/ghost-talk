@@ -1,7 +1,7 @@
 use super::restore::peer_session_binding;
 pub(crate) use crate::model::{
     BackupContact, BackupMessage, BroadcastResult, Chat, DebugLogSnapshot, HydraControlProjection,
-    HydraMailboxResult, HydraRealtimeEnvelope, HydraReady, HydraRecoveryProjection,
+    HydraMailboxResult, HydraReady, HydraRealtimeEnvelope, HydraRecoveryProjection,
     HydraSessionBindingProjection, MailboxSendResult, PeerRouteRegistration, Profile,
     ProfileBackupPublishResult, ProfileBackupRestoreResult, PublicGhostProfile,
     PublishedGhostDescriptor, ResolvedGhostPeer, WalletCreateResponse, WalletImportResponse,

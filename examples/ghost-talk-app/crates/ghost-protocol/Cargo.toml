@@ -14,7 +14,6 @@ serde.workspace = true
 thiserror.workspace = true
 ghost-core = { path = "../ghost-core" }
 serde_json.workspace = true
-blake3.workspace = true
 
 base64.workspace = true
 hex.workspace = true

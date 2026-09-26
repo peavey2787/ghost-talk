@@ -28,9 +28,21 @@ pub struct Message {
     pub contact_request_id: Option<String>,
     #[serde(default)]
     pub reactions: Vec<MessageReaction>,
+    /// Physical carrier when it is not Kaspa. `Some(CARRIER_P2P)` marks an
+    /// ephemeral p2p-net message that was never stored on Kaspa.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub carrier: Option<String>,
 }
 
+/// Carrier label of ephemeral p2p-net chat text.
+pub const CARRIER_P2P: &str = "p2p-net";
+
 impl Message {
+    /// False for ephemeral p2p-net text, which has no on-chain copy.
+    pub fn stored_on_kaspa(&self) -> bool {
+        self.carrier.as_deref() != Some(CARRIER_P2P)
+    }
+
     pub fn session_sid(&self) -> Option<&str> {
         self.session_sid.as_deref()
     }

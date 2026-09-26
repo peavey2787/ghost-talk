@@ -13,7 +13,7 @@ LEAF_CRATES = {
     "ghost-talk-wasm",     # published browser adapter
     "ghost-talk-native",   # native application executable
     "ghost-realtime",      # reusable Ghost/Kinesis realtime protocol/router surface
-    "ghost-p2p",           # reusable Ghost/Kinesis p2p identity/binding surface
+    "ghost-p2p",           # in-process p2p-net browser transport for the realtime contract
     "ghost-wasm",          # standalone browser application workspace
     "ghost-direct-chat",   # focused composition/demo binaries
     "ghost-kaspa-voice",
@@ -175,7 +175,7 @@ def check_local_lock_consistency() -> None:
 
 
 def check_yew_indexmap_unification() -> None:
-    """Keep the browser UI and Kaspa graph on one compatible indexmap 2.x."""
+    """Keep the browser UI graph on one compatible indexmap 2.x."""
     manifest = _manifest_data(APP_CRATES / "ghost-wasm" / "Cargo.toml")
     wasm = manifest.get("target", {}).get('cfg(target_arch = "wasm32")', {}).get("dependencies", {})
     implicit = wasm.get("implicit-clone", {})
@@ -192,7 +192,10 @@ def check_yew_indexmap_unification() -> None:
     expected = (("implicit-clone", "0.6.0"), ("yew", "0.22.0"))
     for name, version in expected:
         package = next((item for item in packages if item.get("name") == name and item.get("version") == version), None)
-        if package is None or "indexmap 2.14.2" not in package.get("dependencies", []):
+        indexmaps = [item for item in packages if item.get("name") == "indexmap"]
+        single = len(indexmaps) == 1 and indexmaps[0].get("version") == "2.14.2"
+        deps = package.get("dependencies", []) if package else []
+        if package is None or not ("indexmap 2.14.2" in deps or (single and "indexmap" in deps)):
             fail(f"standalone WASM lock must bind {name} {version} to indexmap 2.14.2")
 
 def check_kasia_wasm_portability() -> None:

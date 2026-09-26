@@ -23,12 +23,16 @@ fn review_result(review: vault_runtime::VaultReview, token: String) -> KasKoldRe
         change_total_sompi: review.change_total.to_string(),
         own_receive_total_sompi: review.own_receive_total.to_string(),
         fee_sompi: review.fee.to_string(),
-        outputs: review.outputs.into_iter().map(|output| KasKoldReviewOutput {
-            index: output.index,
-            amount_sompi: output.amount.to_string(),
-            ownership: output.ownership.into(),
-            address: output.address,
-        }).collect(),
+        outputs: review
+            .outputs
+            .into_iter()
+            .map(|output| KasKoldReviewOutput {
+                index: output.index,
+                amount_sompi: output.amount.to_string(),
+                ownership: output.ownership.into(),
+                address: output.address,
+            })
+            .collect(),
     }
 }
 
@@ -40,9 +44,13 @@ pub fn review_pskt(
 ) -> Result<KasKoldReviewResult, String> {
     let mut runtime = open_runtime(password, sealed_inventory)?;
     let parsed_network = kaskold_sdk::Network::parse(network).map_err(|error| error.to_string())?;
-    let request = kaskold_sdk::prepare(pskt_hex, parsed_network).map_err(|error| error.to_string())?;
-    let wire = hex::decode(&request.kspt_hex).map_err(|error| format!("KasKold KSPT hex: {error}"))?;
-    let review = runtime.load_transaction_file(&wire).map_err(runtime_error)?;
+    let request =
+        kaskold_sdk::prepare(pskt_hex, parsed_network).map_err(|error| error.to_string())?;
+    let wire =
+        hex::decode(&request.kspt_hex).map_err(|error| format!("KasKold KSPT hex: {error}"))?;
+    let review = runtime
+        .load_transaction_file(&wire)
+        .map_err(runtime_error)?;
     Ok(review_result(review, pskt_review_token(pskt_hex, network)))
 }
 
@@ -54,16 +62,25 @@ pub fn sign_pskt(
     review_token: &str,
 ) -> Result<KasKoldSignResult, String> {
     if review_token != pskt_review_token(pskt_hex, network) {
-        return Err("KasKold transaction changed after review; review it again before signing".into());
+        return Err(
+            "KasKold transaction changed after review; review it again before signing".into(),
+        );
     }
     let mut runtime = open_runtime(password, sealed_inventory)?;
     let network = kaskold_sdk::Network::parse(network).map_err(|error| error.to_string())?;
     let request = kaskold_sdk::prepare(pskt_hex, network).map_err(|error| error.to_string())?;
-    let wire = hex::decode(&request.kspt_hex).map_err(|error| format!("KasKold KSPT hex: {error}"))?;
-    runtime.load_transaction_file(&wire).map_err(runtime_error)?;
+    let wire =
+        hex::decode(&request.kspt_hex).map_err(|error| format!("KasKold KSPT hex: {error}"))?;
+    runtime
+        .load_transaction_file(&wire)
+        .map_err(runtime_error)?;
     runtime.approve().map_err(runtime_error)?;
     let response_hex = hex::encode(runtime.signed_response_wire().map_err(runtime_error)?);
-    let signed = kaskold_sdk::complete(&request, &response_hex).map_err(|error| error.to_string())?;
+    let signed =
+        kaskold_sdk::complete(&request, &response_hex).map_err(|error| error.to_string())?;
     let transaction_json = kaskold_sdk::finalize(&signed).map_err(|error| error.to_string())?;
-    Ok(KasKoldSignResult { signed_pskt_hex: signed.pskt_hex, transaction_json })
+    Ok(KasKoldSignResult {
+        signed_pskt_hex: signed.pskt_hex,
+        transaction_json,
+    })
 }

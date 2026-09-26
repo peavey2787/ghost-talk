@@ -131,7 +131,8 @@ pub(crate) fn handle_realtime_carrier(
     runtime: &mut HydraProfileRuntime,
     envelope: &[u8],
 ) -> Result<HydraMailboxResult, String> {
-    let carrier = ghost_protocol::Gtr1Envelope::decode(envelope).map_err(|error| error.to_string())?;
+    let carrier =
+        ghost_realtime::Gtr1Envelope::decode(envelope).map_err(|error| error.to_string())?;
     let sender_id = carrier.sender_hex();
     let message_id = carrier.message_id_hex();
     let sid = carrier.sid_hex();
@@ -180,7 +181,8 @@ fn open_realtime_body(
     sid: &str,
     message_id: &str,
 ) -> Result<Option<String>, String> {
-    let carrier = ghost_protocol::Gtr1Envelope::decode(envelope).map_err(|error| error.to_string())?;
+    let carrier =
+        ghost_realtime::Gtr1Envelope::decode(envelope).map_err(|error| error.to_string())?;
     if carrier.ciphertext.starts_with(PERSISTENT_REALTIME_MAGIC) {
         let transport = binding.persistent_transport.as_ref().ok_or_else(|| {
             "persistent realtime carrier arrived without restored transport state".to_string()
@@ -197,7 +199,10 @@ fn open_realtime_body(
         plaintext.zeroize();
         return Ok(Some(body));
     }
-    let Some(received) = runtime.hydra.receive(&carrier.ciphertext, StegoProfile::Off)? else {
+    let Some(received) = runtime
+        .hydra
+        .receive(&carrier.ciphertext, StegoProfile::Off)?
+    else {
         return Ok(None);
     };
     if received.from != sender_id {

@@ -11,11 +11,11 @@ mod transport_restore;
 pub(crate) use transport_restore::unlock_profile_runtime;
 mod commands;
 pub(crate) use commands::{
-    broadcast_signer_send, consolidate_kaspa, fetch_verified_media, gather_wallet_history, lock_profile,
-    lookup_public_profile, publish_descriptor, resolve_peer, reveal_recovery,
-    send_call_contact_request, send_call_control_message, send_call_signal, send_contact_accept,
-    prepare_signer_send, send_contact_request, send_kaspa, send_mailbox_message, send_mailbox_message_existing_session,
-    send_mailbox_reaction, send_room_contact_request,
+    broadcast_signer_send, consolidate_kaspa, fetch_verified_media, gather_wallet_history,
+    lock_profile, lookup_public_profile, prepare_signer_send, publish_descriptor, resolve_peer,
+    reveal_recovery, send_call_contact_request, send_call_control_message, send_call_signal,
+    send_contact_accept, send_contact_request, send_kaspa, send_mailbox_message,
+    send_mailbox_message_existing_session, send_mailbox_reaction, send_room_contact_request,
 };
 mod restore;
 pub(crate) use restore::{
@@ -30,8 +30,8 @@ mod kasia;
 mod media;
 pub(crate) use events::{
     browser_wallet_snapshot, clear_debug_log, debug_log_snapshot, hydra_debug_state, listen,
-    load_remembered_unlock, set_debug_logging, set_remembered_unlock, start_wallet_monitor,
-    update_wallet_monitor_public,
+    load_remembered_unlock, record_debug, set_debug_logging, set_remembered_unlock,
+    start_wallet_monitor, update_wallet_monitor_public,
 };
 
 pub(crate) use broadcast::{push_broadcast, start_broadcast, stop_broadcast, BroadcastStopResult};
@@ -40,4 +40,3 @@ pub(crate) use kasia::{
 };
 
 pub(crate) use media::{archive_plan, archive_publish, import_local_media, sign_manifest};
-

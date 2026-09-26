@@ -37,6 +37,7 @@ from architecture.dependency_checks import (
     check_kasia_wasm_portability, check_mailbox_submission_ownership, check_yew_indexmap_unification,
 )
 from architecture.mobile_checks import check_mobile_application_contracts
+from architecture.p2p_checks import check_p2p_net_boundary
 from architecture.parity_checks import (
     check_cross_platform_command_parity, check_broadcast_transport_parity, check_shared_parity_owners,
     check_browser_host_compile_contracts,
@@ -79,6 +80,7 @@ def main() -> int:
     check_identity_ownership()
     check_mailbox_ownership()
     check_transport_ownership(files)
+    check_p2p_net_boundary()
     check_wallet_progress(files)
     check_obsolete_code(files)
     check_rust_surface_sanity(files)
@@ -129,6 +131,7 @@ def main() -> int:
     print("PASS: known zero-coverage CRAP boundaries remain CC<=4")
     print("PASS: Android/iOS shared-UX mobile shells and self-bootstrap contracts are enforced")
     print("PASS: downstream security/contribution/CI/release-engineering surfaces are enforced")
+    print("PASS: p2p-net, Kaspa Portal and HYDRA are clean imports in one WASM module; no Rusty-Kaspa")
     print("PASS: Ghost Talk package versions remain 0.1.0")
     return 0
 

@@ -1,5 +1,5 @@
-mod broadcast;
 mod backup;
+mod broadcast;
 mod discover;
 mod hydra;
 mod interop;
@@ -48,11 +48,8 @@ async fn invoke_social(command: &str, args: &Value) -> Result<Value, String> {
     if matches!(command, "resolve_ghost_peer" | "lookup_ghost_profile") {
         return runtime::peer::invoke(command, args);
     }
-    if command == "hydra_receive_mailbox" {
+    if command == "hydra_receive_mailbox" || command.starts_with("mailbox_") {
         return runtime::mailbox::invoke(command, args).await;
-    }
-    if command.starts_with("mailbox_send_") {
-        return runtime::mailbox_send::invoke(command, args).await;
     }
     if command.starts_with("media_") || command.starts_with("kaspa_archive_") {
         return media::invoke(command, args).await;
@@ -69,7 +66,6 @@ async fn invoke_subsystem(command: &str, args: &Value) -> Result<Value, String> 
     }
     invoke_wallet_subsystem(command, args).await
 }
-
 
 fn invoke_local_subsystem(command: &str, args: &Value) -> Option<Result<Value, String>> {
     if command.starts_with("kaskold_") {
@@ -88,7 +84,10 @@ async fn invoke_wallet_subsystem(command: &str, args: &Value) -> Result<Value, S
     if command.starts_with("wallet_monitor_") {
         return kaspa::invoke_monitor(command, args).await;
     }
-    if matches!(command, "wallet_prepare_signer_send" | "wallet_broadcast_signer_send") {
+    if matches!(
+        command,
+        "wallet_prepare_signer_send" | "wallet_broadcast_signer_send"
+    ) {
         return signer::invoke(command, args).await;
     }
     if command.starts_with("wallet_") {

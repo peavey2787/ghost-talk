@@ -33,9 +33,10 @@ mod runtime;
 #[cfg(target_arch = "wasm32")]
 pub(crate) use runtime::{
     BackupContact, BackupMessage, BroadcastResult, CallRuntimeEvent, DebugLogEntry,
-    DebugLogSnapshot, HydraCallSignalProjection, HydraControlProjection, HydraRealtimeEnvelope,
-    HydraMailboxResult, HydraSessionBindingProjection, KasKoldBackupResult, PeerRouteRegistration, ProfileBackupPublishResult,
-    ProfileBackupRestoreResult, PublishedGhostDescriptor, RealtimeControl,
+    DebugLogSnapshot, HydraCallSignalProjection, HydraControlProjection, HydraMailboxResult,
+    HydraRealtimeEnvelope, HydraSessionBindingProjection, KasKoldBackupResult,
+    PeerRouteRegistration, ProfileBackupPublishResult, ProfileBackupRestoreResult,
+    PublishedGhostDescriptor, RealtimeControl,
 };
 
 #[cfg(target_arch = "wasm32")]

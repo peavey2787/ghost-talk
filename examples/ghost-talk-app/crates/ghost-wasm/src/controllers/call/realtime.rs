@@ -1,12 +1,12 @@
 use std::{cell::RefCell, collections::VecDeque, rc::Rc};
 
-use base64::{engine::general_purpose::STANDARD, Engine as _};
-use ghost_p2p::{GhostP2pTransport, P2pNetTransport, P2pRouteState};
-use ghost_realtime::{route, RealtimeCarrier, RoutePreference};
+use ghost_p2p::{P2pNetTransport, P2pRouteState};
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::{Callback, UseStateHandle};
 
-use crate::{model::Profile, random_id};
+use crate::model::Profile;
+
+mod job;
 
 #[derive(Clone)]
 pub(crate) struct RealtimeSender {
@@ -15,8 +15,12 @@ pub(crate) struct RealtimeSender {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum RealtimeDelivery {
+    /// Live media: p2p-net when routed Automatic, else Kaspa.
     Realtime,
+    /// Must travel over Kaspa (authenticated p2p binding announcements).
     KaspaRealtime,
+    /// Ephemeral chat text: p2p-net only, never stored on Kaspa.
+    DirectOnly,
     DurableControl,
 }
 
@@ -37,94 +41,6 @@ struct RealtimeSenderInner {
     p2p_state: UseStateHandle<P2pRouteState>,
     on_wallet_progress: Callback<crate::model::WalletProjection>,
     on_error: Callback<String>,
-}
-
-fn realtime_target(
-    profile: &Profile,
-    job: &RealtimeJob,
-) -> Result<(String, String, String), String> {
-    let chat = profile
-        .chats
-        .iter()
-        .find(|chat| chat.id == job.chat_id)
-        .ok_or_else(|| "Realtime chat no longer exists.".to_string())?;
-    let peer = chat
-        .peer_hydra_handle()
-        .map(str::to_owned)
-        .ok_or_else(|| "Realtime chat has no authenticated HYDRA peer.".to_string())?;
-    let destination = chat
-        .peer_kaspa_address()
-        .map(str::to_owned)
-        .ok_or_else(|| "Realtime chat has no Kaspa destination.".to_string())?;
-    Ok((peer, destination, random_id()?))
-}
-
-async fn send_realtime_job(
-    snapshot: &SenderSnapshot,
-    job: &RealtimeJob,
-    target: &(String, String, String),
-) -> Result<Option<ghost_api::MailboxSendResult>, String> {
-    let (peer, destination, message_id) = target;
-    if job.delivery == RealtimeDelivery::DurableControl {
-        return crate::controllers::call::send_call_control_message(
-            &snapshot.profile,
-            &snapshot.password,
-            peer,
-            destination,
-            &job.body,
-            message_id,
-        )
-        .await
-        .map(Some);
-    }
-
-    // Advance HYDRA exactly once. Every physical carrier gets these exact GTR1
-    // bytes, so p2p failure cannot cause a second ratchet send or a second
-    // ciphertext for the same logical realtime message.
-    let sealed = crate::controllers::call::seal_realtime(
-        &snapshot.profile.id,
-        peer,
-        message_id,
-        &job.body,
-    )
-    .await?;
-
-    let preference = if job.delivery == RealtimeDelivery::Realtime
-        && snapshot.profile.settings.route.eq_ignore_ascii_case("auto")
-    {
-        RoutePreference::Auto
-    } else {
-        RoutePreference::KaspaOnly
-    };
-    let decision = route(preference, *snapshot.p2p_state == P2pRouteState::Connected);
-
-    if decision.primary == RealtimeCarrier::P2pNet {
-        let sid = decode_hex_array::<16>(&sealed.session_sid, "GTR1 SID")?;
-        let packet = STANDARD
-            .decode(sealed.carrier_b64.as_bytes())
-            .map_err(|_| "sealed GTR1 carrier is not valid base64".to_string())?;
-        let p2p_result = match snapshot.p2p.try_borrow() {
-            Ok(p2p) => p2p.send(sid, &packet).await,
-            Err(_) => Err("p2p-net is busy with another lifecycle operation".into()),
-        };
-        if p2p_result.is_ok() {
-            return Ok(None);
-        }
-        snapshot.p2p_state.set(P2pRouteState::KaspaFallback);
-        if decision.fallback != Some(RealtimeCarrier::Kaspa) {
-            return p2p_result.map(|_| None);
-        }
-    }
-
-    crate::controllers::call::send_realtime_carrier(
-        &snapshot.profile,
-        &snapshot.password,
-        peer,
-        destination,
-        &sealed.carrier_b64,
-    )
-    .await
-    .map(Some)
 }
 
 impl RealtimeSender {
@@ -189,6 +105,21 @@ impl RealtimeSender {
         });
     }
 
+    /// Queue ephemeral chat text that may only travel over p2p-net.
+    pub(crate) fn enqueue_direct(
+        &self,
+        chat_id: String,
+        body: String,
+        on_complete: Callback<Result<(), String>>,
+    ) {
+        self.enqueue_job(RealtimeJob {
+            chat_id,
+            body,
+            delivery: RealtimeDelivery::DirectOnly,
+            on_complete: Some(on_complete),
+        });
+    }
+
     pub(crate) fn enqueue_control(
         &self,
         chat_id: String,
@@ -242,14 +173,14 @@ impl RealtimeSender {
                 return;
             };
             let snapshot = self.snapshot();
-            let target = match realtime_target(&snapshot.profile, &job) {
+            let target = match job::target(&snapshot.profile, &job) {
                 Ok(target) => target,
                 Err(error) => {
                     self.finish_error(job, snapshot.on_error, error);
                     continue;
                 }
             };
-            match send_realtime_job(&snapshot, &job, &target).await {
+            match job::send(&snapshot, &job, &target).await {
                 Ok(sent) => self.finish_success(job, sent, snapshot.on_wallet_progress),
                 Err(error) => self.finish_error(job, snapshot.on_error, error),
             }
@@ -296,10 +227,13 @@ impl RealtimeSender {
         if let Some(callback) = job.on_complete {
             callback.emit(Err(error.clone()));
         }
-        if job.delivery == RealtimeDelivery::DurableControl {
-            on_error.emit(format!("Call signaling failed: {error}"));
-        } else {
-            on_error.emit(error);
+        match job.delivery {
+            // The composer reports direct-text failures (and may fall back).
+            RealtimeDelivery::DirectOnly => {}
+            RealtimeDelivery::DurableControl => {
+                on_error.emit(format!("Call signaling failed: {error}"))
+            }
+            _ => on_error.emit(error),
         }
     }
 }
@@ -311,14 +245,4 @@ struct SenderSnapshot {
     p2p_state: UseStateHandle<P2pRouteState>,
     on_wallet_progress: Callback<crate::model::WalletProjection>,
     on_error: Callback<String>,
-}
-
-fn decode_hex_array<const N: usize>(value: &str, label: &str) -> Result<[u8; N], String> {
-    if value.len() != N * 2 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-        return Err(format!("{label} is not valid hex"));
-    }
-    let decoded = hex::decode(value).map_err(|_| format!("{label} is not valid hex"))?;
-    decoded
-        .try_into()
-        .map_err(|_| format!("{label} has an invalid length"))
 }

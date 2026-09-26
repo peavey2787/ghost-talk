@@ -56,7 +56,8 @@ pub(crate) fn open_runtime(password: &str, sealed: &[u8]) -> Result<VaultRuntime
     if sealed.is_empty() {
         return Ok(VaultRuntime::new());
     }
-    let mut plaintext = ghost_storage::open(password, &ghost_storage::SealedVault(sealed.to_vec()))?;
+    let mut plaintext =
+        ghost_storage::open(password, &ghost_storage::SealedVault(sealed.to_vec()))?;
     if plaintext.len() < 36 || &plaintext[..4] != WRAP_MAGIC {
         plaintext.zeroize();
         return Err("KasKold compatibility inventory is invalid".into());
@@ -89,7 +90,10 @@ fn seal_runtime(password: &str, runtime: &VaultRuntime) -> Result<Vec<u8>, Strin
     result
 }
 
-fn inventory_result(password: &str, runtime: &VaultRuntime) -> Result<KasKoldInventoryResult, String> {
+fn inventory_result(
+    password: &str,
+    runtime: &VaultRuntime,
+) -> Result<KasKoldInventoryResult, String> {
     Ok(KasKoldInventoryResult {
         sealed_inventory: seal_runtime(password, runtime)?,
         wallets: summaries(runtime)?,

@@ -11,8 +11,8 @@ mod peer;
 mod wallet;
 
 pub use backup::{
-    validate_profile_backup_inputs, BackupContact, BackupMessage, ProfileBackupArchive, ProfileBackupPublishResult,
-    ProfileBackupRestoreResult,
+    validate_profile_backup_inputs, BackupContact, BackupMessage, ProfileBackupArchive,
+    ProfileBackupPublishResult, ProfileBackupRestoreResult,
 };
 pub use capabilities::{
     default_capabilities, select_conversation_mode, ConversationMode, ProtocolAvailability,
@@ -25,21 +25,20 @@ pub use events::{
 };
 pub use hydra::{
     HydraCallSignalProjection, HydraContactAcceptedProjection, HydraControlProjection,
-    HydraIncomingRequestProjection, HydraMailboxResult, HydraReady,
-    HydraRealtimeEnvelope,
+    HydraIncomingRequestProjection, HydraMailboxResult, HydraReady, HydraRealtimeEnvelope,
     HydraRecoveryProjection, HydraRoomInviteProjection, HydraSessionBindingProjection,
     HydraSessionEndedProjection, ReceivedProjection,
 };
-pub use metadata::{app_info, AppInfo};
 pub use media::{
     BroadcastSinkFailure, BroadcastStartRequest, BroadcastStopResult, KaspaArchivePlan,
     KaspaArchivePublishResult, VerifiedMedia,
 };
+pub use metadata::{app_info, AppInfo};
 pub use peer::{PeerRouteRegistration, PublicGhostProfile, ResolvedGhostPeer};
 pub use wallet::{
-    derivation_presets, BroadcastResult, DerivationPresetInfo, MailboxSendResult, PublishedGhostDescriptor, WalletCreateResponse,
-    WalletHistoryEntry, WalletHistoryResult, WalletImportResponse, WalletProjection,
-    WalletRecovery, WalletSnapshot,
+    derivation_presets, BroadcastResult, DerivationPresetInfo, MailboxSendResult,
+    PublishedGhostDescriptor, WalletCreateResponse, WalletHistoryEntry, WalletHistoryResult,
+    WalletImportResponse, WalletProjection, WalletRecovery, WalletSnapshot,
 };
 
 pub use kaskold::{

@@ -1,8 +1,6 @@
 use js_sys::Uint8Array;
 use wasm_bindgen_futures::{spawn_local, JsFuture};
-use web_sys::{
-    HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, SubmitEvent,
-};
+use web_sys::{HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, SubmitEvent};
 use yew::prelude::*;
 
 pub(crate) fn text_input(state: UseStateHandle<String>) -> Callback<InputEvent> {

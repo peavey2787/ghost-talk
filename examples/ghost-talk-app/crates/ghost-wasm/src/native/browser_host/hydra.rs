@@ -19,11 +19,12 @@ pub(super) async fn invoke(command: &str, args: &Value) -> Result<Value, String>
     lifecycle_invoke(command, args).await
 }
 
-
 fn invoke_contact(command: &str, args: &Value) -> Option<Result<Value, String>> {
     match command {
         "hydra_preview_contact_request" => Some(preview_contact_request(args)),
-        "hydra_register_peer_routes" => Some(super::runtime::secure_transport::register_routes(args)),
+        "hydra_register_peer_routes" => {
+            Some(super::runtime::secure_transport::register_routes(args))
+        }
         "hydra_peer_session_binding" => Some(super::runtime::secure_transport::binding(args)),
         _ => None,
     }
@@ -42,7 +43,10 @@ fn invoke_transport(command: &str, args: &Value) -> Option<Result<Value, String>
 fn preview_contact_request(args: &Value) -> Result<Value, String> {
     let envelope_hex = required_str(args, "envelopeHex")?;
     let local_addresses: Vec<String> = required(args, "localKaspaAddresses")?;
-    to_value(ghost_kaspa::preview_contact_request(envelope_hex, &local_addresses)?)
+    to_value(ghost_kaspa::preview_contact_request(
+        envelope_hex,
+        &local_addresses,
+    )?)
 }
 
 async fn lifecycle_invoke(command: &str, args: &Value) -> Result<Value, String> {
@@ -60,9 +64,8 @@ fn debug_state(args: &Value) -> Result<Value, String> {
         return Ok(serde_json::json!({"available": false, "sessions": []}));
     }
     let profile_id = required_str(args, "profileId")?;
-    super::runtime::session::debug_value(profile_id).or_else(|_| {
-        Ok(serde_json::json!({"available": false, "sessions": []}))
-    })
+    super::runtime::session::debug_value(profile_id)
+        .or_else(|_| Ok(serde_json::json!({"available": false, "sessions": []})))
 }
 
 async fn initialize_from_wallet(args: &Value) -> Result<Value, String> {
@@ -103,7 +106,8 @@ async fn ensure(args: &Value) -> Result<Value, String> {
         return to_value(ready);
     }
 
-    let secret = WALLET_SECRETS.with(|secrets| secrets.borrow().get(&profile_id).cloned())
+    let secret = WALLET_SECRETS
+        .with(|secrets| secrets.borrow().get(&profile_id).cloned())
         .ok_or_else(|| "wallet must be unlocked before HYDRA can open".to_string())?;
     let seed = ghost_kaspa::wallet::hydra_identity_seed(&secret)?;
     let mut hydra = HydraFacade::open_browser(&store_name(&profile_id), &password).await?;

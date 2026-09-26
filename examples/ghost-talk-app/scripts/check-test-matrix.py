@@ -18,7 +18,6 @@ APP_WASM = APP_ROOT / "crates" / "ghost-wasm"
 
 errors: list[str] = []
 
-
 def fail(message: str) -> None:
     errors.append(message)
 
@@ -35,17 +34,14 @@ def normalized(source: str) -> str:
     source = re.sub(r"\\\s*\r?\n\s*", " ", source)
     return source
 
-
 def require(source: str, token: str, label: str) -> None:
     if token not in source:
         fail(f"{label} is missing `{token}`")
-
 
 def require_command(source: str, prefix: str, flags: tuple[str, ...], label: str) -> None:
     candidates = [line.strip() for line in source.splitlines() if prefix in line]
     if not any(all(flag in line for flag in flags) for line in candidates):
         fail(f"{label} is missing complete command `{prefix}` with flags {', '.join(flags)}")
-
 
 def require_command_variant(
     source: str,
@@ -66,7 +62,6 @@ def require_command_variant(
             f"and forbidding [{excluded}]"
         )
 
-
 def nearest_manifest(path: Path) -> Path | None:
     current = path.parent
     while current != current.parent and REPO_ROOT in (current, *current.parents):
@@ -78,7 +73,6 @@ def nearest_manifest(path: Path) -> Path | None:
         current = current.parent
     return None
 
-
 def first_party_rust_files() -> list[Path]:
     files: list[Path] = []
     for path in REPO_ROOT.rglob("*.rs"):
@@ -87,7 +81,6 @@ def first_party_rust_files() -> list[Path]:
         if nearest_manifest(path) is not None:
             files.append(path)
     return sorted(files)
-
 
 def check_manifest_test_enablement(manifests: set[Path]) -> None:
     disabled_re = re.compile(
@@ -101,7 +94,6 @@ def check_manifest_test_enablement(manifests: set[Path]) -> None:
                 f"{manifest.relative_to(REPO_ROOT)} disables `{key}`; the mandatory full-suite "
                 "runner may not hide first-party tests/doctests/auto test targets"
             )
-
 
 def main() -> int:
     root_sh = normalized(text(ROOT_RUN_SH))
@@ -143,10 +135,12 @@ def main() -> int:
         if path.parent.name != "ghost-wasm"
     }
     standalone_wasm = (APP_WASM / "Cargo.toml").resolve()
+    e2e_harness = (APP_ROOT / "e2e" / "harness" / "Cargo.toml").resolve()
     covered_manifests = {
         (REPO_ROOT / "Cargo.toml").resolve(),
         (APP_ROOT / "Cargo.toml").resolve(),
         standalone_wasm,
+        e2e_harness,
         *root_members,
         *app_members,
     }
@@ -248,6 +242,8 @@ def main() -> int:
         require_command(source, "cargo clippy --manifest-path crates/ghost-wasm/Cargo.toml", ("--target wasm32-unknown-unknown", "--all-targets", "--all-features", "-D warnings"), label)
         require(source, "wasm-pack test --headless", label)
         require(source, "crates/ghost-wasm", label)
+        require_command(source, "cargo clippy --manifest-path e2e/harness/Cargo.toml", ("--all-targets", "-D warnings"), label)
+        require_command(source, "cargo test --manifest-path e2e/harness/Cargo.toml", ("--all-targets", "--no-fail-fast"), label)
         require_command_variant(source, "cargo llvm-cov --workspace", ("--all-targets", "--no-fail-fast", "--lcov"), ("--all-features",), label)
         require_command(source, "cargo llvm-cov --workspace", ("--all-targets", "--all-features", "--no-fail-fast", "--lcov"), label)
         require_command_variant(source, "cargo llvm-cov --manifest-path crates/ghost-wasm/Cargo.toml", ("--all-targets", "--no-fail-fast", "--lcov"), ("--all-features",), label)
@@ -293,7 +289,6 @@ def main() -> int:
     print(f"PASS: all {len(manifests)} first-party Cargo manifests are covered by a mandatory workspace/standalone test surface")
     print("PASS: ignored/disabled tests, --lib-only narrowing, and external full-suite test filters are forbidden")
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())
