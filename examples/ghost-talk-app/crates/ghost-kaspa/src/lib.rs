@@ -18,7 +18,7 @@ pub use descriptor::{build_private_descriptor, build_signed_descriptor};
 pub use history::project_wallet_history_entry;
 pub use live::{fallback_live_event_id, is_live_ghost_carrier};
 pub use node_session::NodeSession;
-pub use resolver::{resolver_query_url, PUBLIC_WRPC_RESOLVERS};
+pub use resolver::{resolver_endpoint, resolver_query_url, PUBLIC_WRPC_RESOLVERS};
 
 mod portal;
 pub use portal::upstream;

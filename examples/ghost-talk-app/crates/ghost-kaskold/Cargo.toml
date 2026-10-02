@@ -19,7 +19,7 @@ hex.workspace = true
 kaskold-sdk.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-kaskold-sdk = { git = "https://github.com/peavey2787/KasKold.git", rev = "fff5e7cc2928c4baade3a7a4bd6695f8a2da4ed8", default-features = false, features = ["wasm"] }
+kaskold-sdk = { git = "https://github.com/peavey2787/KasKold.git", rev = "8d512dfc56b1e6b0bc39727c3c0b4f72812032f2", default-features = false, features = ["wasm"] }
 js-sys.workspace = true
 getrandom = { version = "0.2.17", features = ["js"] }
 

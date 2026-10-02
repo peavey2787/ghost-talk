@@ -208,16 +208,13 @@ async fn resolve(
     network: &str,
 ) -> Result<String, String> {
     let url = ghost_kaspa::resolver_query_url(resolver, network)?;
-    let value: serde_json::Value = client
+    let body = client
         .get(url)
         .send()
         .await
         .map_err(|error| error.to_string())?
-        .json()
+        .text()
         .await
         .map_err(|error| error.to_string())?;
-    value["url"]
-        .as_str()
-        .map(str::to_owned)
-        .ok_or_else(|| "resolver returned no url".into())
+    ghost_kaspa::resolver_endpoint(&body)
 }

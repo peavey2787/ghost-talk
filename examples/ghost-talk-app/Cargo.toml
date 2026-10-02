@@ -37,7 +37,7 @@ hydra-core = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "d90b3
 hydra-crypto = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "d90b387aaefbc20c5a686192e59c8c4b0d98cb26" }
 hydra-stego = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "d90b387aaefbc20c5a686192e59c8c4b0d98cb26" }
 hydra-group = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "d90b387aaefbc20c5a686192e59c8c4b0d98cb26" }
-kaspa-portal = { git = "https://github.com/peavey2787/kaspa-portal.git", rev = "be7acfd183f092fcf57308116ac0fe9683b8813c" }
+kaspa-portal = { git = "https://github.com/peavey2787/kaspa-portal.git", rev = "2e07bd4eac05791fe8cdddf5976051c7f429c189" }
 ghost-talk = { path = "../../crates/ghost-talk" }
 # Shared realtime/voice contract and the p2p-net transport it drives. Kaspa
 # Portal, HYDRA and p2p-net share one wasm-bindgen family, so all link together.
@@ -45,8 +45,8 @@ ghost-realtime = { path = "../../crates/ghost-realtime" }
 p2p-net = { git = "https://github.com/peavey2787/p2p-net", rev = "3ade5744fe7f21747c0246965e557f3825626738" }
 ghost-voice = { path = "../../crates/ghost-voice" }
 # KasKold 2.0 import/backup/signing formats (upstream KasKold, v2 branch).
-vault-runtime = { git = "https://github.com/peavey2787/KasKold.git", rev = "fff5e7cc2928c4baade3a7a4bd6695f8a2da4ed8" }
-kaskold-sdk = { git = "https://github.com/peavey2787/KasKold.git", rev = "fff5e7cc2928c4baade3a7a4bd6695f8a2da4ed8" }
+vault-runtime = { git = "https://github.com/peavey2787/KasKold.git", rev = "8d512dfc56b1e6b0bc39727c3c0b4f72812032f2" }
+kaskold-sdk = { git = "https://github.com/peavey2787/KasKold.git", rev = "8d512dfc56b1e6b0bc39727c3c0b4f72812032f2" }
 
 [profile.dev.package."*"]
 opt-level = 3

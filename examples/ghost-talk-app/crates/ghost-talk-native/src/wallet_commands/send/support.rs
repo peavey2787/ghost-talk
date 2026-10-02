@@ -94,10 +94,3 @@ pub(crate) async fn resolve_wrpc_endpoints(
     }
     finish_resolver_discovery(endpoints, errors)
 }
-
-#[derive(serde::Deserialize)]
-pub(crate) struct ResolverNodeDescriptor {
-    #[serde(default)]
-    pub(crate) uid: Option<String>,
-    pub(crate) url: String,
-}

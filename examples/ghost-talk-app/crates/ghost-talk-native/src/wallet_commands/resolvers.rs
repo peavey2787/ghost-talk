@@ -1,4 +1,3 @@
-use super::send::ResolverNodeDescriptor;
 type ResolverResponse = (&'static str, Result<(String, String), String>);
 type ResolverTaskResult = Result<ResolverResponse, tokio::task::JoinError>;
 pub(crate) use ghost_kaspa::PUBLIC_WRPC_RESOLVERS as PUBLIC_RESOLVERS;
@@ -55,18 +54,16 @@ pub(crate) async fn query_resolver(
     if !response.status().is_success() {
         return Err(format!("HTTP {}", response.status()));
     }
-    let descriptor: ResolverNodeDescriptor = response
-        .json()
+    let body = response
+        .text()
         .await
         .map_err(|error| format!("invalid resolver descriptor: {error}"))?;
-    let endpoint = descriptor.url.trim().to_owned();
-    if !endpoint.starts_with("wss://") {
-        return Err(format!(
-            "TLS resolver returned non-WSS endpoint: {}",
-            descriptor.url
-        ));
-    }
-    Ok((descriptor.uid.unwrap_or_default(), endpoint))
+    let endpoint = ghost_kaspa::resolver_endpoint(&body)?;
+    let uid = serde_json::from_str::<serde_json::Value>(&body)
+        .ok()
+        .and_then(|value| value.get("uid")?.as_str().map(str::to_owned))
+        .unwrap_or_default();
+    Ok((uid, endpoint))
 }
 
 pub(crate) fn absorb_resolver_result(

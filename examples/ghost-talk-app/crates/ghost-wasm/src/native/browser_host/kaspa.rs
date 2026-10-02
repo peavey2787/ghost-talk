@@ -219,20 +219,7 @@ async fn resolve_endpoint(resolver: &str, network: &str) -> Result<String, Strin
 }
 
 pub(super) fn parse_resolver_endpoint(text: &str) -> Result<String, String> {
-    let trimmed = text.trim();
-    if trimmed.starts_with("ws://") || trimmed.starts_with("wss://") {
-        validate_wrpc(trimmed)?;
-        return Ok(trimmed.to_owned());
-    }
-    let value: Value = serde_json::from_str(trimmed)
-        .map_err(|error| format!("invalid Kaspa resolver JSON: {error}"))?;
-    let endpoint = value
-        .get("url")
-        .or_else(|| value.get("endpoint"))
-        .and_then(Value::as_str)
-        .ok_or("Kaspa resolver response did not contain url or endpoint")?;
-    validate_wrpc(endpoint)?;
-    Ok(endpoint.to_owned())
+    ghost_kaspa::resolver_endpoint(text)
 }
 
 fn validate_wrpc(endpoint: &str) -> Result<(), String> {

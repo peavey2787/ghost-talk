@@ -1,23 +1,19 @@
-pub const PUBLIC_WRPC_RESOLVERS: [&str; 16] = [
-    "https://eric.kaspa.stream",
-    "https://maxim.kaspa.stream",
-    "https://sean.kaspa.stream",
-    "https://troy.kaspa.stream",
-    "https://john.kaspa.red",
-    "https://mike.kaspa.red",
-    "https://paul.kaspa.red",
-    "https://alex.kaspa.red",
-    "https://jake.kaspa.green",
-    "https://mark.kaspa.green",
-    "https://adam.kaspa.green",
-    "https://liam.kaspa.green",
-    "https://noah.kaspa.blue",
-    "https://ryan.kaspa.blue",
-    "https://jack.kaspa.blue",
-    "https://luke.kaspa.blue",
-];
+//! Public Kaspa node discovery through the community wRPC resolvers, from
+//! Kaspa Portal. Only TLS (`wss://`) endpoints are accepted from a resolver.
 
-pub fn resolver_query_url(resolver: &str, network: &str) -> Result<String, String> {
-    let network = crate::upstream::portal::primitives::NetworkId::parse(network)?.canonical_name();
-    Ok(format!("{resolver}/v2/kaspa/{network}/tls/wrpc/borsh"))
+use crate::upstream::portal::{network::resolver, primitives::NetworkId};
+
+pub use resolver::PUBLIC_RESOLVERS as PUBLIC_WRPC_RESOLVERS;
+
+/// Resolver query for a TLS Borsh wRPC node on `network`.
+pub fn resolver_query_url(resolver_url: &str, network: &str) -> Result<String, String> {
+    Ok(resolver::query_url(
+        resolver_url,
+        NetworkId::parse(network)?,
+    ))
+}
+
+/// The `wss://` node endpoint a resolver answered with.
+pub fn resolver_endpoint(body: &str) -> Result<String, String> {
+    resolver::parse_endpoint(body).map_err(|error| error.to_string())
 }

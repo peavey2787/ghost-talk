@@ -51,3 +51,19 @@ fn standalone_browser_accepts_kaspa_resolver_node_descriptor() {
     .expect("Kaspa resolver NodeDescriptor URL");
     assert_eq!(endpoint, "wss://node.example.org/wrpc/borsh");
 }
+
+#[wasm_bindgen_test]
+fn standalone_browser_rejects_non_tls_resolver_endpoints() {
+    // A resolver may only hand out TLS nodes; plaintext ws:// or a bare URL
+    // body would let a network attacker steer the wallet to a hostile node.
+    for body in [
+        r#"{"uid":"public-node","url":"ws://node.example.org/wrpc/borsh"}"#,
+        "wss://node.example.org/wrpc/borsh",
+        r#"{"uid":"public-node"}"#,
+    ] {
+        assert!(
+            super::kaspa::parse_resolver_endpoint(body).is_err(),
+            "{body}"
+        );
+    }
+}

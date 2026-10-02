@@ -3041,7 +3041,7 @@ dependencies = [
 [[package]]
 name = "hot-wallet"
 version = "2.0.0"
-source = "git+https://github.com/peavey2787/KasKold.git?rev=fff5e7cc2928c4baade3a7a4bd6695f8a2da4ed8#fff5e7cc2928c4baade3a7a4bd6695f8a2da4ed8"
+source = "git+https://github.com/peavey2787/KasKold.git?rev=8d512dfc56b1e6b0bc39727c3c0b4f72812032f2#8d512dfc56b1e6b0bc39727c3c0b4f72812032f2"
 dependencies = [
  "aes-gcm",
  "getrandom 0.2.17",
@@ -3761,13 +3761,14 @@ dependencies = [
 [[package]]
 name = "kaskold-protocol"
 version = "2.0.0"
-source = "git+https://github.com/peavey2787/KasKold.git?rev=fff5e7cc2928c4baade3a7a4bd6695f8a2da4ed8#fff5e7cc2928c4baade3a7a4bd6695f8a2da4ed8"
+source = "git+https://github.com/peavey2787/KasKold.git?rev=8d512dfc56b1e6b0bc39727c3c0b4f72812032f2#8d512dfc56b1e6b0bc39727c3c0b4f72812032f2"
 dependencies = [
  "blake2b_simd",
  "hex",
  "hmac 0.12.1",
  "js-sys",
  "k256",
+ "kaspa-portal",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -3778,7 +3779,7 @@ dependencies = [
 [[package]]
 name = "kaskold-sdk"
 version = "2.0.0"
-source = "git+https://github.com/peavey2787/KasKold.git?rev=fff5e7cc2928c4baade3a7a4bd6695f8a2da4ed8#fff5e7cc2928c4baade3a7a4bd6695f8a2da4ed8"
+source = "git+https://github.com/peavey2787/KasKold.git?rev=8d512dfc56b1e6b0bc39727c3c0b4f72812032f2#8d512dfc56b1e6b0bc39727c3c0b4f72812032f2"
 dependencies = [
  "getrandom 0.2.17",
  "hex",
@@ -3791,8 +3792,8 @@ dependencies = [
 
 [[package]]
 name = "kaspa-portal"
-version = "1.2.1"
-source = "git+https://github.com/peavey2787/kaspa-portal.git?rev=be7acfd183f092fcf57308116ac0fe9683b8813c#be7acfd183f092fcf57308116ac0fe9683b8813c"
+version = "1.4.0"
+source = "git+https://github.com/peavey2787/kaspa-portal.git?rev=2e07bd4eac05791fe8cdddf5976051c7f429c189#2e07bd4eac05791fe8cdddf5976051c7f429c189"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -5206,13 +5207,14 @@ dependencies = [
 [[package]]
 name = "offline-signer"
 version = "2.0.0"
-source = "git+https://github.com/peavey2787/KasKold.git?rev=fff5e7cc2928c4baade3a7a4bd6695f8a2da4ed8#fff5e7cc2928c4baade3a7a4bd6695f8a2da4ed8"
+source = "git+https://github.com/peavey2787/KasKold.git?rev=8d512dfc56b1e6b0bc39727c3c0b4f72812032f2#8d512dfc56b1e6b0bc39727c3c0b4f72812032f2"
 dependencies = [
  "aes-gcm",
  "argon2",
  "blake2",
  "k256",
  "kaskold-protocol",
+ "kaspa-portal",
  "ripemd",
  "sha2 0.10.9",
  "shared-signer",
@@ -6929,8 +6931,9 @@ dependencies = [
 [[package]]
 name = "shared-signer"
 version = "2.0.0"
-source = "git+https://github.com/peavey2787/KasKold.git?rev=fff5e7cc2928c4baade3a7a4bd6695f8a2da4ed8#fff5e7cc2928c4baade3a7a4bd6695f8a2da4ed8"
+source = "git+https://github.com/peavey2787/KasKold.git?rev=8d512dfc56b1e6b0bc39727c3c0b4f72812032f2#8d512dfc56b1e6b0bc39727c3c0b4f72812032f2"
 dependencies = [
+ "kaspa-portal",
  "sha2 0.10.9",
 ]
 
@@ -8240,7 +8243,7 @@ checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
 [[package]]
 name = "vault-runtime"
 version = "2.0.0"
-source = "git+https://github.com/peavey2787/KasKold.git?rev=fff5e7cc2928c4baade3a7a4bd6695f8a2da4ed8#fff5e7cc2928c4baade3a7a4bd6695f8a2da4ed8"
+source = "git+https://github.com/peavey2787/KasKold.git?rev=8d512dfc56b1e6b0bc39727c3c0b4f72812032f2#8d512dfc56b1e6b0bc39727c3c0b4f72812032f2"
 dependencies = [
  "hot-wallet",
  "kaskold-protocol",

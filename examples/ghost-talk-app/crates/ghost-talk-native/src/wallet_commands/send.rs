@@ -285,5 +285,4 @@ mod support;
 pub(crate) use support::{
     open_secret, parse_u64_decimal, recommended_receive_index, resolve_wrpc_endpoints, seal_secret,
     supported_network, validate_public_projection, validate_requested_network,
-    ResolverNodeDescriptor,
 };
