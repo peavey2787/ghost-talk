@@ -106,8 +106,14 @@ export async function expectCallConnected(page) {
 
 export async function hangUp(page) {
   const modal = page.locator('.voice-call-modal');
-  if (await modal.count()) await modal.getByRole('button', { name: 'Hang up' }).click();
+  const hangup = modal.getByRole('button', { name: 'Hang up' });
+  if (await hangup.count()) await hangup.click();
   await page.getByRole('button', { name: 'Close' }).click({ timeout: 10_000 }).catch(() => {});
+}
+
+/** Both sides must leave the call: no call window may remain open. */
+export async function expectNoCall(page) {
+  await expect(page.locator('.voice-call-modal')).toHaveCount(0, { timeout: LONG });
 }
 
 export async function routeLabel(page) {

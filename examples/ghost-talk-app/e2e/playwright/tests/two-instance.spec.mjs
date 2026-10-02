@@ -70,6 +70,8 @@ test('1. direct chat: text both ways and a voice call', async () => {
   await app.expectDebug(alice.page, 'realtime-received', 'kind=call-voice');
   await app.hangUp(alice.page);
   await app.hangUp(bob.page);
+  await app.expectNoCall(alice.page);
+  await app.expectNoCall(bob.page);
 });
 
 test('2. Auto: Kaspa signals the p2p-net route, then voice and text use p2p-net', async () => {
@@ -83,6 +85,8 @@ test('2. Auto: Kaspa signals the p2p-net route, then voice and text use p2p-net'
   await app.expectDebug(alice.page, 'realtime-received', 'carrier=p2p-net', 'kind=call-voice');
   await app.hangUp(alice.page);
   await app.hangUp(bob.page);
+  await app.expectNoCall(alice.page);
+  await app.expectNoCall(bob.page);
 
   for (const instance of [alice, bob]) await app.setTextRoute(instance.page, 'P2P only');
   await app.openChatWith(alice.page, bob.address);
@@ -106,6 +110,8 @@ test('3. Kaspa only: text and voice travel entirely over Kaspa', async () => {
   await app.expectDebug(bob.page, 'realtime-sent', 'carrier=kaspa', 'kind=call-voice');
   await app.hangUp(bob.page);
   await app.hangUp(alice.page);
+  await app.expectNoCall(alice.page);
+  await app.expectNoCall(bob.page);
   for (const instance of [alice, bob]) await app.setRoute(instance.page, 'Auto');
 });
 
@@ -118,10 +124,20 @@ test('4. Rooms: text both ways and Room voice', async () => {
   await alice.page.getByPlaceholder('Contact, KNS, dot.k, or Kaspa address').fill(bob.address);
   await alice.page.getByRole('button', { name: 'Invite', exact: true }).click();
 
+  // Without a secure session the invite bootstraps one and shows as a notice;
+  // over an existing session (these instances already chat) it arrives as a
+  // pending room with an acceptance banner.
   await app.nav(bob.page, 'Rooms');
-  const invite = bob.page.locator('.room-invite-notice', { hasText: roomName });
-  await expect(invite).toBeVisible({ timeout: 5 * 60 * 1000 });
-  await invite.getByRole('button', { name: 'Accept' }).click();
+  const notice = bob.page.locator('.room-invite-notice', { hasText: roomName });
+  const pendingRoom = bob.page.locator('.room-row', { hasText: roomName });
+  await expect(notice.or(pendingRoom)).toBeVisible({ timeout: 5 * 60 * 1000 });
+  if (await notice.isVisible()) {
+    await notice.getByRole('button', { name: 'Accept' }).click();
+  } else {
+    await pendingRoom.click();
+    await bob.page.locator('.room-pending-banner').getByRole('button', { name: 'Accept' }).click();
+  }
+  await expect(bob.page.locator('.room-pending-banner')).toHaveCount(0);
 
   for (const [sender, receiver, body] of [
     [alice, bob, `room hello ${stamp}`],

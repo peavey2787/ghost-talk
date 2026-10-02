@@ -58,13 +58,14 @@ implicit-clone = { version = "=0.6.0", features = ["map"] }
 indexmap = "=2.14.2"
 # ring 0.17 (via libp2p/rustls) needs its Web Crypto entropy backend in browsers.
 ring = { version = "0.17", features = ["wasm32_unknown_unknown_js"] }
-kaspa-portal = { git = "https://github.com/peavey2787/kaspa-portal.git", rev = "fcc8d2bddc689f5afc2d6e7c5104a7c0aaf933c8", features = ["wasm"] }
+kaspa-portal = { git = "https://github.com/peavey2787/kaspa-portal.git", rev = "be7acfd183f092fcf57308116ac0fe9683b8813c", features = ["wasm"] }
 yew = { version = "=0.22.0", features = ["csr"] }
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 serde-wasm-bindgen = "0.6"
 js-sys = "0.3"
 gloo-timers = { version = "0.3", features = ["futures"] }
+futures-util = { version = "0.3", default-features = false }
 base64 = "0.22"
 web-sys = { version = "0.3", features = [
   "AudioContext",

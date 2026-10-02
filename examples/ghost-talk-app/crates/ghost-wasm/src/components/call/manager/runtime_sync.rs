@@ -70,6 +70,7 @@ pub(super) fn use_realtime_sender(
     realtime_ref.borrow().sync(
         profile_ref.borrow().clone(),
         props.password.clone(),
+        p2p_state.clone(),
         on_wallet_progress,
         props.on_error.clone(),
     );

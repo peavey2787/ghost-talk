@@ -1,3 +1,4 @@
+use futures_util::future::Either;
 use ghost_p2p::{GhostP2pTransport, P2pRouteState, SessionPeerBinding};
 use ghost_protocol::{RealtimeBodyV1, RealtimeCapability, TransportAnnounceV1};
 use ghost_realtime::{parse_hydra_id, parse_session_id};
@@ -7,6 +8,22 @@ use crate::{
     components::call::CallRuntime,
     model::{Chat, RealtimeControl},
 };
+
+/// A route that never answers (e.g. a NAT that does not hairpin) must not
+/// block the remaining announced routes.
+const DIAL_TIMEOUT_MS: u32 = 10_000;
+
+/// Browsers reach a peer only through a WebRTC-direct (with certhash),
+/// WebSocket or WebTransport hop; raw TCP/QUIC routes cannot be dialed.
+fn browser_dialable(address: &str) -> bool {
+    let first_hop = address.split("/p2p-circuit").next().unwrap_or(address);
+    first_hop.contains("/webrtc-direct/certhash/")
+        || first_hop.contains("/ws/")
+        || first_hop.contains("/wss/")
+        || first_hop.ends_with("/ws")
+        || first_hop.ends_with("/wss")
+        || first_hop.contains("/webtransport")
+}
 
 /// Handle a peer's authenticated transport announcement (or its ack): bind the
 /// announced PeerId to the session's SID/HYDRA identity, subscribe, dial, and
@@ -30,12 +47,40 @@ pub(in crate::components::call) async fn process_transport_control(
         },
         format!("chat={} peer={}", chat.id, announcement.peer_id),
     );
+    let new_binding = remember_received(&chat, announcement);
     dial(&runtime, announcement).await;
     mark_if_connected(&runtime, &announcement.peer_id).await;
-    if !body.is_ack() {
-        announce(&runtime, &chat, true).await?;
+    // Acknowledge only a peer binding we have not seen: a repeated
+    // announcement must not cost another Kaspa transaction.
+    if !body.is_ack() && new_binding {
+        announce(&runtime, &chat, true, true).await?;
     }
     Ok(())
+}
+
+/// Chat id + session SID.
+type SessionKey = (String, String);
+/// Peer id + dial addresses.
+type PeerBinding = (String, Vec<String>);
+
+thread_local! {
+    /// Last peer binding received per chat session.
+    static RECEIVED: std::cell::RefCell<std::collections::HashMap<SessionKey, PeerBinding>> =
+        std::cell::RefCell::default();
+}
+
+/// Remember the peer's announced binding for this session; true when it is
+/// new for the session (a new SID always needs our acknowledgement).
+fn remember_received(chat: &Chat, announcement: &TransportAnnounceV1) -> bool {
+    let key = (
+        chat.id.clone(),
+        chat.session_sid().unwrap_or_default().to_owned(),
+    );
+    let binding = (
+        announcement.peer_id.clone(),
+        announcement.dial_addresses.clone(),
+    );
+    RECEIVED.with(|received| received.borrow_mut().insert(key, binding.clone()) != Some(binding))
 }
 
 fn validate(announcement: &TransportAnnounceV1) -> Result<(), String> {
@@ -121,10 +166,16 @@ async fn dial_addresses(runtime: &CallRuntime, addresses: &[String]) {
     }
     runtime.p2p_state.set(P2pRouteState::Connecting);
     let mut p2p = runtime.p2p();
-    for address in addresses {
-        match p2p.connect(address).await {
-            Ok(()) => return,
-            Err(error) => trace(runtime, "dial-failed", format!("{address}: {error}")),
+    for address in addresses.iter().filter(|address| browser_dialable(address)) {
+        let dial = p2p.connect(address);
+        let timeout = gloo_timers::future::TimeoutFuture::new(DIAL_TIMEOUT_MS);
+        futures_util::pin_mut!(dial);
+        match futures_util::future::select(dial, timeout).await {
+            Either::Left((Ok(()), _)) => return,
+            Either::Left((Err(error), _)) => {
+                trace(runtime, "dial-failed", format!("{address}: {error}"))
+            }
+            Either::Right(_) => trace(runtime, "dial-failed", format!("{address}: timed out")),
         }
     }
     runtime.p2p_state.set(P2pRouteState::KaspaFallback);

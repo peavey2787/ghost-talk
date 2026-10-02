@@ -43,8 +43,15 @@ pub(crate) async fn invite_member(
 }
 
 fn member_from_peer(profile: &Profile, peer: &ResolvedGhostPeer) -> RoomMember {
+    // An address-only resolution carries no HYDRA handle, but an established
+    // secure session with that address has already authenticated one. Without
+    // it the member has no route: room traffic is addressed by HYDRA handle.
+    let hydra_handle = peer
+        .hydra_handle
+        .clone()
+        .or_else(|| established_session_handle(profile, &peer.kaspa_address));
     let existing = profile.contacts.iter().find(|contact| {
-        let Some(hydra_id) = peer.hydra_handle.as_deref() else {
+        let Some(hydra_id) = hydra_handle.as_deref() else {
             return false;
         };
         let Ok(binding) = ghost_domain::identity::PeerBinding::new(
@@ -65,9 +72,30 @@ fn member_from_peer(profile: &Profile, peer: &ResolvedGhostPeer) -> RoomMember {
             .or_else(|| peer.dotk_name.clone())
             .unwrap_or_else(|| peer.kaspa_address.clone()),
         kaspa_address: peer.kaspa_address.clone(),
-        hydra_handle: peer.hydra_handle.clone(),
+        hydra_handle,
         role: ghost_rooms::Role::Audience,
     }
+}
+
+/// The authenticated peer HYDRA handle of an established direct session with
+/// `address`, if there is exactly one such handle.
+fn established_session_handle(profile: &Profile, address: &str) -> Option<String> {
+    let mut handles = profile
+        .chats
+        .iter()
+        .filter(|chat| {
+            chat.bootstrap_complete()
+                && !chat.left()
+                && !chat.peer_left()
+                && chat
+                    .peer_kaspa_address()
+                    .is_some_and(|peer| peer.eq_ignore_ascii_case(address))
+        })
+        .filter_map(|chat| chat.peer_hydra_handle());
+    let first = handles.next()?;
+    handles
+        .all(|handle| handle == first)
+        .then(|| first.to_owned())
 }
 
 fn validate_room_invitee(room: &Room, peer: &ResolvedGhostPeer) -> Result<(), String> {

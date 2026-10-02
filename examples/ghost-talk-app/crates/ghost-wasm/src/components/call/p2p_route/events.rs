@@ -5,6 +5,7 @@ use super::{announce::announce_active_sessions, trace};
 use crate::components::call::CallRuntime;
 
 const REDIAL_DELAY_MS: u32 = 2_000;
+const ANNOUNCE_SETTLE_MS: u32 = 1_500;
 
 /// Follow p2p-net lifecycle events for one node generation.
 pub(super) fn spawn_event_loop(runtime: CallRuntime, generation: u64) -> Result<(), String> {
@@ -33,7 +34,7 @@ async fn run(runtime: CallRuntime, generation: u64, mut events: P2pNetEventSubsc
 async fn apply(runtime: &CallRuntime, event: P2pNetEvent) {
     trace(runtime, "node-event", format!("{event:?}"));
     if matches!(event, P2pNetEvent::LocalBindingChanged(_)) {
-        announce_active_sessions(runtime).await;
+        schedule_announce(runtime);
         return;
     }
     if let Some(state) = next_state(runtime, &event) {
@@ -42,6 +43,26 @@ async fn apply(runtime: &CallRuntime, event: P2pNetEvent) {
     if let P2pNetEvent::PeerDisconnected(peer_id) = &event {
         schedule_redial(runtime, peer_id);
     }
+}
+
+thread_local! {
+    static ANNOUNCE_TICKET: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
+
+/// Binding changes arrive in bursts while relays settle; announce once, after
+/// they stop, so a burst costs one Kaspa transaction per session.
+fn schedule_announce(runtime: &CallRuntime) {
+    let ticket = ANNOUNCE_TICKET.with(|t| {
+        t.set(t.get().wrapping_add(1));
+        t.get()
+    });
+    let runtime = runtime.clone();
+    spawn_local(async move {
+        gloo_timers::future::TimeoutFuture::new(ANNOUNCE_SETTLE_MS).await;
+        if ANNOUNCE_TICKET.with(std::cell::Cell::get) == ticket {
+            announce_active_sessions(&runtime).await;
+        }
+    });
 }
 
 /// Idle relay circuits are closed by p2p-net; while the peer's session is
@@ -69,11 +90,12 @@ fn next_state(runtime: &CallRuntime, event: &P2pNetEvent) -> Option<P2pRouteStat
         P2pNetEvent::PeerDisconnected(peer_id) => {
             bound(runtime, peer_id).then_some(P2pRouteState::KaspaFallback)
         }
-        P2pNetEvent::Online => {
-            (*runtime.p2p_state == P2pRouteState::Unavailable).then_some(P2pRouteState::Connecting)
-        }
+        // `Online` is the local node being up, not a peer route; the route
+        // is driven by peer connects/disconnects and dials. (Reading the
+        // route state here would also see this long-lived handler's stale
+        // first-render value and knock a live route back to Connecting.)
+        P2pNetEvent::Online | P2pNetEvent::LocalBindingChanged(_) => None,
         P2pNetEvent::Offline => Some(P2pRouteState::KaspaFallback),
-        P2pNetEvent::LocalBindingChanged(_) => None,
     }
 }
 

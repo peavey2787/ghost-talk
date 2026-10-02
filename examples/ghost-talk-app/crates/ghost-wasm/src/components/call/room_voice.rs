@@ -13,13 +13,16 @@ use crate::controllers::call::RealtimeSender;
 pub(super) fn context(runtime: CallRuntime) -> RoomVoiceContext {
     let join_runtime = runtime.clone();
     let leave_runtime = runtime.clone();
-    let session_state = runtime.room_broadcast_session.clone();
+    let session_runtime = runtime.clone();
     RoomVoiceContext {
         active_room_id: (*runtime.room_voice_id).clone(),
         join: Callback::from(move |room_id| join(join_runtime.clone(), room_id)),
         leave: Callback::from(move |_| leave(&leave_runtime)),
         broadcast_session: (*runtime.room_broadcast_session).clone(),
-        set_broadcast_session: Callback::from(move |session| session_state.set(session)),
+        set_broadcast_session: Callback::from(move |session: Option<String>| {
+            *session_runtime.room_broadcast_ref.borrow_mut() = session.clone();
+            session_runtime.room_broadcast_session.set(session);
+        }),
     }
 }
 
@@ -46,7 +49,7 @@ fn join(runtime: CallRuntime, room_id: String) {
             .emit("Voice is disabled for this Room.".into());
         return;
     }
-    runtime.room_voice_id.set(Some(room_id));
+    set_active_room(&runtime, Some(room_id));
     let Some(local_hydra) = profile.hydra_identity_id.clone() else {
         return;
     };
@@ -57,7 +60,7 @@ fn join(runtime: CallRuntime, room_id: String) {
     spawn_local(async move {
         if let Err(error) = start_capture(capture_runtime).await {
             runtime.on_error.emit(error);
-            runtime.room_voice_id.set(None);
+            set_active_room(&runtime, None);
         }
     });
 }
@@ -78,7 +81,7 @@ async fn start_capture(runtime: CallRuntime) -> Result<(), String> {
 }
 
 fn send_encoded(runtime: CallRuntime, encoded: Vec<u8>) {
-    let Some(room_id) = (*runtime.room_voice_id).clone() else {
+    let Some(room_id) = runtime.room_voice_ref.borrow().clone() else {
         return;
     };
     let profile = runtime.profile_ref.borrow().clone();
@@ -109,7 +112,7 @@ fn next_sequence(runtime: &CallRuntime) -> u64 {
 }
 
 fn push_broadcast(runtime: CallRuntime, sequence: u64, timestamp_ms: u64, encoded: Vec<u8>) {
-    let Some(session_id) = (*runtime.room_broadcast_session).clone() else {
+    let Some(session_id) = runtime.room_broadcast_ref.borrow().clone() else {
         return;
     };
     spawn_local(async move {
@@ -132,7 +135,7 @@ pub(super) fn process(
     else {
         return;
     };
-    if (*runtime.room_voice_id).as_deref() != Some(packet.room_id.as_str()) {
+    if runtime.room_voice_ref.borrow().as_deref() != Some(packet.room_id.as_str()) {
         return;
     }
     if !room.can_speak(&packet.speaker_hydra_id) {
@@ -226,11 +229,17 @@ fn realtime_chat_for(profile: &Profile, hydra: Option<&str>) -> Option<String> {
 }
 
 fn leave(runtime: &CallRuntime) {
-    runtime.room_voice_id.set(None);
+    set_active_room(runtime, None);
     if active_call(runtime).is_none() {
         if let Some(sender) = runtime.sender_ref.borrow_mut().take() {
             sender.close();
         }
         runtime.receiver.borrow().reset();
     }
+}
+
+/// Update the rendered state and the live mirror the audio callbacks read.
+fn set_active_room(runtime: &CallRuntime, room_id: Option<String>) {
+    *runtime.room_voice_ref.borrow_mut() = room_id.clone();
+    runtime.room_voice_id.set(room_id);
 }

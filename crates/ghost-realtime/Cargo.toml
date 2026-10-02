@@ -25,7 +25,7 @@ blake3 = "1"
 hex = "0.4"
 serde = { version = "1", features = ["derive"] }
 thiserror = "2"
-p2p-net = { git = "https://github.com/peavey2787/p2p-net", rev = "4c7d322e5acd2fc9430f19fe0065af8376e29a34", optional = true }
+p2p-net = { git = "https://github.com/peavey2787/p2p-net", rev = "3ade5744fe7f21747c0246965e557f3825626738", optional = true }
 
 [dev-dependencies]
 serde_json = "1"

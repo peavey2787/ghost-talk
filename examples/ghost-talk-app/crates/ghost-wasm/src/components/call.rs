@@ -30,8 +30,13 @@ struct CallRuntime {
     sender_ref: Rc<RefCell<Option<BrowserVoiceSender>>>,
     receiver: Rc<RefCell<BrowserVoiceReceiver>>,
     room_voice_id: UseStateHandle<Option<String>>,
+    /// Live mirror of `room_voice_id` for audio callbacks: a state handle
+    /// captured by a long-lived closure keeps reading its render's value.
+    room_voice_ref: Rc<RefCell<Option<String>>>,
     room_sequence: Rc<RefCell<u64>>,
     room_broadcast_session: UseStateHandle<Option<String>>,
+    /// Live mirror of `room_broadcast_session` for the audio callback.
+    room_broadcast_ref: Rc<RefCell<Option<String>>>,
     p2p: Rc<RefCell<P2pNetTransport>>,
     p2p_state: UseStateHandle<P2pRouteState>,
     p2p_subscriptions: Rc<RefCell<HashSet<String>>>,
@@ -65,6 +70,14 @@ impl CallRuntime {
     }
 }
 
+/// An unanswered call stops ringing after 30 s.
+const RING_TIMEOUT_MS: u32 = 30_000;
+
+/// Once the callee has answered, the secure transport handshake may still
+/// travel over Kaspa (tens of seconds per hop on a busy network), so an
+/// answered call gets a full round trip with headroom to connect.
+const ANSWERED_CONNECT_TIMEOUT_MS: u32 = 120_000;
+
 fn publish_profile(runtime: &CallRuntime, profile: Profile, patch: ProfilePatch) {
     *runtime.profile_ref.borrow_mut() = profile;
     runtime
@@ -85,11 +98,34 @@ fn apply_call_command<F>(runtime: &CallRuntime, apply: F) -> Result<(), String>
 where
     F: FnOnce(&mut CallManager) -> Result<(), String>,
 {
+    let before = call_phase(runtime);
     apply(&mut runtime.call_manager.borrow_mut())?;
+    trace_phase_change(runtime, before);
     runtime
         .render_epoch
         .set((*runtime.render_epoch).wrapping_add(1));
     Ok(())
+}
+
+/// Protocol-debug label of the visible call's phase (no call content).
+fn call_phase(runtime: &CallRuntime) -> Option<String> {
+    let calls = runtime.call_manager.borrow();
+    calls.visible().map(|call| format!("{:?}", call.phase))
+}
+
+fn trace_phase_change(runtime: &CallRuntime, before: Option<String>) {
+    let after = call_phase(runtime);
+    if before != after && runtime.profile_ref.borrow().settings.debug_logging {
+        crate::controllers::debug::record(
+            "call",
+            "call-phase",
+            format!(
+                "{} -> {}",
+                before.as_deref().unwrap_or("none"),
+                after.as_deref().unwrap_or("none")
+            ),
+        );
+    }
 }
 
 fn call_chat(runtime: &CallRuntime, call: &CallRecord) -> Option<Chat> {
@@ -123,6 +159,9 @@ fn close_media(runtime: &CallRuntime) {
 }
 
 fn fail_runtime_call(runtime: &CallRuntime, call_id: &str, message: String) {
+    if runtime.profile_ref.borrow().settings.debug_logging {
+        crate::controllers::debug::record("call", "call-failed", message.clone());
+    }
     close_media(runtime);
     let result = apply_call_command(runtime, |calls| {
         crate::controllers::call::fail(calls, call_id, message.clone())

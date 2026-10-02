@@ -30,7 +30,7 @@ pub(super) async fn send_initial_ring(runtime: CallRuntime, call_id: String) {
         );
         return;
     }
-    TimeoutFuture::new(30_000).await;
+    TimeoutFuture::new(super::RING_TIMEOUT_MS).await;
     let still_ringing = runtime
         .call_manager
         .borrow()
@@ -139,7 +139,7 @@ async fn wait_for_accept_delivery(runtime: CallRuntime, call_id: String) {
         );
         return;
     }
-    TimeoutFuture::new(30_000).await;
+    TimeoutFuture::new(super::ANSWERED_CONNECT_TIMEOUT_MS).await;
     let still_answering = runtime
         .call_manager
         .borrow()

@@ -150,7 +150,7 @@ dependencies = [
  "educe",
  "fnv",
  "hashbrown 0.15.5",
- "itertools 0.13.0",
+ "itertools",
  "num-bigint",
  "num-integer",
  "num-traits",
@@ -170,7 +170,7 @@ dependencies = [
  "arrayvec",
  "digest 0.10.7",
  "educe",
- "itertools 0.13.0",
+ "itertools",
  "num-bigint",
  "num-traits",
  "paste",
@@ -1029,7 +1029,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c54e03a951783e8b327515db3f2a2fd0e3bed362a96b066f341ce66ed49b4ead"
 dependencies = [
  "data-encoding",
- "syn 3.0.6",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -1869,6 +1869,7 @@ version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "base64 0.22.1",
+ "futures-util",
  "getrandom 0.2.17",
  "getrandom 0.3.4",
  "getrandom 0.4.3",
@@ -2775,15 +2776,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itertools"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
-dependencies = [
- "either",
-]
-
-[[package]]
 name = "itoa"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2905,8 +2897,8 @@ dependencies = [
 
 [[package]]
 name = "kaspa-portal"
-version = "1.1.1"
-source = "git+https://github.com/peavey2787/kaspa-portal.git?rev=fcc8d2bddc689f5afc2d6e7c5104a7c0aaf933c8#fcc8d2bddc689f5afc2d6e7c5104a7c0aaf933c8"
+version = "1.2.1"
+source = "git+https://github.com/peavey2787/kaspa-portal.git?rev=be7acfd183f092fcf57308116ac0fe9683b8813c#be7acfd183f092fcf57308116ac0fe9683b8813c"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -3017,11 +3009,9 @@ dependencies = [
  "libp2p-noise",
  "libp2p-ping",
  "libp2p-quic",
- "libp2p-relay",
  "libp2p-swarm",
  "libp2p-tcp",
  "libp2p-upnp",
- "libp2p-webrtc-websys",
  "libp2p-websocket-websys",
  "libp2p-webtransport-websys",
  "libp2p-yamux",
@@ -3268,12 +3258,10 @@ dependencies = [
  "futures",
  "libp2p-core",
  "libp2p-dcutr",
- "libp2p-gossipsub",
  "libp2p-identify",
  "libp2p-identity",
  "libp2p-kad",
  "libp2p-ping",
- "libp2p-relay",
  "libp2p-swarm",
  "pin-project",
  "prometheus-client",
@@ -3340,30 +3328,6 @@ dependencies = [
  "thiserror 2.0.20",
  "tokio",
  "tracing",
-]
-
-[[package]]
-name = "libp2p-relay"
-version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5227b053db429996242c00f6c756fd9b5382b942a03eec34b465431df29697a"
-dependencies = [
- "asynchronous-codec",
- "bytes",
- "either",
- "futures",
- "futures-bounded",
- "futures-timer",
- "libp2p-core",
- "libp2p-identity",
- "libp2p-swarm",
- "prost",
- "prost-codec",
- "rand 0.10.2",
- "static_assertions",
- "thiserror 2.0.20",
- "tracing",
- "web-time",
 ]
 
 [[package]]
@@ -3510,28 +3474,6 @@ dependencies = [
  "sha2 0.11.0",
  "tinytemplate",
  "tracing",
-]
-
-[[package]]
-name = "libp2p-webrtc-websys"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4599b0cb5869694f38b024e431565b1624dddb2cb873f359c5cda392427784c"
-dependencies = [
- "bytes",
- "futures",
- "getrandom 0.4.3",
- "hex",
- "js-sys",
- "libp2p-core",
- "libp2p-identity",
- "libp2p-webrtc-utils",
- "send_wrapper 0.6.0",
- "thiserror 2.0.20",
- "tracing",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
 ]
 
 [[package]]
@@ -4072,7 +4014,7 @@ dependencies = [
 [[package]]
 name = "p2p-net"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net?rev=4c7d322e5acd2fc9430f19fe0065af8376e29a34#4c7d322e5acd2fc9430f19fe0065af8376e29a34"
+source = "git+https://github.com/peavey2787/p2p-net?rev=3ade5744fe7f21747c0246965e557f3825626738#3ade5744fe7f21747c0246965e557f3825626738"
 dependencies = [
  "blake3",
  "either",
@@ -4086,7 +4028,10 @@ dependencies = [
  "libp2p",
  "libp2p-rendezvous",
  "libp2p-websocket",
+ "p2p-net-gossipsub",
+ "p2p-net-relay",
  "p2p-net-webrtc",
+ "p2p-net-webrtc-websys",
  "rand 0.8.8",
  "reqwest",
  "rkyv",
@@ -4107,9 +4052,61 @@ dependencies = [
 ]
 
 [[package]]
+name = "p2p-net-gossipsub"
+version = "0.1.0"
+source = "git+https://github.com/peavey2787/p2p-net?rev=3ade5744fe7f21747c0246965e557f3825626738#3ade5744fe7f21747c0246965e557f3825626738"
+dependencies = [
+ "async-channel",
+ "asynchronous-codec",
+ "base64 0.23.1",
+ "byteorder",
+ "bytes",
+ "either",
+ "fnv",
+ "futures",
+ "futures-timer",
+ "getrandom 0.4.3",
+ "hashlink",
+ "hex_fmt",
+ "libp2p-core",
+ "libp2p-identity",
+ "libp2p-swarm",
+ "prost",
+ "prost-codec",
+ "rand 0.10.2",
+ "regex",
+ "sha2 0.11.0",
+ "tracing",
+ "web-time",
+]
+
+[[package]]
+name = "p2p-net-relay"
+version = "0.1.0"
+source = "git+https://github.com/peavey2787/p2p-net?rev=3ade5744fe7f21747c0246965e557f3825626738#3ade5744fe7f21747c0246965e557f3825626738"
+dependencies = [
+ "asynchronous-codec",
+ "bytes",
+ "either",
+ "futures",
+ "futures-bounded",
+ "futures-timer",
+ "libp2p-core",
+ "libp2p-identity",
+ "libp2p-swarm",
+ "prost",
+ "prost-codec",
+ "rand 0.10.2",
+ "static_assertions",
+ "thiserror 2.0.20",
+ "tracing",
+ "web-time",
+]
+
+[[package]]
 name = "p2p-net-webrtc"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net?rev=4c7d322e5acd2fc9430f19fe0065af8376e29a34#4c7d322e5acd2fc9430f19fe0065af8376e29a34"
+source = "git+https://github.com/peavey2787/p2p-net?rev=3ade5744fe7f21747c0246965e557f3825626738#3ade5744fe7f21747c0246965e557f3825626738"
 dependencies = [
  "async-trait",
  "futures",
@@ -4129,6 +4126,34 @@ dependencies = [
  "tokio-util",
  "tracing",
  "webrtc",
+]
+
+[[package]]
+name = "p2p-net-webrtc-websys"
+version = "0.1.0"
+source = "git+https://github.com/peavey2787/p2p-net?rev=3ade5744fe7f21747c0246965e557f3825626738#3ade5744fe7f21747c0246965e557f3825626738"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "futures",
+ "futures-timer",
+ "getrandom 0.4.3",
+ "hex",
+ "js-sys",
+ "libp2p-core",
+ "libp2p-identity",
+ "libp2p-swarm",
+ "libp2p-webrtc-utils",
+ "prost",
+ "send_wrapper 0.6.0",
+ "serde_json",
+ "thiserror 2.0.20",
+ "tracing",
+ "unsigned-varint",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "web-time",
 ]
 
 [[package]]
@@ -4486,7 +4511,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b570b25f7617e43d59005d0990ccb79e950a423952cea19671b7a876da390adf"
 dependencies = [
  "anyhow",
- "itertools 0.14.0",
+ "itertools",
  "proc-macro2",
  "quote",
  "syn 2.0.119",
@@ -5932,6 +5957,10 @@ name = "unsigned-varint"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eb066959b24b5196ae73cb057f45598450d2c5f71460e98c49b738086eff9c06"
+dependencies = [
+ "futures-io",
+ "futures-util",
+]
 
 [[package]]
 name = "untrusted"

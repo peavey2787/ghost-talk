@@ -24,6 +24,8 @@ struct StreamTarget {
     endpoint: String,
     portal: Rc<RefCell<PortalFacade>>,
     alive: Rc<Cell<bool>>,
+    /// Last delivered block; the backfill anchor after a reconnect.
+    last_block: RefCell<Option<String>>,
 }
 
 thread_local! {
@@ -47,6 +49,7 @@ pub(in crate::native::browser_host) async fn start(
         endpoint: endpoint.clone(),
         portal: Rc::new(RefCell::new(stream)),
         alive: Rc::new(Cell::new(true)),
+        last_block: RefCell::new(None),
     };
     LIVE_STREAMS.with(|streams| {
         streams.borrow_mut().insert(
@@ -108,6 +111,9 @@ async fn run_stream(target: StreamTarget, mut api: NetworkApi) {
             Some(next) => api = next,
             None => return,
         }
+        // The new socket is already subscribed, so backfilling now leaves no
+        // gap: blocks mined while it was down are delivered before live ones.
+        backfill(&target, &mut blocks).await;
     }
 }
 
@@ -120,10 +126,46 @@ async fn pump_blocks(target: &StreamTarget, api: &NetworkApi, blocks: &mut u64) 
         if !target.alive.get() {
             return "stopped".into();
         }
-        *blocks += 1;
-        let event = live_block_event(block);
-        trace_block(*blocks, &event);
-        handle_live_block(&target.profile_id, &target.network, event);
+        deliver(target, block, blocks);
+    }
+}
+
+fn deliver(target: &StreamTarget, block: OwnedBlockAddedNotification, blocks: &mut u64) {
+    *blocks += 1;
+    target.last_block.replace(Some(block.block_hash.clone()));
+    let event = live_block_event(block);
+    trace_block(*blocks, &event);
+    handle_live_block(&target.profile_id, &target.network, event);
+}
+
+/// Deliver blocks mined after the last delivered one. Duplicates of blocks
+/// the new subscription also reports are harmless: carriers are idempotent
+/// by txid and realtime bodies are replay-guarded.
+async fn backfill(target: &StreamTarget, blocks: &mut u64) {
+    let Some(anchor) = target.last_block.borrow().clone() else {
+        return;
+    };
+    let portal = target.portal.borrow().clone();
+    match portal.blocks_since(&anchor).await {
+        Ok(missed) => {
+            let count = missed.len();
+            for block in missed
+                .into_iter()
+                .filter(|block| block.block_hash != anchor)
+            {
+                if !target.alive.get() {
+                    return;
+                }
+                deliver(target, block, blocks);
+            }
+            debug::record(
+                "info",
+                "kaspa",
+                "live-stream-backfilled",
+                format!("blocks={count}"),
+            );
+        }
+        Err(error) => debug::record("warn", "kaspa", "live-stream-backfill-failed", error),
     }
 }
 

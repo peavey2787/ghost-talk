@@ -8,6 +8,7 @@ const python = process.env.GHOST_E2E_PYTHON || (process.platform === 'win32' ? '
 
 export default defineConfig({
   testDir: './tests',
+  globalSetup: './global-setup.mjs',
   timeout: 20 * 60 * 1000,
   expect: { timeout: 120 * 1000 },
   workers: 1,

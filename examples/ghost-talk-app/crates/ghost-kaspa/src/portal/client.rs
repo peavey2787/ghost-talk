@@ -49,6 +49,25 @@ impl PortalFacade {
             .map_err(|error| error.to_string())
     }
 
+    /// Blocks accepted after `low_hash_hex`, to backfill what a dropped
+    /// BlockAdded stream missed. One bounded node page per call.
+    pub async fn blocks_since(
+        &self,
+        low_hash_hex: &str,
+    ) -> Result<Vec<kaspa_portal::network::wrpc::block_added::OwnedBlockAddedNotification>, String>
+    {
+        let hash: [u8; 32] = hex::decode(low_hash_hex)
+            .map_err(|error| format!("invalid block hash: {error}"))?
+            .try_into()
+            .map_err(|_| "block hash must be 32 bytes".to_string())?;
+        self.portal
+            .chain()
+            .map_err(|error| error.to_string())?
+            .blocks_since(&kaspa_portal::primitives::BlockHash::new(hash))
+            .await
+            .map_err(|error| error.to_string())
+    }
+
     /// Close this facade's persistent transport.
     pub fn disconnect(&self) {
         let _ = self.portal.disconnect();

@@ -103,8 +103,10 @@ fn use_call_runtime(
     let sender_ref = use_mut_ref(|| None::<BrowserVoiceSender>);
     let receiver = use_mut_ref(BrowserVoiceReceiver::new);
     let room_voice_id = use_state(|| None::<String>);
+    let room_voice_ref = use_mut_ref(|| None::<String>);
     let room_sequence = use_mut_ref(|| 0u64);
     let room_broadcast_session = use_state(|| None::<String>);
+    let room_broadcast_ref = use_mut_ref(|| None::<String>);
     let p2p = use_mut_ref(P2pNetTransport::default);
     let p2p_state = use_state(|| P2pRouteState::Unavailable);
     let p2p_subscriptions = use_mut_ref(std::collections::HashSet::<String>::new);
@@ -117,8 +119,10 @@ fn use_call_runtime(
         sender_ref,
         receiver,
         room_voice_id,
+        room_voice_ref,
         room_sequence,
         room_broadcast_session,
+        room_broadcast_ref,
         p2p,
         p2p_state,
         p2p_subscriptions,

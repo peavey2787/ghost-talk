@@ -1,6 +1,7 @@
 //! One queued realtime job: seal once, then choose the physical carrier.
 
 use base64::{engine::general_purpose::STANDARD, Engine as _};
+use futures_util::future::Either;
 use ghost_p2p::{GhostP2pTransport, P2pRouteState};
 use ghost_realtime::{parse_session_id, route, RealtimeCarrier, RouteDecision, RoutePreference};
 
@@ -116,13 +117,36 @@ async fn try_p2p(
     if decision.primary != RealtimeCarrier::P2pNet {
         return Ok(false);
     }
-    match send_p2p(snapshot, sealed).await {
+    match send_p2p_bounded(snapshot, sealed).await {
         Ok(()) => Ok(true),
         Err(error) if decision.fallback.is_none() => Err(error),
-        Err(_) => {
-            snapshot.p2p_state.set(P2pRouteState::KaspaFallback);
+        Err(error) => {
+            fall_back_to_kaspa(snapshot, error);
             Ok(false)
         }
+    }
+}
+
+fn fall_back_to_kaspa(snapshot: &SenderSnapshot, error: String) {
+    if snapshot.profile.settings.debug_logging {
+        crate::controllers::debug::record("realtime", "p2p-send-failed", error);
+    }
+    snapshot.p2p_state.set(P2pRouteState::KaspaFallback);
+}
+
+/// A stalled p2p send must not hold the serial realtime queue.
+const P2P_SEND_TIMEOUT_MS: u32 = 3_000;
+
+async fn send_p2p_bounded(
+    snapshot: &SenderSnapshot,
+    sealed: &HydraRealtimeEnvelope,
+) -> Result<(), String> {
+    let send = send_p2p(snapshot, sealed);
+    let timeout = gloo_timers::future::TimeoutFuture::new(P2P_SEND_TIMEOUT_MS);
+    futures_util::pin_mut!(send);
+    match futures_util::future::select(send, timeout).await {
+        Either::Left((result, _)) => result,
+        Either::Right(_) => Err("p2p-net send timed out".to_string()),
     }
 }
 

@@ -70,10 +70,14 @@ impl RealtimeSender {
         &self,
         profile: Profile,
         password: String,
+        p2p_state: UseStateHandle<P2pRouteState>,
         on_wallet_progress: Callback<crate::model::WalletProjection>,
         on_error: Callback<String>,
     ) {
         let mut inner = self.inner.borrow_mut();
+        // A `UseStateHandle` reads the value of the render it came from, so
+        // take this render's handle: route decisions must see the live state.
+        inner.p2p_state = p2p_state;
         if profile.state_revision() > inner.profile.state_revision()
             || profile.id != inner.profile.id
         {

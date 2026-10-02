@@ -8,8 +8,13 @@ pub(super) fn process_signed_call_signal(
     runtime: &CallRuntime,
 ) {
     let signal = call_signal(runtime, &projection);
-    match crate::controllers::call::receive_signal(&mut runtime.call_manager.borrow_mut(), &signal)
-    {
+    // Bind first: a `match` scrutinee's `borrow_mut()` would otherwise stay
+    // alive through the arms, and `apply_remote_call_action` borrows again.
+    let before = crate::components::call::call_phase(runtime);
+    let disposition =
+        crate::controllers::call::receive_signal(&mut runtime.call_manager.borrow_mut(), &signal);
+    crate::components::call::trace_phase_change(runtime, before);
+    match disposition {
         ghost_domain::call::SignalDisposition::Applied => {
             apply_remote_call_action(runtime, &projection)
         }

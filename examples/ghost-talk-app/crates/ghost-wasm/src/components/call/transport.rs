@@ -27,7 +27,7 @@ pub(super) async fn establish_secure_transport(runtime: CallRuntime, call_id: St
         );
         return;
     }
-    TimeoutFuture::new(30_000).await;
+    TimeoutFuture::new(super::ANSWERED_CONNECT_TIMEOUT_MS).await;
     let still_connecting = runtime
         .call_manager
         .borrow()
