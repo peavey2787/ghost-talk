@@ -1003,7 +1003,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c54e03a951783e8b327515db3f2a2fd0e3bed362a96b066f341ce66ed49b4ead"
 dependencies = [
  "data-encoding",
- "syn 1.0.109",
+ "syn 3.0.6",
 ]
 
 [[package]]
@@ -2354,7 +2354,7 @@ dependencies = [
 [[package]]
 name = "kaspa-portal"
 version = "1.4.0"
-source = "git+https://github.com/peavey2787/kaspa-portal.git?rev=2e07bd4eac05791fe8cdddf5976051c7f429c189#2e07bd4eac05791fe8cdddf5976051c7f429c189"
+source = "git+https://github.com/peavey2787/kaspa-portal.git?rev=abcabab596f29b9a0e688ddeb521866a1438a911#abcabab596f29b9a0e688ddeb521866a1438a911"
 dependencies = [
  "aes-gcm",
  "argon2",
