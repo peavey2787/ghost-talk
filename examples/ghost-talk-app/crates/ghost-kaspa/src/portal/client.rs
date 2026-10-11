@@ -31,13 +31,17 @@ impl PortalFacade {
         if endpoint.is_empty() {
             return Err("Kaspa Portal connection requires a concrete wRPC endpoint".into());
         }
-        let network = kaspa_portal::primitives::NetworkId::parse(network)?;
-        let portal = kaspa_portal::KaspaPortal::builder()
-            .network(network)
-            .endpoint(endpoint)
-            .connect()
-            .await
-            .map_err(|error| error.to_string())?;
+        Self::open(builder(network)?.endpoint(endpoint)).await
+    }
+
+    /// Connect to the first healthy public node the community resolvers offer;
+    /// Kaspa Portal races their answers and accepts only TLS (`wss://`) nodes.
+    pub async fn connect_public(network: &str) -> Result<Self, String> {
+        Self::open(builder(network)?).await
+    }
+
+    async fn open(builder: kaspa_portal::KaspaPortalBuilder) -> Result<Self, String> {
+        let portal = builder.connect().await.map_err(|error| error.to_string())?;
         Ok(Self { portal })
     }
 
@@ -217,4 +221,10 @@ impl PortalFacade {
             observations,
         })
     }
+}
+
+#[cfg(feature = "upstream")]
+fn builder(network: &str) -> Result<kaspa_portal::KaspaPortalBuilder, String> {
+    let network = kaspa_portal::primitives::NetworkId::parse(network)?;
+    Ok(kaspa_portal::KaspaPortal::builder().network(network))
 }

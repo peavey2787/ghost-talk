@@ -2312,7 +2312,7 @@ dependencies = [
 [[package]]
 name = "hot-wallet"
 version = "2.0.0"
-source = "git+https://github.com/peavey2787/KasKold.git?rev=21cf35cfc24c273fa3d92b1cb1495cc04d608e7c#21cf35cfc24c273fa3d92b1cb1495cc04d608e7c"
+source = "git+https://github.com/peavey2787/KasKold.git?rev=486907b194e422eca1fc958616bd9798b3393238#486907b194e422eca1fc958616bd9798b3393238"
 dependencies = [
  "aes-gcm",
  "getrandom 0.2.17",
@@ -2500,7 +2500,7 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "tower-service",
- "webpki-roots 1.0.9",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -2867,17 +2867,14 @@ dependencies = [
 [[package]]
 name = "kaskold-protocol"
 version = "2.0.0"
-source = "git+https://github.com/peavey2787/KasKold.git?rev=21cf35cfc24c273fa3d92b1cb1495cc04d608e7c#21cf35cfc24c273fa3d92b1cb1495cc04d608e7c"
+source = "git+https://github.com/peavey2787/KasKold.git?rev=486907b194e422eca1fc958616bd9798b3393238#486907b194e422eca1fc958616bd9798b3393238"
 dependencies = [
- "blake2b_simd",
  "hex",
- "hmac 0.12.1",
  "js-sys",
  "k256",
  "kaspa-portal",
  "serde",
  "serde_json",
- "sha2 0.10.9",
  "shared-signer",
  "wasm-bindgen",
 ]
@@ -2885,7 +2882,7 @@ dependencies = [
 [[package]]
 name = "kaskold-sdk"
 version = "2.0.0"
-source = "git+https://github.com/peavey2787/KasKold.git?rev=21cf35cfc24c273fa3d92b1cb1495cc04d608e7c#21cf35cfc24c273fa3d92b1cb1495cc04d608e7c"
+source = "git+https://github.com/peavey2787/KasKold.git?rev=486907b194e422eca1fc958616bd9798b3393238#486907b194e422eca1fc958616bd9798b3393238"
 dependencies = [
  "getrandom 0.2.17",
  "hex",
@@ -2899,7 +2896,7 @@ dependencies = [
 [[package]]
 name = "kaspa-portal"
 version = "1.4.0"
-source = "git+https://github.com/peavey2787/kaspa-portal.git?rev=abcabab596f29b9a0e688ddeb521866a1438a911#abcabab596f29b9a0e688ddeb521866a1438a911"
+source = "git+https://github.com/peavey2787/kaspa-portal.git?rev=b9390d261896943f42aa5147829724c21dfafe05#b9390d261896943f42aa5147829724c21dfafe05"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -2923,6 +2920,7 @@ dependencies = [
  "qrcode",
  "reqwest",
  "ripemd",
+ "rustls",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -2934,6 +2932,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+ "webpki-roots",
  "zeroize",
 ]
 
@@ -3495,7 +3494,7 @@ dependencies = [
  "thiserror 2.0.20",
  "tracing",
  "url",
- "webpki-roots 1.0.9",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -3947,7 +3946,7 @@ dependencies = [
 [[package]]
 name = "offline-signer"
 version = "2.0.0"
-source = "git+https://github.com/peavey2787/KasKold.git?rev=21cf35cfc24c273fa3d92b1cb1495cc04d608e7c#21cf35cfc24c273fa3d92b1cb1495cc04d608e7c"
+source = "git+https://github.com/peavey2787/KasKold.git?rev=486907b194e422eca1fc958616bd9798b3393238#486907b194e422eca1fc958616bd9798b3393238"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -4815,7 +4814,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
- "webpki-roots 1.0.9",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -5273,7 +5272,7 @@ dependencies = [
 [[package]]
 name = "shared-signer"
 version = "2.0.0"
-source = "git+https://github.com/peavey2787/KasKold.git?rev=21cf35cfc24c273fa3d92b1cb1495cc04d608e7c#21cf35cfc24c273fa3d92b1cb1495cc04d608e7c"
+source = "git+https://github.com/peavey2787/KasKold.git?rev=486907b194e422eca1fc958616bd9798b3393238#486907b194e422eca1fc958616bd9798b3393238"
 dependencies = [
  "kaspa-portal",
  "sha2 0.10.9",
@@ -5731,7 +5730,6 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "tungstenite",
- "webpki-roots 0.26.11",
 ]
 
 [[package]]
@@ -6009,8 +6007,9 @@ checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
 [[package]]
 name = "vault-runtime"
 version = "2.0.0"
-source = "git+https://github.com/peavey2787/KasKold.git?rev=21cf35cfc24c273fa3d92b1cb1495cc04d608e7c#21cf35cfc24c273fa3d92b1cb1495cc04d608e7c"
+source = "git+https://github.com/peavey2787/KasKold.git?rev=486907b194e422eca1fc958616bd9798b3393238#486907b194e422eca1fc958616bd9798b3393238"
 dependencies = [
+ "hmac 0.12.1",
  "hot-wallet",
  "kaskold-protocol",
  "serde_json",
@@ -6200,15 +6199,6 @@ checksum = "5a6580f308b1fad9207618087a65c04e7a10bc77e02c8e84e9b00dd4b12fa0bb"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "webpki-roots"
-version = "0.26.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "521bc38abb08001b01866da9f51eb7c5d647a19260e00054a8c7fd5f9e57f7a9"
-dependencies = [
- "webpki-roots 1.0.9",
 ]
 
 [[package]]

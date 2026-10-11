@@ -2,9 +2,6 @@ use crate::model::{WalletHistoryEntry, WalletProjection, WalletSnapshot};
 use ghost_kaspa::{wallet::WalletPublic, PortalFacade};
 use serde_json::Value;
 use std::{cell::RefCell, collections::HashMap};
-use wasm_bindgen::JsCast;
-use wasm_bindgen_futures::JsFuture;
-use web_sys::Response;
 
 use super::support::util::{required, required_str, to_value};
 
@@ -178,48 +175,13 @@ async fn connect_endpoint(public: &WalletPublic, endpoint: &str) -> Result<Porta
     PortalFacade::connect(&public.network, endpoint).await
 }
 
+/// The first healthy public node the resolvers offer, chosen by Kaspa Portal.
 async fn public_portal(public: &WalletPublic) -> Result<PortalFacade, String> {
-    let mut failures = Vec::new();
-    for resolver in ghost_kaspa::PUBLIC_WRPC_RESOLVERS {
-        match resolver_portal(resolver, public).await {
-            Ok(portal) => return Ok(portal),
-            Err(error) => failures.push(format!("{resolver}: {error}")),
-        }
-    }
-    Err(format!(
-        "No public Kaspa wRPC endpoint was usable in this browser: {}",
-        failures.into_iter().take(4).collect::<Vec<_>>().join(" | ")
-    ))
-}
-
-async fn resolver_portal(resolver: &str, public: &WalletPublic) -> Result<PortalFacade, String> {
-    let endpoint = resolve_endpoint(resolver, &public.network).await?;
-    let portal = connect_endpoint(public, &endpoint).await?;
-    portal.current_virtual_daa_score().await?;
-    Ok(portal)
-}
-
-async fn resolve_endpoint(resolver: &str, network: &str) -> Result<String, String> {
-    let url = ghost_kaspa::resolver_query_url(resolver, network)?;
-    let window = web_sys::window().ok_or("Browser window unavailable")?;
-    let response = JsFuture::from(window.fetch_with_str(&url))
+    PortalFacade::connect_public(&public.network)
         .await
-        .map_err(crate::native::invoke::js_error)?
-        .dyn_into::<Response>()
-        .map_err(|_| "Kaspa resolver returned a non-HTTP response".to_string())?;
-    if !response.ok() {
-        return Err(format!("HTTP {}", response.status()));
-    }
-    let text = JsFuture::from(response.text().map_err(crate::native::invoke::js_error)?)
-        .await
-        .map_err(crate::native::invoke::js_error)?
-        .as_string()
-        .ok_or("Kaspa resolver response was not text")?;
-    parse_resolver_endpoint(&text)
-}
-
-pub(super) fn parse_resolver_endpoint(text: &str) -> Result<String, String> {
-    ghost_kaspa::resolver_endpoint(text)
+        .map_err(|error| {
+            format!("No public Kaspa wRPC endpoint was usable in this browser: {error}")
+        })
 }
 
 fn validate_wrpc(endpoint: &str) -> Result<(), String> {

@@ -6,7 +6,6 @@ mod descriptor;
 mod history;
 mod live;
 mod node_session;
-mod resolver;
 pub mod wallet;
 pub use archive::{
     archive_plan, archive_remaining_cost, estimate_archive_chunk_fee, validate_archive_size,
@@ -18,7 +17,6 @@ pub use descriptor::{build_private_descriptor, build_signed_descriptor};
 pub use history::project_wallet_history_entry;
 pub use live::{fallback_live_event_id, is_live_ghost_carrier};
 pub use node_session::NodeSession;
-pub use resolver::{resolver_endpoint, resolver_query_url, PUBLIC_WRPC_RESOLVERS};
 
 mod portal;
 pub use portal::upstream;

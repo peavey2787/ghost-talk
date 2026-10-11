@@ -184,7 +184,8 @@ def check_native_frontend_contract() -> None:
     for token in ("publish_ghost_descriptor", "build_signed_descriptor", "send_payload"):
         if token not in browser_discover:
             fail(f"standalone Web Discover publish path is missing `{token}`")
-    if "PUBLIC_WRPC_RESOLVERS" not in browser_kaspa:
+    # Kaspa Portal owns public node discovery; the browser asks it on demand.
+    if "PortalFacade::connect_public" not in browser_kaspa:
         fail("standalone Web Discover/Signer must resolve a public Kaspa wRPC endpoint on demand")
     if "active_addresses: addresses" in browser_kaspa or "funded_addresses" not in browser_kaspa:
         fail("standalone Web wallet snapshot must report funded addresses from live UTXOs, not every derived address")

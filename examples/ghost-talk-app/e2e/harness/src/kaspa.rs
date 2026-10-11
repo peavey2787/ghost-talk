@@ -180,41 +180,9 @@ async fn wait_for_balance(
     Err("timed out waiting for the funding transaction to appear".into())
 }
 
-/// Connect to a public Kaspa node through the public resolvers.
+/// Connect to a public Kaspa node through Kaspa Portal's resolvers.
 async fn connect(network: &str) -> Result<PortalFacade, String> {
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(8))
-        .build()
-        .map_err(|error| error.to_string())?;
-    let mut errors = Vec::new();
-    for resolver in ghost_kaspa::PUBLIC_WRPC_RESOLVERS {
-        match resolve(&client, resolver, network).await {
-            Ok(endpoint) => match PortalFacade::connect(network, &endpoint).await {
-                Ok(portal) => return Ok(portal),
-                Err(error) => errors.push(format!("{endpoint}: {error}")),
-            },
-            Err(error) => errors.push(format!("{resolver}: {error}")),
-        }
-    }
-    Err(format!(
-        "no public Kaspa node reachable: {}",
-        errors.join("; ")
-    ))
-}
-
-async fn resolve(
-    client: &reqwest::Client,
-    resolver: &str,
-    network: &str,
-) -> Result<String, String> {
-    let url = ghost_kaspa::resolver_query_url(resolver, network)?;
-    let body = client
-        .get(url)
-        .send()
+    PortalFacade::connect_public(network)
         .await
-        .map_err(|error| error.to_string())?
-        .text()
-        .await
-        .map_err(|error| error.to_string())?;
-    ghost_kaspa::resolver_endpoint(&body)
+        .map_err(|error| format!("no public Kaspa node reachable: {error}"))
 }

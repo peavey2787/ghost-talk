@@ -1,7 +1,4 @@
-use super::{
-    absorb_resolver_result, finish_resolver_discovery, resolve_wrpc_override, resolver_http_client,
-    resolver_tasks, WalletPublic, WalletSecret,
-};
+use super::{WalletPublic, WalletSecret};
 
 pub(crate) fn recommended_receive_index(
     public: &WalletPublic,
@@ -68,29 +65,4 @@ pub(crate) fn parse_u64_decimal(value: &str, label: &str) -> Result<u64, String>
     value
         .parse::<u64>()
         .map_err(|_| format!("{label} is outside the supported range"))
-}
-
-/// Select one or more concrete Kaspa wRPC endpoints for the published
-/// `KaspaPortal::builder().network(...).endpoint(...).connect().await` API.
-///
-/// Resolver HTTPS is endpoint metadata discovery only. It never supplies
-/// wallet state and never opens a Kaspa wRPC session; the selected WebSocket is
-/// opened exclusively by Kaspa Portal.
-pub(crate) async fn resolve_wrpc_endpoints(
-    network: &str,
-    override_endpoint: Option<&str>,
-) -> Result<Vec<String>, String> {
-    if let Some(endpoint) = resolve_wrpc_override(override_endpoint)? {
-        return Ok(vec![endpoint]);
-    }
-    let network =
-        ghost_kaspa::upstream::portal::primitives::NetworkId::parse(network)?.canonical_name();
-    let client = resolver_http_client()?;
-    let mut tasks = resolver_tasks(&client, &network);
-    let mut endpoints = Vec::new();
-    let mut errors = Vec::new();
-    while let Some(result) = tasks.join_next().await {
-        absorb_resolver_result(result, &mut endpoints, &mut errors);
-    }
-    finish_resolver_discovery(endpoints, errors)
 }

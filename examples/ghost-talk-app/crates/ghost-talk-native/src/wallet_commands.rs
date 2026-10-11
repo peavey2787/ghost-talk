@@ -9,8 +9,8 @@ pub(crate) use wallet_lifecycle::{
 };
 mod send;
 pub(crate) use send::{
-    open_secret, parse_u64_decimal, recommended_receive_index, resolve_wrpc_endpoints,
-    validate_public_projection, wallet_broadcast_signer_send, wallet_consolidate,
-    wallet_prepare_signer_send, wallet_send,
+    open_secret, parse_u64_decimal, recommended_receive_index, validate_public_projection,
+    wallet_broadcast_signer_send, wallet_consolidate, wallet_prepare_signer_send, wallet_send,
 };
 mod resolvers;
+pub(crate) use resolvers::resolve_wrpc_override;

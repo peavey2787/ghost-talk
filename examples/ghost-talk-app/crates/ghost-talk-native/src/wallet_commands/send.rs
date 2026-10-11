@@ -1,13 +1,7 @@
-use super::{
-    resolvers::{
-        absorb_resolver_result, finish_resolver_discovery, resolve_wrpc_override,
-        resolver_http_client, resolver_tasks,
-    },
-    wallet_lifecycle::{
-        broadcast_projection, rest_base_for_network, BroadcastResult, Instant, RestHistory, State,
-        WalletHistoryEntry, WalletHistoryResult, WalletNetworkOptions, WalletPublic,
-        WalletRuntimeState, WalletSecret,
-    },
+use super::wallet_lifecycle::{
+    broadcast_projection, rest_base_for_network, BroadcastResult, Instant, RestHistory, State,
+    WalletHistoryEntry, WalletHistoryResult, WalletNetworkOptions, WalletPublic,
+    WalletRuntimeState, WalletSecret,
 };
 #[expect(clippy::too_many_arguments, reason = "stable flat Tauri IPC contract")]
 #[tauri::command]
@@ -283,6 +277,6 @@ mod signer;
 pub(crate) use signer::{wallet_broadcast_signer_send, wallet_prepare_signer_send};
 mod support;
 pub(crate) use support::{
-    open_secret, parse_u64_decimal, recommended_receive_index, resolve_wrpc_endpoints, seal_secret,
-    supported_network, validate_public_projection, validate_requested_network,
+    open_secret, parse_u64_decimal, recommended_receive_index, seal_secret, supported_network,
+    validate_public_projection, validate_requested_network,
 };

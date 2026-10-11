@@ -34,8 +34,8 @@ ghost-storage = { path = "../ghost-storage" }
 ghost-kaspa = { path = "../ghost-kaspa", features = ["upstream"] }
 ghost-indexer = { path = "../ghost-indexer" }
 ghost-hydra = { path = "../ghost-hydra", features = ["upstream"] }
-vault-runtime = { git = "https://github.com/peavey2787/KasKold.git", rev = "21cf35cfc24c273fa3d92b1cb1495cc04d608e7c" }
-kaskold-sdk = { git = "https://github.com/peavey2787/KasKold.git", rev = "21cf35cfc24c273fa3d92b1cb1495cc04d608e7c", default-features = false, features = ["wasm"] }
+vault-runtime = { git = "https://github.com/peavey2787/KasKold.git", rev = "486907b194e422eca1fc958616bd9798b3393238" }
+kaskold-sdk = { git = "https://github.com/peavey2787/KasKold.git", rev = "486907b194e422eca1fc958616bd9798b3393238", default-features = false, features = ["wasm"] }
 zeroize = { version = "1", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -58,7 +58,7 @@ implicit-clone = { version = "=0.6.0", features = ["map"] }
 indexmap = "=2.14.2"
 # ring 0.17 (via libp2p/rustls) needs its Web Crypto entropy backend in browsers.
 ring = { version = "0.17", features = ["wasm32_unknown_unknown_js"] }
-kaspa-portal = { git = "https://github.com/peavey2787/kaspa-portal.git", rev = "abcabab596f29b9a0e688ddeb521866a1438a911", features = ["wasm"] }
+kaspa-portal = { git = "https://github.com/peavey2787/kaspa-portal.git", rev = "b9390d261896943f42aa5147829724c21dfafe05", features = ["wasm"] }
 yew = { version = "=0.22.0", features = ["csr"] }
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"

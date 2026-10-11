@@ -1,4 +1,4 @@
-use super::{normalized_override, GatewayConnection, KaspaGatewayState, BLOCK_FANOUT_CAPACITY};
+use super::{GatewayConnection, KaspaGatewayState, BLOCK_FANOUT_CAPACITY};
 use ghost_kaspa::{NodeSession, PortalFacade};
 use tokio::sync::broadcast;
 
@@ -24,37 +24,28 @@ pub(super) async fn portal_for_network(
     connect_first_available(state, network, wrpc_override).await
 }
 
+/// An explicit endpoint when the user set one; otherwise Kaspa Portal picks
+/// the first healthy public node its resolvers offer.
 async fn connect_first_available(
     state: &KaspaGatewayState,
     network: &str,
     wrpc_override: Option<&str>,
 ) -> Result<PortalFacade, String> {
-    let endpoints = crate::wallet_commands::resolve_wrpc_endpoints(network, wrpc_override).await?;
-    let source = endpoint_source(wrpc_override);
-    let mut last_error = "no Kaspa wRPC endpoint accepted the Portal connection".to_string();
-    for endpoint in endpoints {
-        match connect_endpoint(state, network, source, &endpoint).await {
-            Ok(portal) => return Ok(portal),
-            Err(error) => last_error = error,
-        }
+    let explicit = crate::wallet_commands::resolve_wrpc_override(wrpc_override)?;
+    let (source, endpoint) = match explicit.as_deref() {
+        Some(endpoint) => ("explicit-endpoint", endpoint),
+        None => ("public-resolver", "resolver-selected"),
+    };
+    log_connect_attempt(network, source, endpoint);
+    let portal = match explicit.as_deref() {
+        Some(endpoint) => PortalFacade::connect(network, endpoint).await,
+        None => PortalFacade::connect_public(network).await,
     }
-    Err(last_error)
+    .map_err(|error| log_connect_failure(network, endpoint, error))?;
+    install_connection(state, network, portal).await
 }
 
-fn endpoint_source(wrpc_override: Option<&str>) -> &'static str {
-    if normalized_override(wrpc_override).is_some() {
-        "explicit-endpoint"
-    } else {
-        "public-resolver"
-    }
-}
-
-async fn connect_endpoint(
-    state: &KaspaGatewayState,
-    network: &str,
-    source: &str,
-    endpoint: &str,
-) -> Result<PortalFacade, String> {
+fn log_connect_attempt(network: &str, source: &str, endpoint: &str) {
     crate::debug_log::record(
         "info",
         "kaspa",
@@ -68,22 +59,20 @@ async fn connect_endpoint(
         "Ghost Talk: connecting through Kaspa Portal: network={} endpoint={}",
         network, endpoint
     );
-    let portal = PortalFacade::connect(network, endpoint)
-        .await
-        .map_err(|error| {
-            eprintln!(
-                "Ghost Talk: Kaspa Portal connection failed: network={} endpoint={} error={}",
-                network, endpoint, error
-            );
-            crate::debug_log::record(
-                "warn",
-                "kaspa",
-                "gateway-connect-failed",
-                format!("network={} endpoint={} error={}", network, endpoint, error),
-            );
-            error
-        })?;
-    install_connection(state, network, portal).await
+}
+
+fn log_connect_failure(network: &str, endpoint: &str, error: String) -> String {
+    eprintln!(
+        "Ghost Talk: Kaspa Portal connection failed: network={} endpoint={} error={}",
+        network, endpoint, error
+    );
+    crate::debug_log::record(
+        "warn",
+        "kaspa",
+        "gateway-connect-failed",
+        format!("network={} endpoint={} error={}", network, endpoint, error),
+    );
+    error
 }
 
 async fn install_connection(
