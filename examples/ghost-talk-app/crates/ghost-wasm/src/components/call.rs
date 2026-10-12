@@ -15,12 +15,14 @@ mod p2p_route;
 mod presentation;
 mod room_voice;
 mod signaling;
+mod swarm;
 mod termination;
 mod transport;
 
 use crate::controllers::call::RealtimeSender;
 pub(crate) use direct_text::{DirectTextContext, DirectTextRequest};
 pub use manager::{CallButton, LiveCallManager};
+pub use swarm::SwarmStatus;
 
 #[derive(Clone)]
 struct CallRuntime {
@@ -41,6 +43,7 @@ struct CallRuntime {
     p2p_state: UseStateHandle<P2pRouteState>,
     p2p_subscriptions: Rc<RefCell<HashSet<String>>>,
     p2p_generation: Rc<RefCell<u64>>,
+    swarm: swarm::SwarmTracker,
     realtime: RealtimeSender,
     password: String,
     on_select: Callback<String>,

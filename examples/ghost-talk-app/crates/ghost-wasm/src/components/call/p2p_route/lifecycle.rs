@@ -54,9 +54,13 @@ pub(in crate::components::call) fn use_p2p_effect(profile: &Profile, runtime: Ca
         match key.start_config() {
             Some(config) => {
                 runtime.p2p_state.set(P2pRouteState::Starting);
+                runtime.swarm.starting();
                 spawn_local(start(runtime.clone(), generation, config));
             }
-            None => runtime.p2p_state.set(P2pRouteState::Unavailable),
+            None => {
+                runtime.p2p_state.set(P2pRouteState::Unavailable);
+                runtime.swarm.disable();
+            }
         }
         move || retire(&runtime)
     });
@@ -80,6 +84,7 @@ async fn start(runtime: CallRuntime, generation: u64, config: P2pStartConfig) {
         Err(error) => {
             trace(&runtime, "node-start-failed", error);
             runtime.p2p_state.set(P2pRouteState::KaspaFallback);
+            runtime.swarm.offline();
         }
     }
 }
@@ -104,6 +109,7 @@ async fn on_started(runtime: &CallRuntime, generation: u64, binding: LocalP2pBin
     runtime.p2p_state.set(P2pRouteState::Connecting);
     if spawn_event_loop(runtime.clone(), generation).is_err() {
         runtime.p2p_state.set(P2pRouteState::KaspaFallback);
+        runtime.swarm.offline();
         return;
     }
     announce_active_sessions(runtime).await;
@@ -113,6 +119,7 @@ fn retire(runtime: &CallRuntime) {
     advance_generation(runtime);
     runtime.p2p_subscriptions.borrow_mut().clear();
     runtime.p2p_state.set(P2pRouteState::Unavailable);
+    runtime.swarm.disable();
     shutdown_detached(runtime);
 }
 

@@ -28,6 +28,24 @@ pub enum RoomMode {
     Radio,
 }
 
+impl RoomMode {
+    pub const ALL: [Self; 4] = [
+        Self::PrivateGroup,
+        Self::CommunityVoice,
+        Self::Stage,
+        Self::Radio,
+    ];
+
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::PrivateGroup => "Private group",
+            Self::CommunityVoice => "Community voice",
+            Self::Stage => "Stage",
+            Self::Radio => "Radio",
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct RoomPolicies {
     pub access: RoomAccess,
@@ -37,6 +55,13 @@ pub struct RoomPolicies {
 }
 
 impl RoomPolicies {
+    /// The canonical preset these policies match, if any.
+    pub fn mode(self) -> Option<RoomMode> {
+        RoomMode::ALL
+            .into_iter()
+            .find(|mode| Self::for_mode(*mode) == self)
+    }
+
     pub const fn for_mode(mode: RoomMode) -> Self {
         match mode {
             RoomMode::PrivateGroup => Self {
@@ -79,5 +104,24 @@ mod tests {
         let radio = RoomPolicies::for_mode(RoomMode::Radio);
         assert_eq!(radio.audio, ChannelPolicy::PresentersOnly);
         assert!(radio.broadcast);
+    }
+
+    #[test]
+    fn every_preset_round_trips_to_its_mode() {
+        for mode in RoomMode::ALL {
+            assert_eq!(RoomPolicies::for_mode(mode).mode(), Some(mode));
+        }
+        let mut custom = RoomPolicies::for_mode(RoomMode::Stage);
+        custom.broadcast = true;
+        assert_eq!(custom.mode(), None);
+    }
+
+    #[test]
+    fn every_mode_has_its_own_label() {
+        let labels = RoomMode::ALL.map(RoomMode::label);
+        assert_eq!(
+            labels,
+            ["Private group", "Community voice", "Stage", "Radio"]
+        );
     }
 }

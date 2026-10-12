@@ -1,3 +1,4 @@
+use crate::components::call::SwarmStatus;
 use crate::model::Profile;
 use yew::prelude::*;
 
@@ -21,12 +22,16 @@ pub fn sidebar(props: &SidebarProps) -> Html {
     let incoming = pending_direct_count(&props.profile, &props.tab, &props.selected_chat_id);
     let room_invites = pending_room_count(&props.profile);
     let network_title = network_title(&props.network_status, props.reconnect_attempts);
+    let swarm = use_context::<SwarmStatus>().unwrap_or_default();
     html! {
       <aside class="sidebar">
         <div class="brand-row">
           <img class="brand-mark small" src={crate::ui_assets::ghost_talk_logo_src()} alt="" />
           <h1>{"Ghost Talk"}</h1>
-          <span class={classes!("network-dot", props.network_status.clone())} title={network_title}></span>
+          <span class="status-icons">
+            {kaspa_status_icon(&props.network_status, network_title)}
+            {swarm_status_icon(swarm)}
+          </span>
         </div>
         <input class="search" placeholder="Search name, KNS, dot.k or kaspa:…" />
         <nav>{for TABS.iter().map(|name| nav_button(props, name, incoming, room_invites))}</nav>
@@ -87,6 +92,32 @@ fn network_title(status: &str, reconnect_attempts: u32) -> String {
     }
 }
 
+/// Kaspa mark (mirrored K in a disc): teal connected, grey reconnecting, black offline.
+fn kaspa_status_icon(status: &str, title: String) -> Html {
+    html! {
+      <svg class={classes!("status-icon", "kaspa-status", status.to_owned())} viewBox="0 0 24 24" role="img" aria-label={title.clone()}>
+        <title>{title}</title>
+        <circle class="status-disc" cx="12" cy="12" r="11"/>
+        <path class="status-glyph" d="M15.5 5.5v13M15.5 12L8 6M15.5 12L8 18"/>
+      </svg>
+    }
+}
+
+/// p2p-net swarm glyph (three linked nodes) with the same colour states.
+fn swarm_status_icon(status: SwarmStatus) -> Html {
+    let title = status.title();
+    html! {
+      <svg class={classes!("status-icon", "swarm-status", status.indicator_class())} viewBox="0 0 24 24" role="img" aria-label={title.clone()}>
+        <title>{title}</title>
+        <circle class="status-disc" cx="12" cy="12" r="11"/>
+        <path class="status-glyph" d="M12 7L7.5 15.5H16.5Z"/>
+        <circle class="status-node" cx="12" cy="7" r="2"/>
+        <circle class="status-node" cx="7.5" cy="15.5" r="2"/>
+        <circle class="status-node" cx="16.5" cy="15.5" r="2"/>
+      </svg>
+    }
+}
+
 fn nav_button(props: &SidebarProps, name: &&str, incoming: usize, room_invites: usize) -> Html {
     let tab = (*name).to_string();
     let on_tab = props.on_tab.clone();
@@ -118,7 +149,7 @@ fn profile_switch_button(props: &SidebarProps) -> Html {
         .unwrap_or_else(|| "No Kaspa wallet".into());
     html! {
         <button class="profile-chip" onclick={Callback::from(move |_| callback.emit(()))}>
-          <span class="avatar">{props.profile.label.chars().next().unwrap_or('G').to_ascii_uppercase()}</span>
+          <crate::components::avatar::Avatar label={props.profile.label.clone()} reference={props.profile.public_avatar().cloned()} size={36} />
           <span><b>{props.profile.label.clone()}</b><small>{network}</small></span>
           <span>{"⇄"}</span>
         </button>

@@ -79,6 +79,7 @@ pub fn live_call_manager(props: &LiveCallManagerProps) -> Html {
     let current = visible_call(&runtime);
     let actions = call_actions(&runtime, current.clone());
     html! {
+        <ContextProvider<super::SwarmStatus> context={runtime.swarm.status()}>
         <ContextProvider<CallContext> context={context}>
           <ContextProvider<RoomVoiceContext> context={room_voice}>
           <ContextProvider<super::DirectTextContext> context={super::direct_text::context(&runtime)}>
@@ -87,6 +88,7 @@ pub fn live_call_manager(props: &LiveCallManagerProps) -> Html {
           </ContextProvider<super::DirectTextContext>>
           </ContextProvider<RoomVoiceContext>>
         </ContextProvider<CallContext>>
+        </ContextProvider<super::SwarmStatus>>
     }
 }
 
@@ -111,6 +113,7 @@ fn use_call_runtime(
     let p2p_state = use_state(|| P2pRouteState::Unavailable);
     let p2p_subscriptions = use_mut_ref(std::collections::HashSet::<String>::new);
     let p2p_generation = use_mut_ref(|| 0u64);
+    let swarm = super::swarm::use_swarm_tracker();
     let realtime = use_realtime_sender(props, &profile_ref, &render_epoch, &p2p, &p2p_state);
     CallRuntime {
         profile_ref,
@@ -127,6 +130,7 @@ fn use_call_runtime(
         p2p_state,
         p2p_subscriptions,
         p2p_generation,
+        swarm,
         realtime,
         password: props.password.clone(),
         on_select: props.on_select.clone(),

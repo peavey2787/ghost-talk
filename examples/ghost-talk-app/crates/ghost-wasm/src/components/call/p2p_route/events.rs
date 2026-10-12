@@ -24,6 +24,7 @@ async fn run(runtime: CallRuntime, generation: u64, mut events: P2pNetEventSubsc
             Ok(event) => apply(&runtime, event).await,
             Err(error) => {
                 runtime.p2p_state.set(P2pRouteState::KaspaFallback);
+                runtime.swarm.offline();
                 runtime.on_error.emit(format!("p2p-net events: {error}"));
                 return;
             }
@@ -33,6 +34,7 @@ async fn run(runtime: CallRuntime, generation: u64, mut events: P2pNetEventSubsc
 
 async fn apply(runtime: &CallRuntime, event: P2pNetEvent) {
     trace(runtime, "node-event", format!("{event:?}"));
+    runtime.swarm.apply(&event);
     if matches!(event, P2pNetEvent::LocalBindingChanged(_)) {
         schedule_announce(runtime);
         return;

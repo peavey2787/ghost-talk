@@ -7,7 +7,7 @@ use crate::P2pInfrastructure;
 
 /// Discovery namespace application id; keeps Ghost Talk peers in their own
 /// hashed discovery namespace instead of p2p-net's default one.
-pub const GHOST_TALK_DISCOVERY_APP_ID: &str = "ghost-talk";
+pub const GHOST_TALK_DISCOVERY_APP_ID: &str = "ghost-talk-v1";
 
 /// Stable libp2p network discriminator for a Kaspa network name. Peers on
 /// different Kaspa networks never share a libp2p network.

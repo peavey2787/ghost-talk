@@ -55,6 +55,7 @@ pub fn identity_gate(props: &IdentityGateProps) -> Html {
         backup: use_state(|| None::<(Profile, String, String)>),
         password_input: use_node_ref(),
     };
+    use_password_autofocus(&state, props.profiles.is_empty());
     if let Some(backup) = (*state.backup).clone() {
         return render_backup_gate(props, &state, backup);
     }
@@ -62,6 +63,22 @@ pub fn identity_gate(props: &IdentityGateProps) -> Html {
         return render_unlock_gate(props, &state);
     }
     render_create_gate(props, &state)
+}
+
+/// Focus the unlock password whenever the unlock form is shown so the user
+/// can start typing immediately.
+#[hook]
+fn use_password_autofocus(state: &IdentityState, no_profiles: bool) {
+    let unlocking = !*state.creating && !no_profiles && state.backup.is_none();
+    let password_input = state.password_input.clone();
+    use_effect_with(unlocking, move |unlocking| {
+        if *unlocking {
+            if let Some(input) = password_input.cast::<HtmlInputElement>() {
+                let _ = input.focus();
+            }
+        }
+        || ()
+    });
 }
 
 fn single_profile_id(profiles: &[Profile]) -> String {
@@ -156,7 +173,7 @@ fn render_identity_row(profile: &Profile, state: &IdentityState) -> Html {
               let _ = input.focus();
           }
       })}>
-        <span class="avatar">{profile.label.chars().next().unwrap_or('G').to_ascii_uppercase()}</span>
+        <crate::components::avatar::Avatar label={profile.label.clone()} reference={profile.public_avatar().cloned()} size={36} />
         <span><b>{profile.label.clone()}</b><small>{network}</small></span>
         <span class="arrow">{"›"}</span>
       </button>

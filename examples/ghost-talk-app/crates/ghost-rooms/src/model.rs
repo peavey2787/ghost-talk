@@ -123,6 +123,14 @@ impl Room {
     pub fn broadcast_enabled(&self) -> bool {
         self.broadcast_enabled
     }
+    pub fn policies(&self) -> crate::RoomPolicies {
+        crate::RoomPolicies {
+            access: self.access,
+            text: self.text_policy,
+            audio: self.audio_policy,
+            broadcast: self.broadcast_enabled,
+        }
+    }
     pub fn can_speak(&self, hydra_id: &str) -> bool {
         self.allowed_by_policy(hydra_id, self.audio_policy)
     }

@@ -21,6 +21,8 @@ pub fn discover_view(props: &DiscoverProps) -> Html {
     let result = use_state(|| None::<PublicGhostProfile>);
     let status = use_state(String::new);
     let busy = use_state(|| false);
+    let section = use_state(|| DiscoverSection::People);
+    let room_filter = use_state(|| None::<ghost_rooms::RoomMode>);
 
     let ghost_address = registered_address(&props.profile);
     let public_users = observed_public_users(&props.profile, &ghost_address);
@@ -34,12 +36,40 @@ pub fn discover_view(props: &DiscoverProps) -> Html {
                     <p>{"Public Ghost Talk profiles are optional. Private/unlisted users can still chat over Kaspa."}</p>
                 </div>
             </div>
-            {render_profile_editor(props, &ghost_address, status.clone(), busy.clone())}
-            {render_lookup_form(props, query.clone(), result.clone(), status.clone(), busy.clone())}
-            {status_view(&status)}
-            {render_lookup_result((*result).clone(), props)}
-            {render_public_directory(public_users, public_count, props.on_start_chat.clone())}
+            {render_section_tabs(section.clone())}
+            {if *section == DiscoverSection::Rooms {
+                rooms::render_room_directory(&props.profile, room_filter)
+            } else {
+                html! {<>
+                    {render_profile_editor(props, &ghost_address, status.clone(), busy.clone())}
+                    {render_lookup_form(props, query.clone(), result.clone(), status.clone(), busy.clone())}
+                    {status_view(&status)}
+                    {render_lookup_result((*result).clone(), props)}
+                    {render_public_directory(public_users, public_count, props.on_start_chat.clone())}
+                </>}
+            }}
         </section>
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum DiscoverSection {
+    People,
+    Rooms,
+}
+
+fn render_section_tabs(section: UseStateHandle<DiscoverSection>) -> Html {
+    let tab = |value: DiscoverSection, label: &'static str| {
+        let section = section.clone();
+        html! {
+            <button class={(*section == value).then_some("active")} onclick={Callback::from(move |_| section.set(value))}>{label}</button>
+        }
+    };
+    html! {
+        <div class="segmented discover-tabs">
+            {tab(DiscoverSection::People, "Public users")}
+            {tab(DiscoverSection::Rooms, "Rooms")}
+        </div>
     }
 }
 
@@ -66,5 +96,6 @@ pub(crate) fn observed_public_users(
 mod avatar_editor;
 mod editor;
 mod lookup;
+mod rooms;
 use editor::render_profile_editor;
 use lookup::render_lookup_form;
