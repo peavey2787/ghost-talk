@@ -14,3 +14,4 @@ serde.workspace = true
 thiserror.workspace = true
 rand.workspace = true
 hex.workspace = true
+kaspa-portal.workspace = true

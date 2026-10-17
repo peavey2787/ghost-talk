@@ -3,7 +3,7 @@ use super::{
     events::{
         fragment, CarrierFrame, GhostCallInviteContext, GhostContactDescriptor,
         GhostContactRequest, BASE64, GHOST_KKTP_VERSION, GHST_DATA_MAX, GTCR_MAGIC,
-        KKTP_ANCHOR_PREFIX, MAX_FRAGMENTS, MAX_GHOST_TX_PAYLOAD, MAX_KSPT_V1_PAYLOAD_BYTES,
+        KKTP_ANCHOR_PREFIX, MAX_GHOST_TX_PAYLOAD, MAX_KSPT_PAYLOAD_BYTES,
     },
     kktp_codec::{kktp_anchor_type, kktp_mailbox_id},
     kktp_types::{
@@ -17,14 +17,12 @@ mod tests {
     use ghost_core::Id128;
 
     #[test]
-    fn fragments_roundtrip_across_kspt_v1_boundary() {
+    fn fragments_roundtrip_across_the_payload_ceiling() {
         let data = vec![0x5a; GHST_DATA_MAX + 17];
         let packet = Id128([7; 16]);
         let frames = fragment(packet, &data).unwrap();
         assert_eq!(frames.len(), 2);
-        assert!(frames
-            .iter()
-            .all(|raw| raw.len() <= MAX_KSPT_V1_PAYLOAD_BYTES));
+        assert!(frames.iter().all(|raw| raw.len() <= MAX_KSPT_PAYLOAD_BYTES));
         let mut rebuilt = Vec::new();
         for raw in frames {
             rebuilt.extend(CarrierFrame::decode(&raw).unwrap().payload);
@@ -33,15 +31,12 @@ mod tests {
     }
 
     #[test]
-    fn eighty_kib_logical_carrier_only_fragments_at_real_kspt_v1_boundary() {
+    fn eighty_kib_logical_carrier_fits_one_transaction() {
         let data = vec![0xa5; MAX_GHOST_TX_PAYLOAD];
         let packet = Id128([9; 16]);
         let frames = fragment(packet, &data).unwrap();
-        assert!(frames.len() > 1);
-        assert!(frames.len() <= MAX_FRAGMENTS);
-        assert!(frames
-            .iter()
-            .all(|raw| raw.len() <= MAX_KSPT_V1_PAYLOAD_BYTES));
+        assert_eq!(frames.len(), 1);
+        assert!(frames.iter().all(|raw| raw.len() <= MAX_KSPT_PAYLOAD_BYTES));
         let rebuilt = frames
             .iter()
             .flat_map(|raw| CarrierFrame::decode(raw).unwrap().payload)

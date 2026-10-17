@@ -57,11 +57,10 @@ pub(crate) struct UtxoTracker {
 
 impl UtxoTracker {
     pub(crate) fn new(network: &str) -> Self {
-        let prefix = if network.trim().eq_ignore_ascii_case("mainnet") {
-            "kaspa"
-        } else {
-            "kaspatest"
-        };
+        use kaspa_portal::primitives::address::KaspaNetwork;
+        let prefix = KaspaNetwork::from_name(&network.trim().to_ascii_lowercase())
+            .and_then(KaspaNetwork::hrp)
+            .unwrap_or("kaspatest");
         Self {
             prefix,
             set: HashMap::new(),
@@ -69,7 +68,7 @@ impl UtxoTracker {
     }
 
     pub(crate) fn address(&self, entry: &UtxoEntry) -> Option<String> {
-        script_address(&entry.script_public_key, self.prefix)
+        kaspa_portal::primitives::address::script_address(&entry.script_public_key, self.prefix)
     }
 
     pub(crate) fn apply(&mut self, entry: &UtxoEntry) {
@@ -82,19 +81,6 @@ impl UtxoTracker {
 
     pub(crate) fn remove(&mut self, entry: &UtxoEntry) {
         self.set.remove(&outpoint_key(entry));
-    }
-}
-
-fn script_address(script: &[u8], prefix: &str) -> Option<String> {
-    use kaspa_portal::primitives::address::{encode_p2pk_address, encode_p2sh_address};
-    match script {
-        [0x20, key @ .., 0xac] if key.len() == 32 => {
-            Some(encode_p2pk_address(key.try_into().ok()?, prefix))
-        }
-        [0xaa, 0x20, hash @ .., 0x87] if hash.len() == 32 => {
-            Some(encode_p2sh_address(hash.try_into().ok()?, prefix))
-        }
-        _ => None,
     }
 }
 

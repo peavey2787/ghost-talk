@@ -5,12 +5,11 @@ use std::{fmt, str::FromStr};
 
 pub const APP_NAME: &str = "Ghost Talk";
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
-/// Logical Ghost Talk carrier/message ceiling. Portal 1.0.1 can carry up to
-/// KSPT v1's u16 payload limit in one transaction; larger logical carriers are
-/// split only when they genuinely exceed that wire-format boundary.
+/// Logical Ghost Talk carrier/message ceiling. Carriers are split only when
+/// they exceed Portal's per-transaction payload ceiling.
 pub const MAX_GHOST_TX_PAYLOAD: usize = 80 * 1024;
-/// KSPT v1 payload-length field ceiling used by Kaspa Portal 1.0.1.
-pub const MAX_KSPT_V1_PAYLOAD_BYTES: usize = u16::MAX as usize;
+/// Largest payload one Kaspa transaction carries (Portal's Toccata ceiling).
+pub use kaspa_portal::transaction::model::MAX_PAYLOAD_SIZE as MAX_KSPT_PAYLOAD_BYTES;
 pub const MAX_EVENT_BYTES: usize = 512 * 1024;
 pub const MAX_MAILBOX_ENVELOPE_BYTES: usize = MAX_EVENT_BYTES + 64 * 1024;
 pub const MAX_FRAGMENTS: usize = 128;
@@ -71,24 +70,6 @@ pub struct TransactionObservation {
     pub payload: Vec<u8>,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub enum Network {
-    Mainnet,
-    Testnet10,
-    Testnet11,
-    Custom,
-}
-
-impl Network {
-    pub fn kaspa_prefix(self) -> &'static str {
-        match self {
-            Self::Mainnet => "kaspa",
-            Self::Testnet10 | Self::Testnet11 => "kaspatest",
-            Self::Custom => "kaspa",
-        }
-    }
-}
-
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct KaspaAddress(String);
 
@@ -98,12 +79,7 @@ impl KaspaAddress {
         if !(s.starts_with("kaspa:") || s.starts_with("kaspatest:")) {
             return Err("unsupported Kaspa address prefix".into());
         }
-        if s.len() < 20 || s.len() > 128 {
-            return Err("Kaspa address length".into());
-        }
-        if !s.bytes().all(|b| b.is_ascii_alphanumeric() || b == b':') {
-            return Err("invalid Kaspa address characters".into());
-        }
+        kaspa_portal::primitives::address::decode_address(s)?;
         Ok(Self(s.to_owned()))
     }
 

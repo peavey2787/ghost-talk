@@ -58,9 +58,12 @@ fn validate_mailbox_payloads(payloads: &[Vec<u8>]) -> Result<(), String> {
     }
     if payloads
         .iter()
-        .any(|payload| payload.is_empty() || payload.len() > ghost_core::MAX_KSPT_V1_PAYLOAD_BYTES)
+        .any(|payload| payload.is_empty() || payload.len() > ghost_core::MAX_KSPT_PAYLOAD_BYTES)
     {
-        return Err("Ghost Talk attempted to sign a payload larger than KSPT v1 permits".into());
+        return Err(
+            "Ghost Talk attempted to sign a payload larger than one Kaspa transaction carries"
+                .into(),
+        );
     }
     Ok(())
 }

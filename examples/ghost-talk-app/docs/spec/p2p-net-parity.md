@@ -6,7 +6,7 @@ Ghost Talk has one realtime transport contract: `ghost_realtime::GhostP2pTranspo
 
 Ghost Talk, Kaspa Portal, HYDRA and p2p-net are separately maintained crates that share one `wasm-bindgen 0.2.108` ABI family, so the application links all of them as ordinary dependencies into one WebAssembly module. There is no copy of p2p-net code and no separately loaded p2p module.
 
-`ghost-p2p` implements `GhostP2pTransport` by starting p2p-net's own `WasmNode` in process with the shared Ghost node policy (`ghost_realtime::ghost_node_config`) in a per-profile IndexedDB namespace (`ghost_realtime::storage_namespace`). Kaspa access goes only through Kaspa Portal (wRPC requests, BlockAdded/UtxosChanged/VirtualDaaScoreChanged subscriptions, address and script derivation); Rusty-Kaspa client crates are not in either graph. Architecture checks enforce both rules and a single p2p-net revision.
+`ghost-p2p` implements `GhostP2pTransport` by starting p2p-net's own `WasmNode` in process with the shared Ghost node policy (`ghost_realtime::ghost_node_config`) in a per-profile IndexedDB namespace (`ghost_realtime::storage_namespace`). Kaspa access goes only through Kaspa Portal (wRPC requests, BlockAdded/UtxosChanged/VirtualDaaScoreChanged subscriptions, address and script derivation); Rusty-Kaspa client crates are not in either graph. Architecture checks enforce both rules and that p2p-net tracks its default branch.
 
 Persistent browser identity, IndexedDB durability, same-profile tab exclusion, lifecycle handling, address filtering, WebRTC-direct/WebSocket/relay transports, discovery, and reconnect behavior belong to p2p-net. Ghost does not import libp2p or browser peer-connection APIs.
 

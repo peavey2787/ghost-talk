@@ -32,21 +32,21 @@ sysinfo = { version = "0.39.6", default-features = false, features = ["system", 
 fs2 = "0.4.3"
 
 # HYDRA is external and every directly consumed HYDRA crate is pinned to one commit.
-hydra-msg = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "d90b387aaefbc20c5a686192e59c8c4b0d98cb26" }
-hydra-core = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "d90b387aaefbc20c5a686192e59c8c4b0d98cb26" }
-hydra-crypto = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "d90b387aaefbc20c5a686192e59c8c4b0d98cb26" }
-hydra-stego = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "d90b387aaefbc20c5a686192e59c8c4b0d98cb26" }
-hydra-group = { git = "https://github.com/peavey2787/hydra-msg.git", rev = "d90b387aaefbc20c5a686192e59c8c4b0d98cb26" }
-kaspa-portal = { git = "https://github.com/peavey2787/kaspa-portal.git", rev = "b9390d261896943f42aa5147829724c21dfafe05" }
+hydra-msg = { git = "https://github.com/peavey2787/hydra-msg.git" }
+hydra-core = { git = "https://github.com/peavey2787/hydra-msg.git" }
+hydra-crypto = { git = "https://github.com/peavey2787/hydra-msg.git" }
+hydra-stego = { git = "https://github.com/peavey2787/hydra-msg.git" }
+hydra-group = { git = "https://github.com/peavey2787/hydra-msg.git" }
+kaspa-portal = { git = "https://github.com/peavey2787/kaspa-portal.git" }
 ghost-talk = { path = "../../crates/ghost-talk" }
 # Shared realtime/voice contract and the p2p-net transport it drives. Kaspa
 # Portal, HYDRA and p2p-net share one wasm-bindgen family, so all link together.
 ghost-realtime = { path = "../../crates/ghost-realtime" }
-p2p-net = { git = "https://github.com/peavey2787/p2p-net", rev = "3ade5744fe7f21747c0246965e557f3825626738" }
+p2p-net = { git = "https://github.com/peavey2787/p2p-net" }
 ghost-voice = { path = "../../crates/ghost-voice" }
 # KasKold 2.0 import/backup/signing formats (upstream KasKold, v2 branch).
-vault-runtime = { git = "https://github.com/peavey2787/KasKold.git", rev = "486907b194e422eca1fc958616bd9798b3393238" }
-kaskold-sdk = { git = "https://github.com/peavey2787/KasKold.git", rev = "486907b194e422eca1fc958616bd9798b3393238" }
+vault-runtime = { git = "https://github.com/peavey2787/KasKold.git", branch = "v2" }
+kaskold-sdk = { git = "https://github.com/peavey2787/KasKold.git", branch = "v2" }
 
 [profile.dev.package."*"]
 opt-level = 3

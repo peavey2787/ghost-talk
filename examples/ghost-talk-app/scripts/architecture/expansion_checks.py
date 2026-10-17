@@ -241,13 +241,14 @@ def check_kaskold_compatibility_and_ui_contracts() -> None:
         fail("shared KasKold compatibility must cover every Vault import/backup and SDK PSKT signing path")
     if "ghost-kaskold" not in native_manifest or "ghost_kaskold::" not in native:
         fail("native KasKold commands must delegate to the shared ghost-kaskold facade")
-    kaskold_source = re.compile(r'(vault-runtime|kaskold-sdk)\s*=\s*\{[^}]*git = "https://github\.com/peavey2787/KasKold\.git", rev = "([0-9a-f]{40})"')
+    # KasKold's crates live on its v2 branch until v2 becomes the default.
+    kaskold_source = re.compile(r'(vault-runtime|kaskold-sdk)\s*=\s*\{\s*git = "https://github\.com/peavey2787/KasKold\.git", branch = "v2"([^}]*)\}')
     manifests = [APP_ROOT / "Cargo.toml", shared_root / "Cargo.toml", APP_CRATES / "ghost-wasm" / "Cargo.toml"]
     found = [match for manifest in manifests for match in kaskold_source.findall(text(manifest))]
     if {name for name, _ in found} != {"vault-runtime", "kaskold-sdk"}:
-        fail("ghost-kaskold must import vault-runtime and kaskold-sdk from upstream KasKold by git revision")
-    if len({rev for _, rev in found}) != 1:
-        fail(f"KasKold is pinned to more than one revision: {sorted({rev for _, rev in found})}")
+        fail("ghost-kaskold must import vault-runtime and kaskold-sdk from upstream KasKold's v2 branch")
+    if any(re.search(r'\b(rev|branch|tag)\s*=', options) for _, options in found):
+        fail("KasKold must track its v2 branch, not a pinned revision, other branch or tag")
     if "ghost_storage::seal" not in shared or "ghost_storage::open" not in shared:
         fail("shared KasKold secret inventory must remain encrypted by Ghost profile custody")
     if "local.kaskold_inventory != baseline.kaskold_inventory" not in wallet:

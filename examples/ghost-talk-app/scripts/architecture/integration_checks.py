@@ -61,8 +61,8 @@ def check_dotk_integration() -> None:
 
     wallet_dir = APP_CRATES / "ghost-kaspa" / "src" / "wallet"
     kaspa_wallet = "".join(text(wallet_dir / name) for name in ("planning.rs", "consolidation.rs"))
-    if not re.search(r'kaspa-portal = \{ git = "https://github.com/peavey2787/kaspa-portal.git", rev = "[0-9a-f]{40}" \}', workspace_manifest):
-        fail("Ghost Talk must pin Kaspa Portal (>= 1.1.0 notification API) to one reviewed revision")
+    if 'kaspa-portal = { git = "https://github.com/peavey2787/kaspa-portal.git" }' not in workspace_manifest:
+        fail("Ghost Talk must track Kaspa Portal's default branch (>= 1.1.0 notification API)")
     fee_tokens = ("analysis.fee_sufficient", ".minimum_fee_sompi", ".recommended_fee_sompi")
     if any(token not in kaspa_wallet for token in fee_tokens):
         fail("wallet/consolidation flow must enforce Portal's Toccata-aware fee analysis and replan floor")

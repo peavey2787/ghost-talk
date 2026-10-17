@@ -26,7 +26,7 @@ if exist "%ProgramFiles%\LLVM\bin\clang.exe" (
 call scripts\tooling\ensure-wasm-target.cmd || goto :report
 
 echo ==^> trunk build --release
-if exist "%ROOT%	argetuildrontend" rmdir /s /q "%ROOT%	argetuildrontend"
+if exist "%ROOT%\target\build\frontend" rmdir /s /q "%ROOT%\target\build\frontend"
 pushd "%APP%\crates\ghost-wasm"
 trunk build --release
 set "BUILD=%ERRORLEVEL%"

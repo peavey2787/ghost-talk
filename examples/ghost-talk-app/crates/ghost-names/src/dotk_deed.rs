@@ -1,5 +1,5 @@
 use kaspa_portal::primitives::address::{
-    encode_address_for_network, script_hash, AddressType, KaspaNetwork, MAX_ADDR_LEN,
+    encode_address_for_network, p2sh_script, script_hash, AddressType, KaspaNetwork, MAX_ADDR_LEN,
 };
 use serde::Deserialize;
 
@@ -79,16 +79,11 @@ pub(crate) fn derive_deed(
     let state = active_state(name, owner_type, &owner)?;
     redeem[deployment.state_offset..deployment.state_offset + STATE_LEN].copy_from_slice(&state);
     let hash = script_hash(&redeem);
-    // Standard P2SH lock: OP_BLAKE2B OP_DATA32 <hash> OP_EQUAL.
-    let mut script = Vec::with_capacity(35);
-    script.extend_from_slice(&[0xaa, 0x20]);
-    script.extend_from_slice(&hash);
-    script.push(0x87);
     Ok(DerivedDeed {
         name: name.to_string(),
         address,
         deed_address: mainnet_address(&hash, AddressType::P2sh)?,
-        script_public_key: hex::encode(script),
+        script_public_key: hex::encode(p2sh_script(&hash)),
         bond: deployment.bond,
     })
 }

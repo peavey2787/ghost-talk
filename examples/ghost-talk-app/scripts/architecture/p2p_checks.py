@@ -6,7 +6,7 @@ import re
 from .common import APP_CRATES, APP_ROOT, SDK_CRATES, fail, rel, text
 
 RUSTY_KASPA = re.compile(r"(?m)^\s*(kaspa-wrpc-client|kaspa-rpc-core|kaspa-consensus-core|kaspa-addresses|kaspa-txscript|kaspa-hashes|workflow-core)\s*[=.]")
-P2P_NET_DEP = re.compile(r'p2p-net\s*=\s*\{[^}]*rev\s*=\s*"([0-9a-f]{40})"')
+P2P_NET_PINNED = re.compile(r'p2p-net\s*=\s*\{[^}]*\b(?:rev|branch|tag)\s*=')
 
 
 def check_p2p_net_boundary() -> None:
@@ -31,11 +31,9 @@ def check_p2p_net_boundary() -> None:
         fail("ghost-realtime must keep p2p-net helpers available to native/Kinesis consumers by default")
     manifests = [APP_ROOT / "Cargo.toml", SDK_CRATES / "ghost-realtime" / "Cargo.toml"]
     manifests += sorted(APP_CRATES.glob("*/Cargo.toml"))
-    revisions = set()
     for manifest in manifests:
         body = manifest.read_text(encoding="utf-8")
         if RUSTY_KASPA.search(body):
             fail(f"{rel(manifest)} depends on Rusty-Kaspa directly; use Kaspa Portal")
-        revisions.update(P2P_NET_DEP.findall(body))
-    if len(revisions) > 1:
-        fail(f"p2p-net is pinned to more than one revision: {sorted(revisions)}")
+        if P2P_NET_PINNED.search(body):
+            fail(f"{rel(manifest)} pins p2p-net; track its default branch")

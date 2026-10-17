@@ -16,7 +16,7 @@ use super::{
 pub(crate) use base64::engine::general_purpose::STANDARD as BASE64;
 pub(crate) use ghost_core::{
     ConversationId, EventId, Id128, PacketId, RoomId, MAX_EVENT_BYTES, MAX_FRAGMENTS,
-    MAX_GHOST_TX_PAYLOAD, MAX_KSPT_V1_PAYLOAD_BYTES,
+    MAX_GHOST_TX_PAYLOAD, MAX_KSPT_PAYLOAD_BYTES,
 };
 pub(crate) use serde::{Deserialize, Serialize};
 pub(crate) use sha3::Sha3_256;
@@ -25,9 +25,9 @@ pub const EVENT_VERSION: u16 = 1;
 pub const GHST_MAGIC: [u8; 4] = *b"GHST";
 pub const GHST_VERSION: u8 = 1;
 pub const GHST_HEADER: usize = 30;
-/// Maximum logical bytes carried by one KSPT-v1 transaction after the
-/// Ghost Talk frame header. Ordinary HYDRA carriers now fit in one transaction.
-pub const GHST_DATA_MAX: usize = MAX_KSPT_V1_PAYLOAD_BYTES - GHST_HEADER;
+/// Maximum logical bytes carried by one transaction after the Ghost Talk
+/// frame header. Ordinary HYDRA carriers fit in one transaction.
+pub const GHST_DATA_MAX: usize = MAX_KSPT_PAYLOAD_BYTES - GHST_HEADER;
 pub const GTCD_MAGIC: [u8; 4] = *b"GTCD";
 pub const GTCD_VERSION: u16 = 1;
 pub const GTACK_MAGIC: [u8; 4] = *b"GTAK";

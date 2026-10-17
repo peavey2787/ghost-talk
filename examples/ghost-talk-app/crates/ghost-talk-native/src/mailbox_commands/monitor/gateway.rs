@@ -216,10 +216,9 @@ pub(crate) fn decode_mailbox_payloads(payloads_hex: &[String]) -> Result<Vec<Vec
         .map(|payload_hex| {
             let payload = hex::decode(payload_hex)
                 .map_err(|_| "prepared mailbox payload is not valid hex".to_string())?;
-            if payload.is_empty() || payload.len() > ghost_core::MAX_KSPT_V1_PAYLOAD_BYTES {
+            if payload.is_empty() || payload.len() > ghost_core::MAX_KSPT_PAYLOAD_BYTES {
                 return Err(
-                    "prepared Ghost Talk physical fragment exceeds the KSPT v1 payload boundary"
-                        .into(),
+                    "prepared Ghost Talk physical fragment exceeds the KSPT payload ceiling".into(),
                 );
             }
             ghost_protocol::CarrierFrame::decode(&payload)?;
