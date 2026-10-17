@@ -35,7 +35,6 @@ pub(super) fn use_call_runtime(
     let p2p_subscriptions = use_mut_ref(std::collections::HashSet::<String>::new);
     let p2p_generation = use_mut_ref(|| 0u64);
     let swarm = super::super::swarm::use_swarm_tracker();
-    let rooms = super::super::swarm::use_room_directory_tracker();
     let realtime = use_realtime_sender(props, &profile_ref, &render_epoch, &p2p, &p2p_state);
     CallRuntime {
         profile_ref,
@@ -53,7 +52,7 @@ pub(super) fn use_call_runtime(
         p2p_subscriptions,
         p2p_generation,
         swarm,
-        rooms,
+        rooms: props.rooms.clone(),
         realtime,
         password: props.password.clone(),
         on_select: props.on_select.clone(),

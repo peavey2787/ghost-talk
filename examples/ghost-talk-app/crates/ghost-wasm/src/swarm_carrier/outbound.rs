@@ -31,10 +31,13 @@ pub(crate) async fn publish(topic: &str, payload: &[u8]) -> Result<(), String> {
 /// Publish every frame of a no-spend mailbox send, tagged for its recipient.
 pub(crate) async fn deliver(delivery: &SwarmDelivery) -> Result<(), String> {
     let node = node()?;
+    let sent_at_secs = (crate::now_ms() / 1000.0).max(0.0) as u64;
     for frame_hex in &delivery.frames_hex {
         let frame =
             hex::decode(frame_hex).map_err(|_| "swarm mailbox frame is not hex".to_string())?;
-        let packet = SwarmMailboxPacket::for_destination(&delivery.destination, frame)?;
+        let packet =
+            SwarmMailboxPacket::for_destination(&delivery.destination, frame, sent_at_secs)?;
+        super::retention::hold(&packet);
         node.publish(MAILBOX_TOPIC, &packet.encode()).await?;
     }
     Ok(())

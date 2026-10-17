@@ -12,7 +12,7 @@ fn profile_with_dotk_alias() -> Profile {
     profile
 }
 
-#[test]
+#[wasm_bindgen_test::wasm_bindgen_test]
 fn explicit_dotk_input_bypasses_cached_alias_addresses() {
     assert_eq!(
         resolve_recipient_target(&profile_with_dotk_alias(), "ALICE.K").unwrap(),
@@ -20,7 +20,7 @@ fn explicit_dotk_input_bypasses_cached_alias_addresses() {
     );
 }
 
-#[test]
+#[wasm_bindgen_test::wasm_bindgen_test]
 fn dotk_candidate_selection_preserves_name_for_fresh_verification() {
     let candidates = recipient_candidates(&profile_with_dotk_alias(), "alice.k");
     assert_eq!(candidates.len(), 1);

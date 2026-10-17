@@ -1,5 +1,6 @@
-//! Signed public-room advertisement carried on the p2p-net room directory
-//! topic. Only `RoomAccess::Public` rooms can produce one: private groups,
+//! Signed public-room advertisement, carried on the p2p-net room directory
+//! topic (short-lived, re-announced while the owner is online) or in a Kaspa
+//! transaction payload (long-lived, costs a fee). Only `RoomAccess::Public` rooms can produce one: private groups,
 //! invite-only and unlisted rooms are never announced. The owner signs the
 //! canonical body with the Kaspa P2PK key of `owner_kaspa_address`; the host
 //! verifies that signature before a listing reaches the directory.
@@ -13,6 +14,11 @@ pub const ROOM_ANNOUNCEMENT_VERSION: u16 = 1;
 /// Kaspa domain-signature domain of a room announcement.
 pub const ROOM_ANNOUNCEMENT_SIGNATURE_DOMAIN: &[u8] = b"GhostTalk/RoomAnnouncement/v1";
 const MAX_ENCODED_BYTES: usize = 4 * 1024;
+/// Swarm announcements are re-published every minute and expire quickly.
+pub const SWARM_LISTING_LIFETIME_MS: u64 = 10 * 60 * 1000;
+/// A Kaspa announcement lists the room for a day.
+pub const KASPA_LISTING_LIFETIME_MS: u64 = 24 * 60 * 60 * 1000;
+const MAX_LISTING_LIFETIME_MS: u64 = 7 * 24 * 60 * 60 * 1000;
 const MAX_NAME_CHARS: usize = 80;
 const MAX_LABEL_CHARS: usize = 80;
 
@@ -28,6 +34,8 @@ pub struct RoomAnnouncement {
     pub owner_kaspa_address: String,
     pub owner_hydra_id: String,
     pub issued_at_ms: u64,
+    /// Listeners drop the listing at this time (signed).
+    pub expires_at_ms: u64,
     #[serde(default)]
     pub signature_hex: String,
 }
@@ -45,12 +53,13 @@ struct Signing<'a> {
     owner_kaspa_address: &'a str,
     owner_hydra_id: &'a str,
     issued_at_ms: u64,
+    expires_at_ms: u64,
 }
 
 impl RoomAnnouncement {
     /// An unsigned announcement for a public room with a canonical public
-    /// mode; `None` for every other room.
-    pub fn for_room(room: &Room, issued_at_ms: u64) -> Option<Self> {
+    /// mode, listed for `lifetime_ms`; `None` for every other room.
+    pub fn for_room(room: &Room, issued_at_ms: u64, lifetime_ms: u64) -> Option<Self> {
         if room.access() != RoomAccess::Public || room.pending_acceptance() {
             return None;
         }
@@ -68,6 +77,7 @@ impl RoomAnnouncement {
             owner_kaspa_address: room.owner_kaspa_address.clone(),
             owner_hydra_id: room.owner_hydra_id.clone(),
             issued_at_ms,
+            expires_at_ms: issued_at_ms.saturating_add(lifetime_ms),
             signature_hex: String::new(),
         };
         announcement.validate().ok()?;
@@ -86,6 +96,7 @@ impl RoomAnnouncement {
             owner_kaspa_address: &self.owner_kaspa_address,
             owner_hydra_id: &self.owner_hydra_id,
             issued_at_ms: self.issued_at_ms,
+            expires_at_ms: self.expires_at_ms,
         })
         .map_err(|error| error.to_string())
     }
@@ -117,7 +128,9 @@ impl RoomAnnouncement {
             && bounded_text(&self.name, MAX_NAME_CHARS)
             && bounded_text(&self.owner_label, MAX_LABEL_CHARS)
             && self.owner_kaspa_address.starts_with("kaspa")
-            && self.owner_kaspa_address.len() <= 128;
+            && self.owner_kaspa_address.len() <= 128
+            && self.expires_at_ms > self.issued_at_ms
+            && self.expires_at_ms - self.issued_at_ms <= MAX_LISTING_LIFETIME_MS;
         valid
             .then_some(())
             .ok_or_else(|| "Ghost Talk room announcement is invalid".to_string())
@@ -168,18 +181,19 @@ pub(crate) mod tests {
 
     #[test]
     fn only_public_preset_rooms_are_announced() {
-        assert!(RoomAnnouncement::for_room(&room(RoomMode::PrivateGroup), 1).is_none());
+        assert!(RoomAnnouncement::for_room(&room(RoomMode::PrivateGroup), 1, 10).is_none());
         for mode in [RoomMode::CommunityVoice, RoomMode::Stage, RoomMode::Radio] {
-            let announcement = RoomAnnouncement::for_room(&room(mode), 7).unwrap();
+            let announcement = RoomAnnouncement::for_room(&room(mode), 7, 10).unwrap();
             assert_eq!(announcement.mode, mode);
             assert_eq!(announcement.name, "Lobby");
             assert_eq!(announcement.issued_at_ms, 7);
+            assert_eq!(announcement.expires_at_ms, 17);
         }
     }
 
     #[test]
     fn announcement_round_trips_and_signing_excludes_the_signature() {
-        let mut announcement = RoomAnnouncement::for_room(&room(RoomMode::Stage), 9).unwrap();
+        let mut announcement = RoomAnnouncement::for_room(&room(RoomMode::Stage), 9, 10).unwrap();
         let unsigned = announcement.signing_bytes().unwrap();
         announcement.signature_hex = "ee".repeat(64);
         assert_eq!(announcement.signing_bytes().unwrap(), unsigned);
@@ -189,7 +203,7 @@ pub(crate) mod tests {
 
     #[test]
     fn malformed_announcements_fail_closed() {
-        let mut announcement = RoomAnnouncement::for_room(&room(RoomMode::Radio), 1).unwrap();
+        let mut announcement = RoomAnnouncement::for_room(&room(RoomMode::Radio), 1, 10).unwrap();
         assert!(RoomAnnouncement::decode(b"{}").is_err());
         assert!(RoomAnnouncement::decode(&[b'G'; MAX_ENCODED_BYTES + 1]).is_err());
         announcement.mode = RoomMode::PrivateGroup;
@@ -197,5 +211,10 @@ pub(crate) mod tests {
         announcement.mode = RoomMode::Radio;
         announcement.room_id = "not-hex".into();
         assert!(announcement.signing_bytes().is_err());
+        announcement.room_id = "ab".repeat(16);
+        announcement.expires_at_ms = announcement.issued_at_ms;
+        assert!(announcement.encode().is_err(), "expiry must follow issue");
+        announcement.expires_at_ms = MAX_LISTING_LIFETIME_MS + 2;
+        assert!(announcement.encode().is_err(), "lifetime is bounded");
     }
 }

@@ -111,7 +111,7 @@ mod tests {
     use super::target_exists;
     use ghost_rooms::{ChannelPolicy, NewRoom, RoomAccess, RoomService};
 
-    #[test]
+    #[wasm_bindgen_test::wasm_bindgen_test]
     fn reaction_target_must_exist() {
         let room = RoomService::new_room(NewRoom {
             id: "room".into(),

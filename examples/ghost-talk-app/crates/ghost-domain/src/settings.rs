@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+mod retention;
+pub use retention::{SwarmRetention, MAX_RETENTION_MEGABYTES, MAX_RETENTION_MINUTES};
+
 /// Who pays for Ghost Talk traffic. `Kaspa` anchors mailbox traffic on chain
 /// (fees, durable history). `NoSpend` sends the same signed/sealed mailbox
 /// frames over the p2p-net swarm only: no Kaspa fees, nothing stored on chain.
@@ -31,6 +34,8 @@ pub struct Settings {
     pub route: String,
     #[serde(default)]
     pub spend_mode: SpendMode,
+    #[serde(default)]
+    pub swarm_retention: SwarmRetention,
     #[serde(default = "default_stego")]
     pub stego: String,
     /// Chat text carrier: "Kaspa" (durable, default), "P2P preferred", or
@@ -67,6 +72,7 @@ impl Default for Settings {
         Self {
             route: default_route(),
             spend_mode: SpendMode::Kaspa,
+            swarm_retention: SwarmRetention::default(),
             stego: default_stego(),
             text_route: default_text_route(),
             contacts_backup_kaspa: true,

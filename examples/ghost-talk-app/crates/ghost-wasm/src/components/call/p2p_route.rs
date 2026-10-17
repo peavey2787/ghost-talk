@@ -16,6 +16,7 @@ pub(super) use control::process_transport_control;
 pub(super) use lifecycle::use_p2p_effect;
 pub(super) use room_announcer::use_room_announcer;
 pub(super) use sessions::use_session_announce_effect;
+pub(super) use shared_topics::use_retention_policy;
 
 use super::CallRuntime;
 

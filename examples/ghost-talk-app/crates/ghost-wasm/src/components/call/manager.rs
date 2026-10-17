@@ -35,6 +35,7 @@ pub struct LiveCallManagerProps {
     pub on_update: Callback<ProfilePatch>,
     pub on_error: Callback<String>,
     pub on_swarm_mailbox: Callback<crate::model::WalletLiveEvent>,
+    pub rooms: super::RoomDirectoryTracker,
     #[prop_or_default]
     pub children: Children,
 }
@@ -69,6 +70,7 @@ pub fn live_call_manager(props: &LiveCallManagerProps) -> Html {
     p2p_route::use_p2p_effect(&props.profile, runtime.clone());
     p2p_route::use_session_announce_effect(&props.profile, runtime.clone());
     p2p_route::use_room_announcer(runtime.clone());
+    p2p_route::use_retention_policy(&props.profile);
     use_realtime_effect(props, runtime.clone());
     use_connecting_effect(runtime.clone());
     let context = CallContext {

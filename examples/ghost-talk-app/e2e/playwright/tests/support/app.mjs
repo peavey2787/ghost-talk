@@ -141,3 +141,35 @@ export async function expectDebug(page, ...fragments) {
     }, { timeout: LONG, intervals: [3000] })
     .toBe(true);
 }
+
+/** Sidebar messaging mode: "Kaspa" or "No-spend". */
+export async function setSpendMode(page, label) {
+  const option = page.locator('.spend-mode-switch .spend-mode-option', { hasText: label });
+  await option.click();
+  await expect(option).toHaveAttribute('aria-checked', 'true');
+}
+
+/** Reopen the app after it was closed and unlock the stored ID. */
+export async function reopen(page) {
+  await page.goto('/index.html');
+  await page.getByPlaceholder('ID / wallet password').fill(PASSWORD);
+  await page.getByRole('button', { name: 'Unlock', exact: true }).click();
+  await expect(page.locator('.sidebar nav')).toBeVisible({ timeout: LONG });
+}
+
+/** Create a public Community room owned by this instance. */
+export async function createPublicRoom(page, name) {
+  await nav(page, 'Rooms');
+  await page.getByPlaceholder('Room name').fill(name);
+  await page.locator('.room-create-form select').selectOption('community');
+  await page.locator('.room-create-form button.primary').click();
+}
+
+/** The Discover → Rooms row for a public room, once it is listed. */
+export async function expectListedRoom(page, name) {
+  await nav(page, 'Discover');
+  await page.locator('.discover-tabs button', { hasText: 'Rooms' }).click();
+  const row = page.locator('.discover-public-list .public-user-row', { hasText: name });
+  await expect(row).toBeVisible({ timeout: LONG });
+  return row;
+}

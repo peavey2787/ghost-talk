@@ -213,7 +213,7 @@ mod tests {
 
     const WORDS: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art";
 
-    #[test]
+    #[wasm_bindgen_test::wasm_bindgen_test]
     fn kaskold_restore_accepts_24_word_recovery_and_rejects_12_word_root() {
         let words = import_recovery("mnemonic", WORDS, &[], "", "").expect("24-word import");
         assert_eq!(words.split_whitespace().count(), 24);

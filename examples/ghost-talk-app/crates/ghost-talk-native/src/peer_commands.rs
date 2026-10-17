@@ -8,7 +8,7 @@ mod name_resolution;
 mod room_announcement;
 pub(crate) use name_resolution::NameResolverState;
 use name_resolution::{resolve_target, ResolvedTarget};
-pub(crate) use room_announcement::room_announcement_sign;
+pub(crate) use room_announcement::{room_announcement_publish, room_announcement_sign};
 
 const MAX_CONTACT_CARD_BYTES: usize = 64 * 1024;
 

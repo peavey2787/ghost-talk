@@ -132,7 +132,7 @@ pub(crate) async fn send_reaction(
 mod tests {
     use ghost_protocol::validate_kktp_message_id;
 
-    #[test]
+    #[wasm_bindgen_test::wasm_bindgen_test]
     fn reaction_targets_require_wire_message_ids() {
         assert!(validate_kktp_message_id(&"ab".repeat(16)).is_ok());
         assert!(validate_kktp_message_id("message").is_err());

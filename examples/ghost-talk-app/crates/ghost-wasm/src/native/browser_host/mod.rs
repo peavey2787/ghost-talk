@@ -42,6 +42,9 @@ async fn invoke_runtime(command: &str, args: &Value) -> Result<Value, String> {
     if command == "publish_ghost_descriptor" {
         return discover::invoke(command, args).await;
     }
+    if command == "room_announcement_publish" {
+        return rooms::publish_announcement(args).await;
+    }
     invoke_social(command, args).await
 }
 

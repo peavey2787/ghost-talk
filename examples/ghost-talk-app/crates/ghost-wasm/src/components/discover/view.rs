@@ -41,12 +41,10 @@ pub fn discover_view(props: &DiscoverProps) -> Html {
             </div>
             {render_section_tabs(section.clone())}
             {if *section == DiscoverSection::Rooms {
-                rooms::render_room_directory(
-                    &props.profile,
-                    &heard_rooms,
-                    room_filter,
-                    props.on_start_chat.clone(),
-                )
+                html! {<>
+                    {rooms::render_room_directory(props, &heard_rooms, room_filter, kaspa_announce::Busy { status: status.clone(), busy: busy.clone() })}
+                    {status_view(&status)}
+                </>}
             } else {
                 html! {<>
                     {render_profile_editor(props, &ghost_address, status.clone(), busy.clone())}
@@ -103,6 +101,7 @@ pub(crate) fn observed_public_users(
 
 mod avatar_editor;
 mod editor;
+mod kaspa_announce;
 mod lookup;
 mod rooms;
 use editor::render_profile_editor;

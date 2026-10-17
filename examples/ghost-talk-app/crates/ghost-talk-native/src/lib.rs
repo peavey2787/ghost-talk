@@ -50,8 +50,8 @@ use media_commands::{
     media_manifest_sign,
 };
 use peer_commands::{
-    lookup_ghost_profile, publish_ghost_descriptor, resolve_ghost_peer, room_announcement_sign,
-    NameResolverState, PublicDirectoryState,
+    lookup_ghost_profile, publish_ghost_descriptor, resolve_ghost_peer, room_announcement_publish,
+    room_announcement_sign, NameResolverState, PublicDirectoryState,
 };
 use profile_state_commands::{profile_state_load, profile_state_save};
 use remembered_unlock_commands::{remembered_unlock_load, remembered_unlock_set};
@@ -98,6 +98,7 @@ macro_rules! native_handler {
             kaspa_archive_publish,
             media_manifest_sign,
             room_announcement_sign,
+            room_announcement_publish,
             media_import_local,
             media_fetch_verified,
             kasia_identity,

@@ -22,6 +22,7 @@ mod transport;
 use crate::controllers::call::RealtimeSender;
 pub(crate) use direct_text::{DirectTextContext, DirectTextRequest};
 pub use manager::{CallButton, LiveCallManager};
+pub(crate) use swarm::{use_room_directory_tracker, RoomDirectoryTracker};
 pub use swarm::{RoomListings, SwarmStatus};
 
 #[derive(Clone)]

@@ -5,6 +5,8 @@
 //     "not stored on Kaspa"
 //  3. Kaspa only: text + voice entirely on Kaspa
 //  4. Rooms: text + Room voice
+//  5. Room announcements on Kaspa: a public room's signed listing is
+//     published as a Kaspa payload and listed in the peer's Discover
 import { test, expect } from '@playwright/test';
 import { launchInstance, relayAddresses } from './support/instances.mjs';
 import * as app from './support/app.mjs';
@@ -162,4 +164,14 @@ test('4. Rooms: text both ways and Room voice', async () => {
     await app.nav(instance.page, 'Rooms');
     await instance.page.getByRole('button', { name: 'Leave voice' }).click();
   }
+});
+
+test('5. Room announcements: a public room is announced on Kaspa and listed', async () => {
+  const roomName = `Kaspa Room ${stamp}`;
+  await app.createPublicRoom(alice.page, roomName);
+  const own = await app.expectListedRoom(alice.page, roomName);
+  await own.getByRole('button', { name: 'Announce on Kaspa' }).click();
+  await expect(alice.page.getByText(`Announced ${roomName} on Kaspa`)).toBeVisible({ timeout: 5 * 60 * 1000 });
+  const listed = await app.expectListedRoom(bob.page, roomName);
+  await expect(listed.getByRole('button', { name: 'Message host' })).toBeVisible();
 });

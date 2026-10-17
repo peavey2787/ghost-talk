@@ -65,7 +65,10 @@ async fn resolve_destination(
     }
 }
 
-fn broadcast_patch(profile: &Profile, result: crate::model::BroadcastResult) -> BroadcastPatch {
+pub(crate) fn broadcast_patch(
+    profile: &Profile,
+    result: crate::model::BroadcastResult,
+) -> BroadcastPatch {
     BroadcastPatch {
         transaction_id: result.transaction_id,
         patch: super::state::wallet_progress_patch(profile, result.public),

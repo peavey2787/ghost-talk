@@ -34,6 +34,7 @@ pub fn settings_view(props: &SettingsProps) -> Html {
         <div class="page-head"><div><h2>{"Settings"}</h2><p>{"Privacy, transport, wallet security, recovery, and Kaspa endpoints."}</p></div></div>
         {render_voice_settings(props, &state)}
         {super::settings_p2p::render_p2p_settings(props)}
+        {super::settings_retention::render_retention_settings(props)}
         {render_security_settings(props, &state)}
         {render_recovery(props, &state)}
         {render_backup_settings(props, &state)}

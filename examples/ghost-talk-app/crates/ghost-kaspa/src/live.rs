@@ -38,6 +38,7 @@ pub fn is_live_ghost_carrier(payload: &[u8]) -> bool {
                     | b"GTVL"
                     | b"GTBK"
                     | b"GTR1"
+                    | b"GTRA"
             ))
 }
 
@@ -64,6 +65,7 @@ mod tests {
             b"KKTP:ANCHOR:{}",
             b"GHST....",
             b"GTCR....",
+            b"GTRA{}",
         ] {
             assert!(is_live_ghost_carrier(carrier));
         }

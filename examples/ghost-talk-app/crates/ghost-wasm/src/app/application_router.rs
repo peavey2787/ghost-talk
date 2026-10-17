@@ -126,7 +126,7 @@ mod tests {
     use super::{ApplicationEvent, ApplicationRouter};
     use crate::model::{ChatStore, Message};
 
-    #[test]
+    #[wasm_bindgen_test::wasm_bindgen_test]
     fn incoming_message_routes_through_chat_owner() {
         let mut chats = ChatStore::from(vec![ghost_chat::ChatService::new_basic(
             "chat".into(),

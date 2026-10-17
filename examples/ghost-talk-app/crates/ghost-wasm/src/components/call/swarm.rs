@@ -8,7 +8,7 @@ use yew::prelude::*;
 
 mod room_directory;
 pub use room_directory::RoomListings;
-pub(super) use room_directory::{use_room_directory_tracker, RoomDirectoryTracker};
+pub(crate) use room_directory::{use_room_directory_tracker, RoomDirectoryTracker};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum SwarmStatus {
@@ -103,7 +103,7 @@ pub(super) fn use_swarm_tracker() -> SwarmTracker {
 mod tests {
     use super::SwarmStatus;
 
-    #[test]
+    #[wasm_bindgen_test::wasm_bindgen_test]
     fn indicator_classes_follow_peer_reachability() {
         assert_eq!(SwarmStatus::Disabled.indicator_class(), "disconnected");
         assert_eq!(SwarmStatus::Starting.indicator_class(), "connecting");

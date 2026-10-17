@@ -1,3 +1,4 @@
+use crate::components::call::{use_room_directory_tracker, RoomDirectoryTracker};
 use crate::model::{CallRuntimeEvent, Profile, RealtimeControl, WalletSnapshot};
 use std::{cell::RefCell, collections::HashSet, rc::Rc};
 use yew::prelude::*;
@@ -37,6 +38,8 @@ pub(crate) struct AppRuntime {
     pub(crate) mailbox_busy: Rc<RefCell<HashSet<String>>>,
     pub(crate) mailbox_dirty: Rc<RefCell<HashSet<String>>>,
     pub(crate) resume_busy: Rc<RefCell<HashSet<String>>>,
+    /// Public rooms heard on Kaspa and the swarm.
+    pub(crate) rooms: RoomDirectoryTracker,
 }
 
 #[hook]
@@ -72,6 +75,7 @@ pub(crate) fn use_app_runtime() -> AppRuntime {
         mailbox_busy: use_mut_ref(HashSet::<String>::new),
         mailbox_dirty: use_mut_ref(HashSet::<String>::new),
         resume_busy: use_mut_ref(HashSet::<String>::new),
+        rooms: use_room_directory_tracker(),
     }
 }
 

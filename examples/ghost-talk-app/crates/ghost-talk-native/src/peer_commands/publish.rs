@@ -131,7 +131,7 @@ fn directory_matches(
     Ok(current.encode()? == payload)
 }
 
-async fn publish_payload(
+pub(super) async fn publish_payload(
     gateway: &crate::kaspa_gateway::KaspaGatewayState,
     secret: &WalletSecret,
     public: &WalletPublic,

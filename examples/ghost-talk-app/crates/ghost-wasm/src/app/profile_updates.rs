@@ -143,6 +143,8 @@ fn merge_settings(before: &Settings, after: &Settings, latest: &Settings) -> Set
         };
     }
     field!(route);
+    field!(spend_mode);
+    field!(swarm_retention);
     field!(stego);
     field!(text_route);
     field!(contacts_backup_kaspa);
@@ -161,8 +163,11 @@ fn merge_settings(before: &Settings, after: &Settings, latest: &Settings) -> Set
 #[cfg(test)]
 mod tests {
     use super::*;
+    use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
-    #[test]
+    wasm_bindgen_test_configure!(run_in_browser);
+
+    #[wasm_bindgen_test]
     fn chat_patch_does_not_roll_back_concurrent_contact_change() {
         let before = Profile::new("p".into(), "Profile".into());
         let chat = ghost_chat::ChatService::new_basic("chat".into(), "Peer".into());
@@ -177,5 +182,19 @@ mod tests {
         let merged = apply_profile_patch(&latest, patch).unwrap();
         assert_eq!(merged.contacts.len(), 1);
         assert_eq!(merged.chats.len(), 1);
+    }
+
+    #[wasm_bindgen_test]
+    fn spend_mode_and_retention_changes_survive_the_merge() {
+        let before = Profile::new("p".into(), "Profile".into());
+        let mut after = before.settings.clone();
+        after.spend_mode = ghost_domain::settings::SpendMode::NoSpend;
+        after.swarm_retention.minutes = 5;
+        let merged = merge_settings(&before.settings, &after, &before.settings);
+        assert_eq!(
+            merged.spend_mode,
+            ghost_domain::settings::SpendMode::NoSpend
+        );
+        assert_eq!(merged.swarm_retention.minutes, 5);
     }
 }

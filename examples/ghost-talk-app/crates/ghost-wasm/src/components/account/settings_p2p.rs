@@ -8,7 +8,7 @@ pub(super) fn render_p2p_settings(props: &SettingsProps) -> Html {
     let settings = &props.profile.settings;
     html! {
         <div class="card form-grid p2p-settings-card"><h3>{"Direct transport (p2p-net)"}</h3>
-          <p>{"With Auto, live voice moves to p2p-net after both sides exchange signed transport announcements over Kaspa; Kaspa stays the fallback. Browsers reach each other through p2p-net relays."}</p>
+          <p>{"With Auto, live voice moves to p2p-net after both sides exchange signed transport announcements (over Kaspa, or over the swarm in No-spend mode); Kaspa stays the fallback. Browsers reach each other through p2p-net relays."}</p>
           <label>{"Relay peers (one multiaddr per line)"}<textarea class="p2p-relay-peers" value={settings.p2p_relay_peers.join("\n")} onchange={list_callback(props, "p2pRelayPeers")} placeholder="/dns4/relay.example/tcp/443/wss/p2p/12D3KooW…" /></label>
           <label>{"Bootstrap peers (one multiaddr per line)"}<textarea class="p2p-bootstrap-peers" value={settings.p2p_bootstrap_peers.join("\n")} onchange={list_callback(props, "p2pBootstrapPeers")} placeholder="p2p-net public bootstrap" /></label>
           <small>{"Leave both empty to use p2p-net's public bootstrap policy."}</small>

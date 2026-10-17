@@ -46,6 +46,7 @@ mod tests {
             owner_kaspa_address: owner.into(),
             owner_hydra_id: "cd".repeat(32),
             issued_at_ms: 42,
+            expires_at_ms: 1_042,
             signature_hex: String::new(),
         }
     }

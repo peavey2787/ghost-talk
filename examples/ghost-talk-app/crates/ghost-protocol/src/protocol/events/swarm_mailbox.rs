@@ -13,7 +13,12 @@ pub const GTSM_MAGIC: [u8; 4] = *b"GTSM";
 pub const GTSM_VERSION: u8 = 1;
 const RECIPIENT_TAG_DOMAIN: &[u8] = b"GhostTalk/swarm-mailbox/recipient/v1\0";
 const FRAME_ID_DOMAIN: &[u8] = b"GhostTalk/swarm-mailbox/frame/v1\0";
-const HEADER_BYTES: usize = 4 + 1 + 32;
+const HEADER_BYTES: usize = 4 + 1 + 32 + 8;
+
+mod query;
+mod store;
+pub use query::{SwarmMailQuery, GTSQ_MAGIC};
+pub use store::SwarmMailStore;
 
 /// Routing digest of one Kaspa destination address (case-insensitive).
 pub fn swarm_recipient_tag(kaspa_address: &str) -> [u8; 32] {
@@ -36,15 +41,23 @@ pub fn swarm_frame_id(frame: &[u8]) -> String {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SwarmMailboxPacket {
     pub recipient_tag: [u8; 32],
+    /// Sender clock when the frame was first published (seconds). Holders
+    /// replay it unchanged, so late receivers keep the original send time.
+    pub sent_at_secs: u64,
     /// One validated GHST carrier frame.
     pub frame: Vec<u8>,
 }
 
 impl SwarmMailboxPacket {
-    pub fn for_destination(kaspa_address: &str, frame: Vec<u8>) -> Result<Self, String> {
+    pub fn for_destination(
+        kaspa_address: &str,
+        frame: Vec<u8>,
+        sent_at_secs: u64,
+    ) -> Result<Self, String> {
         CarrierFrame::decode(&frame)?;
         Ok(Self {
             recipient_tag: swarm_recipient_tag(kaspa_address),
+            sent_at_secs,
             frame,
         })
     }
@@ -54,6 +67,7 @@ impl SwarmMailboxPacket {
         out.extend_from_slice(&GTSM_MAGIC);
         out.push(GTSM_VERSION);
         out.extend_from_slice(&self.recipient_tag);
+        out.extend_from_slice(&self.sent_at_secs.to_be_bytes());
         out.extend_from_slice(&self.frame);
         out
     }
@@ -68,9 +82,12 @@ impl SwarmMailboxPacket {
         let frame = bytes[HEADER_BYTES..].to_vec();
         CarrierFrame::decode(&frame)?;
         let mut recipient_tag = [0u8; 32];
-        recipient_tag.copy_from_slice(&bytes[5..HEADER_BYTES]);
+        recipient_tag.copy_from_slice(&bytes[5..37]);
+        let mut sent_at = [0u8; 8];
+        sent_at.copy_from_slice(&bytes[37..HEADER_BYTES]);
         Ok(Self {
             recipient_tag,
+            sent_at_secs: u64::from_be_bytes(sent_at),
             frame,
         })
     }
@@ -82,11 +99,11 @@ impl SwarmMailboxPacket {
 }
 
 #[cfg(test)]
-mod tests {
+pub(super) mod tests {
     use super::*;
     use crate::fragment;
 
-    fn frame() -> Vec<u8> {
+    pub(super) fn frame() -> Vec<u8> {
         fragment(ghost_core::Id128([5; 16]), b"KKTP:ANCHOR:{}")
             .unwrap()
             .remove(0)
@@ -94,9 +111,10 @@ mod tests {
 
     #[test]
     fn packet_round_trips_and_routes_by_address_digest() {
-        let packet = SwarmMailboxPacket::for_destination("kaspa:QXYZ", frame()).unwrap();
+        let packet = SwarmMailboxPacket::for_destination("kaspa:QXYZ", frame(), 77).unwrap();
         let decoded = SwarmMailboxPacket::decode(&packet.encode()).unwrap();
         assert_eq!(decoded, packet);
+        assert_eq!(decoded.sent_at_secs, 77);
         let mine = ["kaspa:other".to_string(), "kaspa:qxyz".to_string()];
         assert!(decoded.addressed_to(mine.iter()));
         assert!(!decoded.addressed_to(mine[..1].iter()));
@@ -108,8 +126,8 @@ mod tests {
 
     #[test]
     fn malformed_packets_fail_closed() {
-        assert!(SwarmMailboxPacket::for_destination("kaspa:a", b"not ghst".to_vec()).is_err());
-        let mut encoded = SwarmMailboxPacket::for_destination("kaspa:a", frame())
+        assert!(SwarmMailboxPacket::for_destination("kaspa:a", b"not ghst".to_vec(), 1).is_err());
+        let mut encoded = SwarmMailboxPacket::for_destination("kaspa:a", frame(), 1)
             .unwrap()
             .encode();
         assert!(SwarmMailboxPacket::decode(&encoded[..HEADER_BYTES]).is_err());

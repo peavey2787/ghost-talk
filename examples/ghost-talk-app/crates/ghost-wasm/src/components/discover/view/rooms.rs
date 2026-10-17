@@ -3,8 +3,9 @@
 //! swarm room directory. Private, invite-only and unlisted rooms (including
 //! private groups) are never announced, so they never appear.
 
+use super::{kaspa_announce, DiscoverProps};
 use crate::model::Profile;
-use ghost_rooms::{RoomAnnouncement, RoomMode};
+use ghost_rooms::{RoomAnnouncement, RoomMode, SWARM_LISTING_LIFETIME_MS};
 use web_sys::HtmlSelectElement;
 use yew::prelude::*;
 
@@ -21,7 +22,7 @@ pub(super) fn discoverable_rooms(
     let mut rooms: Vec<RoomAnnouncement> = profile
         .rooms
         .iter()
-        .filter_map(|room| RoomAnnouncement::for_room(room, now))
+        .filter_map(|room| RoomAnnouncement::for_room(room, now, SWARM_LISTING_LIFETIME_MS))
         .collect();
     let heard = heard
         .iter()
@@ -34,23 +35,23 @@ pub(super) fn discoverable_rooms(
 }
 
 pub(super) fn render_room_directory(
-    profile: &Profile,
+    props: &DiscoverProps,
     heard: &[RoomAnnouncement],
     filter: UseStateHandle<Option<RoomMode>>,
-    on_start_chat: Callback<String>,
+    busy: kaspa_announce::Busy,
 ) -> Html {
-    let rooms = discoverable_rooms(profile, heard, *filter);
+    let rooms = discoverable_rooms(&props.profile, heard, *filter);
     html! {
         <div class="card discover-public-list">
             <div class="public-profile-title">
                 <div>
                     <h3>{"Public rooms"}</h3>
-                    <small>{"Your public rooms and rooms announced on the swarm. Private groups are never listed."}</small>
+                    <small>{"Your public rooms and rooms announced on the swarm or Kaspa. Private groups are never listed."}</small>
                 </div>
                 {render_mode_filter(filter)}
                 <span class="directory-count">{rooms.len()}</span>
             </div>
-            {render_rooms(profile, rooms, on_start_chat)}
+            {render_rooms(props, rooms, &busy)}
         </div>
     }
 }
@@ -85,24 +86,24 @@ fn mode_key(mode: RoomMode) -> &'static str {
 }
 
 fn render_rooms(
-    profile: &Profile,
+    props: &DiscoverProps,
     rooms: Vec<RoomAnnouncement>,
-    on_start_chat: Callback<String>,
+    busy: &kaspa_announce::Busy,
 ) -> Html {
     if rooms.is_empty() {
         return html! { <p class="muted">{"No public rooms of this type are known yet."}</p> };
     }
     html! {
         <div class="public-user-list">
-            {for rooms.iter().map(|room| render_room(profile, room, on_start_chat.clone()))}
+            {for rooms.iter().map(|room| render_room(props, room, busy))}
         </div>
     }
 }
 
 fn render_room(
-    profile: &Profile,
+    props: &DiscoverProps,
     room: &RoomAnnouncement,
-    on_start_chat: Callback<String>,
+    busy: &kaspa_announce::Busy,
 ) -> Html {
     html! {
         <div class="public-user-row">
@@ -110,7 +111,8 @@ fn render_room(
                 <b>{room.name.clone()}</b>
                 <small>{format!("{} · {} member(s) · host {}", room.mode.label(), room.member_count, room.owner_label)}</small>
             </div>
-            {message_host_button(profile, room, on_start_chat)}
+            {message_host_button(&props.profile, room, props.on_start_chat.clone())}
+            {kaspa_announce::announce_button(props, room, busy)}
         </div>
     }
 }

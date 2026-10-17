@@ -11,10 +11,11 @@ mod store;
 mod tombstones;
 
 pub use announcement::{
-    RoomAnnouncement, GTRA_MAGIC, ROOM_ANNOUNCEMENT_SIGNATURE_DOMAIN, ROOM_ANNOUNCEMENT_VERSION,
+    RoomAnnouncement, GTRA_MAGIC, KASPA_LISTING_LIFETIME_MS, ROOM_ANNOUNCEMENT_SIGNATURE_DOMAIN,
+    ROOM_ANNOUNCEMENT_VERSION, SWARM_LISTING_LIFETIME_MS,
 };
 pub use channel::{ChannelPolicy, Role, RoomMode, RoomPolicies};
-pub use directory::{RoomDirectory, ROOM_LISTING_TTL_MS};
+pub use directory::RoomDirectory;
 pub use model::{Room, RoomAccess, RoomBan, RoomMember, RoomMessage, RoomWire};
 pub use service::{NewRoom, RoomService, RoomState};
 pub use store::RoomStore;

@@ -46,7 +46,8 @@ pub use realtime::{
 };
 
 pub use events::{
-    swarm_frame_id, swarm_recipient_tag, SwarmMailboxPacket, GTSM_MAGIC, GTSM_VERSION,
+    swarm_frame_id, swarm_recipient_tag, SwarmMailQuery, SwarmMailStore, SwarmMailboxPacket,
+    GTSM_MAGIC, GTSM_VERSION, GTSQ_MAGIC,
 };
 
 pub use direct_text::{DirectTextV1, DIRECT_TEXT_PREFIX, MAX_DIRECT_TEXT_BYTES};

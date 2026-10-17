@@ -41,4 +41,4 @@ pub(crate) use kasia::{
 };
 
 pub(crate) use media::{archive_plan, archive_publish, import_local_media, sign_manifest};
-pub(crate) use swarm::{set_spend_mode, sign_room_announcement};
+pub(crate) use swarm::{room_announcement, set_spend_mode, AnnouncementCommand};

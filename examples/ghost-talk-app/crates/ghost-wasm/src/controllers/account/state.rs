@@ -1,4 +1,4 @@
-use ghost_domain::settings::SpendMode;
+use ghost_domain::settings::{SpendMode, SwarmRetention};
 
 use crate::model::{
     Profile, ProfilePatch, Settings, WalletHistoryEntry, WalletHistoryResult, WalletProjection,
@@ -84,6 +84,12 @@ fn apply_backup_boolean(settings: &mut Settings, field: &str, checked: bool) -> 
 pub(crate) fn spend_mode_patch(profile: &Profile, spend_mode: SpendMode) -> ProfilePatch {
     let mut settings = profile.settings.clone();
     settings.spend_mode = spend_mode;
+    settings_patch(profile, settings)
+}
+
+pub(crate) fn swarm_retention_patch(profile: &Profile, retention: SwarmRetention) -> ProfilePatch {
+    let mut settings = profile.settings.clone();
+    settings.swarm_retention = retention.bounded();
     settings_patch(profile, settings)
 }
 

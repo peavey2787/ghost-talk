@@ -6,7 +6,7 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use ghost_realtime::ROOM_DIRECTORY_TOPIC;
-use ghost_rooms::{RoomAnnouncement, ROOM_LISTING_TTL_MS};
+use ghost_rooms::{RoomAnnouncement, SWARM_LISTING_LIFETIME_MS};
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
@@ -17,7 +17,7 @@ use crate::{
 };
 
 const ANNOUNCE_INTERVAL_MS: u32 = 60_000;
-const RESIGN_AFTER_MS: u64 = ROOM_LISTING_TTL_MS / 2;
+const RESIGN_AFTER_MS: u64 = SWARM_LISTING_LIFETIME_MS / 2;
 
 type SignedCache = Rc<RefCell<HashMap<String, RoomAnnouncement>>>;
 
@@ -65,7 +65,7 @@ async fn signed(
     if let Some(cached) = cached.filter(|cached| still_current(cached, room, now)) {
         return Some(cached);
     }
-    let unsigned = RoomAnnouncement::for_room(room, now)?;
+    let unsigned = RoomAnnouncement::for_room(room, now, SWARM_LISTING_LIFETIME_MS)?;
     match crate::controllers::room::sign_announcement(profile, &runtime.password, unsigned).await {
         Ok(signed) => {
             cache.borrow_mut().insert(room.id.clone(), signed.clone());
@@ -84,5 +84,6 @@ fn still_current(cached: &RoomAnnouncement, room: &Room, now: u64) -> bool {
         ..cached.clone()
     };
     now.saturating_sub(cached.issued_at_ms) < RESIGN_AFTER_MS
-        && RoomAnnouncement::for_room(room, cached.issued_at_ms).as_ref() == Some(&unsigned)
+        && RoomAnnouncement::for_room(room, cached.issued_at_ms, SWARM_LISTING_LIFETIME_MS).as_ref()
+            == Some(&unsigned)
 }

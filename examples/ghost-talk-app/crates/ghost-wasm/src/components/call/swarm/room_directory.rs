@@ -1,6 +1,8 @@
-//! Public rooms heard on the swarm room-directory topic. Announcements are
-//! signature-checked before they get here; `ghost_rooms::RoomDirectory` keeps
-//! only fresh ones, and Discover reads them through `RoomListings` context.
+//! Public rooms heard on the network: on the swarm room-directory topic and
+//! in Kaspa blocks. Every announcement's owner signature is checked here;
+//! `ghost_rooms::RoomDirectory` keeps only fresh ones, and Discover reads
+//! them through `RoomListings` context. The app owns one tracker, shared by
+//! the Kaspa live-event listener and the swarm topic consumer.
 
 use ghost_rooms::{RoomAnnouncement, RoomDirectory};
 use std::{cell::RefCell, rc::Rc};
@@ -27,7 +29,7 @@ impl RoomListings {
 }
 
 #[derive(Clone)]
-pub(in crate::components::call) struct RoomDirectoryTracker {
+pub(crate) struct RoomDirectoryTracker {
     directory: Rc<RefCell<RoomDirectory>>,
     // Long-lived topic consumers hold this tracker, so the counter cannot be
     // read back from the (render-captured) state handle.
@@ -36,14 +38,21 @@ pub(in crate::components::call) struct RoomDirectoryTracker {
 }
 
 impl RoomDirectoryTracker {
-    pub(in crate::components::call) fn listings(&self) -> RoomListings {
+    pub(crate) fn listings(&self) -> RoomListings {
         RoomListings {
             directory: self.directory.clone(),
             version: *self.version,
         }
     }
 
-    pub(in crate::components::call) fn admit(&self, announcement: RoomAnnouncement) {
+    /// Admit a GTRA packet whose owner signature verifies.
+    pub(crate) fn admit_packet(&self, packet: &[u8]) {
+        let Ok(announcement) = RoomAnnouncement::decode(packet) else {
+            return;
+        };
+        if ghost_kaspa::verify_room_announcement(&announcement).is_err() {
+            return;
+        }
         if self.directory.borrow_mut().admit(announcement, now_ms()) {
             let mut counter = self.counter.borrow_mut();
             *counter = counter.wrapping_add(1);
@@ -52,8 +61,14 @@ impl RoomDirectoryTracker {
     }
 }
 
+impl PartialEq for RoomDirectoryTracker {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.directory, &other.directory) && *self.version == *other.version
+    }
+}
+
 #[hook]
-pub(in crate::components::call) fn use_room_directory_tracker() -> RoomDirectoryTracker {
+pub(crate) fn use_room_directory_tracker() -> RoomDirectoryTracker {
     RoomDirectoryTracker {
         directory: use_mut_ref(RoomDirectory::default),
         counter: use_mut_ref(|| 0u64),

@@ -42,6 +42,7 @@ pub(crate) fn app_shell(
         on_update={call_update}
         {on_error}
         {on_swarm_mailbox}
+        rooms={live.rooms.clone()}
       >
         <main class="app">
           <Sidebar profile={active.clone()} tab={(*state.tab).clone()} selected_chat_id={(*state.selected_chat_id).clone()} network_status={(*state.network_status).clone()} reconnect_attempts={*state.reconnect_attempts} on_tab={tab_callback(state.clone(), live.clone())} on_switch_user={switch_user} on_update={update_profile.clone()}/>

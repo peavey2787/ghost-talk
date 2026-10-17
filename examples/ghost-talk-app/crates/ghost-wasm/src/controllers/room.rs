@@ -10,7 +10,7 @@ mod patches;
 mod reactions;
 mod transport;
 
-pub(crate) use announcement::{owned_rooms, sign_announcement};
+pub(crate) use announcement::{announce_on_kaspa, owned_rooms, sign_announcement};
 pub(crate) use creation::{
     accept_bootstrap, accept_existing, bootstrap_room_name, create_room, decline_bootstrap,
 };

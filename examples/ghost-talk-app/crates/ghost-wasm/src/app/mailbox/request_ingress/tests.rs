@@ -24,7 +24,7 @@ fn saved_contact(address: &str, hydra: Option<&str>) -> Contact {
     )
 }
 
-#[test]
+#[wasm_bindgen_test::wasm_bindgen_test]
 fn saved_contact_requires_both_authenticated_identifiers_when_hydra_is_known() {
     let mut profile = Profile::new("p".into(), "Local".into());
     ghost_contacts::ContactService::push(
@@ -46,7 +46,7 @@ fn saved_contact_requires_both_authenticated_identifiers_when_hydra_is_known() {
     assert_eq!(chat.peer_hydra_handle(), Some("old-hydra"));
 }
 
-#[test]
+#[wasm_bindgen_test::wasm_bindgen_test]
 fn saved_contact_does_not_match_same_address_with_different_hydra_identity() {
     let mut profile = Profile::new("p".into(), "Local".into());
     ghost_contacts::ContactService::push(
@@ -66,7 +66,7 @@ fn saved_contact_does_not_match_same_address_with_different_hydra_identity() {
     assert_eq!(chat.label, "kaspatest:same");
 }
 
-#[test]
+#[wasm_bindgen_test::wasm_bindgen_test]
 fn exact_saved_binding_still_uses_saved_contact_label() {
     let mut profile = Profile::new("p".into(), "Local".into());
     ghost_contacts::ContactService::push(
@@ -86,7 +86,7 @@ fn exact_saved_binding_still_uses_saved_contact_label() {
     assert_eq!(chat.label, "Old saved contact");
 }
 
-#[test]
+#[wasm_bindgen_test::wasm_bindgen_test]
 fn incomplete_saved_binding_does_not_auto_match() {
     let mut profile = Profile::new("p".into(), "Local".into());
     ghost_contacts::ContactService::push(
@@ -106,7 +106,7 @@ fn incomplete_saved_binding_does_not_auto_match() {
     assert_eq!(chat.label, "KASPATEST:INCOMPLETE");
 }
 
-#[test]
+#[wasm_bindgen_test::wasm_bindgen_test]
 fn same_request_id_from_different_peer_does_not_reuse_old_thread() {
     let mut profile = Profile::new("p".into(), "Local".into());
     let first = incoming("kaspatest:first", "hydra-first");

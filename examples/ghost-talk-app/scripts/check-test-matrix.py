@@ -4,6 +4,8 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
+from test_matrix_browser_only import dead_plain_test_failure
+
 APP_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = APP_ROOT.parents[1]
 APP_RUN_SH = APP_ROOT / "scripts" / "run-all-tests.sh"
@@ -167,6 +169,8 @@ def main() -> int:
         wasm = len(re.findall(r"#\s*\[\s*wasm_bindgen_test(?:\([^]]*\))?\s*\]", source))
         native_tests += native
         wasm_tests += wasm
+        if dead_failure := dead_plain_test_failure(path, native, APP_WASM, REPO_ROOT):
+            fail(dead_failure)
         if wasm:
             wasm_test_files.append(path)
             if ROOT_WASM not in path.parents and APP_WASM not in path.parents:
@@ -287,6 +291,7 @@ def main() -> int:
     print("PASS: root SDK WASM and application WASM real-browser test surfaces are mandatory")
     print("PASS: root/app/standalone-WASM default + all-feature LCOV all feed one CRAP<=25 gate")
     print(f"PASS: all {len(manifests)} first-party Cargo manifests are covered by a mandatory workspace/standalone test surface")
+    print("PASS: wasm32-only application modules use browser-run wasm_bindgen tests")
     print("PASS: ignored/disabled tests, --lib-only narrowing, and external full-suite test filters are forbidden")
     return 0
 

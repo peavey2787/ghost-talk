@@ -25,10 +25,11 @@ pub(crate) fn register_wallet_listener(state: AppState, runtime: AppRuntime) {
 }
 
 pub(crate) fn handle_wallet_live_event(
-    event: WalletLiveEvent,
+    mut event: WalletLiveEvent,
     state: AppState,
     runtime: AppRuntime,
 ) {
+    admit_room_announcements(&mut event, &runtime);
     if runtime.active_id.borrow().as_deref() == Some(event.profile_id.as_str()) {
         if let Some(snapshot) = event.snapshot.clone() {
             state.snapshot.set(Some(snapshot));
@@ -49,6 +50,21 @@ pub(crate) fn handle_wallet_live_event(
         return;
     }
     spawn_local(drain_mailbox_profile(profile_id, state, runtime));
+}
+
+/// Kaspa-carried public-room announcements go to the room directory, not
+/// the mailbox.
+fn admit_room_announcements(event: &mut WalletLiveEvent, runtime: &AppRuntime) {
+    event.mailbox.retain(|carrier| {
+        let Some(packet) = hex::decode(&carrier.payload_hex)
+            .ok()
+            .filter(|payload| payload.starts_with(&ghost_rooms::GTRA_MAGIC))
+        else {
+            return true;
+        };
+        runtime.rooms.admit_packet(&packet);
+        false
+    });
 }
 
 pub(crate) fn apply_wallet_live_payload(
