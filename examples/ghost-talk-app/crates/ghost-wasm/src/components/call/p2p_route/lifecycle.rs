@@ -7,7 +7,7 @@ use yew::prelude::*;
 use super::{
     announce::announce_active_sessions,
     events::{current, spawn_event_loop},
-    trace,
+    shared_topics, trace,
 };
 use crate::{components::call::CallRuntime, model::Profile};
 
@@ -28,7 +28,7 @@ impl RouteKey {
                 .wallet
                 .as_ref()
                 .map(|wallet| wallet.public.network.clone()),
-            automatic: profile.settings.route.eq_ignore_ascii_case("auto"),
+            automatic: profile.settings.runs_swarm(),
             infrastructure: P2pInfrastructure {
                 bootstrap_peers: profile.settings.p2p_bootstrap_peers.clone(),
                 relay_peers: profile.settings.p2p_relay_peers.clone(),
@@ -46,7 +46,8 @@ impl RouteKey {
     }
 }
 
-/// Run one p2p-net node for the profile while its realtime route is Auto.
+/// Run one p2p-net node for the profile while its realtime route is Auto or
+/// it is in no-spend mode (the swarm then carries its mailbox).
 #[hook]
 pub(in crate::components::call) fn use_p2p_effect(profile: &Profile, runtime: CallRuntime) {
     use_effect_with(RouteKey::new(profile), move |key| {
@@ -112,6 +113,9 @@ async fn on_started(runtime: &CallRuntime, generation: u64, binding: LocalP2pBin
         runtime.swarm.offline();
         return;
     }
+    if let Err(error) = shared_topics::start(runtime, generation).await {
+        trace(runtime, "shared-topics-failed", error);
+    }
     announce_active_sessions(runtime).await;
 }
 
@@ -120,6 +124,7 @@ fn retire(runtime: &CallRuntime) {
     runtime.p2p_subscriptions.borrow_mut().clear();
     runtime.p2p_state.set(P2pRouteState::Unavailable);
     runtime.swarm.disable();
+    crate::swarm_carrier::detach();
     shutdown_detached(runtime);
 }
 

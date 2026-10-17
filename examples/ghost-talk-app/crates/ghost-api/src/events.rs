@@ -8,6 +8,10 @@ pub struct MailboxEvent {
     pub blue_score: String,
     pub payload_hex: String,
     pub block_time: Option<u64>,
+    /// True for frames received over the p2p-net swarm mailbox rather than
+    /// from a Kaspa block; such content is not stored on Kaspa.
+    #[serde(default)]
+    pub via_swarm: bool,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]

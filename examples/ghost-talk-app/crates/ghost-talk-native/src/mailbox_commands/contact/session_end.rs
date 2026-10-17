@@ -1,5 +1,5 @@
 use super::super::{
-    gateway::{decode_mailbox_payloads, mailbox_send_result},
+    gateway::decode_mailbox_payloads,
     send_state::{MailboxSendResult, State},
     submission::outbound_send::OutboundMailboxSend,
 };
@@ -48,7 +48,7 @@ pub async fn mailbox_send_session_end(
     )
     .await?;
     let result = outbound.send(&destination, &payloads, false).await?;
-    Ok(mailbox_send_result(result, false, None))
+    Ok(result.into_send_result(false, None))
 }
 
 #[expect(

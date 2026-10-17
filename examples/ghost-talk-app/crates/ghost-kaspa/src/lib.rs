@@ -6,6 +6,7 @@ mod descriptor;
 mod history;
 mod live;
 mod node_session;
+mod room_announcement;
 pub mod wallet;
 pub use archive::{
     archive_plan, archive_remaining_cost, estimate_archive_chunk_fee, validate_archive_size,
@@ -15,8 +16,9 @@ pub use archive::{
 pub use contact_preview::preview_contact_request;
 pub use descriptor::{build_private_descriptor, build_signed_descriptor};
 pub use history::project_wallet_history_entry;
-pub use live::{fallback_live_event_id, is_live_ghost_carrier};
+pub use live::{fallback_live_event_id, is_live_ghost_carrier, live_mailbox_event};
 pub use node_session::NodeSession;
+pub use room_announcement::{sign_room_announcement, verify_room_announcement};
 
 mod portal;
 pub use portal::upstream;

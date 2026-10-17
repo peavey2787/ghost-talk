@@ -37,8 +37,8 @@ pub use metadata::{app_info, AppInfo};
 pub use peer::{PeerRouteRegistration, PublicGhostProfile, ResolvedGhostPeer};
 pub use wallet::{
     derivation_presets, BroadcastResult, DerivationPresetInfo, MailboxSendResult,
-    PublishedGhostDescriptor, WalletCreateResponse, WalletHistoryEntry, WalletHistoryResult,
-    WalletImportResponse, WalletProjection, WalletRecovery, WalletSnapshot,
+    PublishedGhostDescriptor, SwarmDelivery, WalletCreateResponse, WalletHistoryEntry,
+    WalletHistoryResult, WalletImportResponse, WalletProjection, WalletRecovery, WalletSnapshot,
 };
 
 pub use kaskold::{

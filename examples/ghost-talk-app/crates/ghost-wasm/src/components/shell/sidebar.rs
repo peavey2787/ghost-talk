@@ -1,5 +1,6 @@
 use crate::components::call::SwarmStatus;
-use crate::model::Profile;
+use crate::model::{Profile, ProfilePatch};
+use ghost_domain::settings::SpendMode;
 use yew::prelude::*;
 
 pub const TABS: [&str; 8] = [
@@ -15,6 +16,7 @@ pub struct SidebarProps {
     pub reconnect_attempts: u32,
     pub on_tab: Callback<String>,
     pub on_switch_user: Callback<()>,
+    pub on_update: Callback<ProfilePatch>,
 }
 
 #[component(Sidebar)]
@@ -33,6 +35,7 @@ pub fn sidebar(props: &SidebarProps) -> Html {
             {swarm_status_icon(swarm)}
           </span>
         </div>
+        {spend_mode_switch(props)}
         <input class="search" placeholder="Search name, KNS, dot.k or kaspa:…" />
         <nav>{for TABS.iter().map(|name| nav_button(props, name, incoming, room_invites))}</nav>
         {profile_switch_button(props)}
@@ -82,6 +85,41 @@ fn pending_room_count(profile: &Profile) -> usize {
             .iter()
             .filter(|room| room.pending_acceptance())
             .count()
+}
+
+/// Kaspa (fee-paying transactions, stored on chain) or No-spend (the swarm
+/// only, free, nothing stored on chain): always visible, one click to switch.
+fn spend_mode_switch(props: &SidebarProps) -> Html {
+    let current = props.profile.settings.spend_mode;
+    html! {
+      <div class="spend-mode-switch" role="radiogroup" aria-label="Messaging mode">
+        {for SpendMode::ALL.into_iter().map(|mode| spend_mode_option(props, mode, current))}
+      </div>
+    }
+}
+
+fn spend_mode_option(props: &SidebarProps, mode: SpendMode, current: SpendMode) -> Html {
+    let selected = mode == current;
+    let (profile, on_update) = (props.profile.clone(), props.on_update.clone());
+    let onclick = Callback::from(move |_| {
+        if !selected {
+            on_update.emit(crate::controllers::account::spend_mode_patch(
+                &profile, mode,
+            ));
+        }
+    });
+    html! {
+      <button class={classes!("spend-mode-option", selected.then_some("selected"))} role="radio" aria-checked={selected.to_string()} title={spend_mode_hint(mode)} {onclick}>
+        {mode.label()}
+      </button>
+    }
+}
+
+fn spend_mode_hint(mode: SpendMode) -> &'static str {
+    match mode {
+        SpendMode::Kaspa => "Kaspa mode: messages are Kaspa transactions — small fee, stored on chain, reach peers even when they are offline.",
+        SpendMode::NoSpend => "No-spend mode: messages travel over the swarm only — no funds needed, nothing stored on Kaspa, peers must be online.",
+    }
 }
 
 fn network_title(status: &str, reconnect_attempts: u32) -> String {

@@ -34,6 +34,12 @@ pub struct P2pNetEventSubscription {
     inner: WasmEventSubscription,
 }
 
+/// A shared gossip topic (swarm mailbox, room directory). Deliveries carry the
+/// authenticated source peer; the payload's own signatures decide admission.
+pub struct P2pNetTopicSubscription {
+    inner: WasmSubscription,
+}
+
 impl P2pNetTransport {
     fn node(&self) -> Result<Rc<WasmNode>, String> {
         self.node
@@ -45,6 +51,20 @@ impl P2pNetTransport {
     pub fn subscribe_events(&self) -> Result<P2pNetEventSubscription, String> {
         let inner = self.node()?.subscribe_events();
         Ok(P2pNetEventSubscription { inner })
+    }
+
+    /// Gossip `payload` to every subscriber of a shared `topic`.
+    pub async fn publish(&self, topic: &str, payload: &[u8]) -> Result<(), String> {
+        let node = self.node()?;
+        node.broadcast(topic.to_owned(), Uint8Array::from(payload))
+            .await
+            .map_err(js_error)
+    }
+
+    pub async fn subscribe_topic(&self, topic: &str) -> Result<P2pNetTopicSubscription, String> {
+        let node = self.node()?;
+        let inner = node.subscribe(topic.to_owned()).await.map_err(js_error)?;
+        Ok(P2pNetTopicSubscription { inner })
     }
 
     pub fn has_bound_peer(&self, peer_id: &str) -> bool {
@@ -68,6 +88,13 @@ impl P2pNetEventSubscription {
         let event: NodeEventWire = serde_wasm_bindgen::from_value(value)
             .map_err(|error| format!("invalid p2p-net node event: {error}"))?;
         Ok(event.into())
+    }
+}
+
+impl P2pNetTopicSubscription {
+    pub async fn next(&mut self) -> Result<P2pIncoming, String> {
+        let value = self.inner.recv().await.map_err(js_error)?;
+        read_incoming(&value)
     }
 }
 

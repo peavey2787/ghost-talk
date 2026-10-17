@@ -1,4 +1,4 @@
-use crate::model::{CallRecord, Chat, Profile, ProfilePatch};
+use crate::model::{CallRecord, Chat, Profile, ProfilePatch, WalletLiveEvent};
 use ghost_domain::call::{CallEvent, CallManager};
 use ghost_p2p::{P2pNetTransport, P2pRouteState};
 use ghost_talk_wasm::{BrowserVoiceReceiver, BrowserVoiceSender};
@@ -22,7 +22,7 @@ mod transport;
 use crate::controllers::call::RealtimeSender;
 pub(crate) use direct_text::{DirectTextContext, DirectTextRequest};
 pub use manager::{CallButton, LiveCallManager};
-pub use swarm::SwarmStatus;
+pub use swarm::{RoomListings, SwarmStatus};
 
 #[derive(Clone)]
 struct CallRuntime {
@@ -44,11 +44,14 @@ struct CallRuntime {
     p2p_subscriptions: Rc<RefCell<HashSet<String>>>,
     p2p_generation: Rc<RefCell<u64>>,
     swarm: swarm::SwarmTracker,
+    rooms: swarm::RoomDirectoryTracker,
     realtime: RealtimeSender,
     password: String,
     on_select: Callback<String>,
     on_update: Callback<ProfilePatch>,
     on_error: Callback<String>,
+    /// Swarm mailbox frames for this profile, as wallet live events.
+    on_swarm_mailbox: Callback<WalletLiveEvent>,
 }
 
 #[derive(Clone, PartialEq)]

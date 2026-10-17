@@ -6,6 +6,7 @@ mod interop;
 mod kaspa;
 mod media;
 mod metadata;
+mod rooms;
 mod runtime;
 mod signer;
 mod support;
@@ -70,6 +71,9 @@ async fn invoke_subsystem(command: &str, args: &Value) -> Result<Value, String> 
 fn invoke_local_subsystem(command: &str, args: &Value) -> Option<Result<Value, String>> {
     if command.starts_with("kaskold_") {
         return Some(interop::kaskold::invoke(command, args));
+    }
+    if command == "room_announcement_sign" {
+        return Some(rooms::sign_announcement(args));
     }
     if matches!(command, "app_info" | "derivation_presets") {
         return Some(metadata::invoke(command));

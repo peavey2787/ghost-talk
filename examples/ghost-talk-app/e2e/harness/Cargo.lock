@@ -1649,6 +1649,7 @@ dependencies = [
  "ghost-domain",
  "ghost-media",
  "ghost-protocol",
+ "ghost-rooms",
  "gloo-timers 0.3.0",
  "hex",
  "kaspa-portal",
@@ -1693,6 +1694,16 @@ dependencies = [
  "hex",
  "p2p-net",
  "serde",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "ghost-rooms"
+version = "0.1.0"
+dependencies = [
+ "ghost-domain",
+ "serde",
+ "serde_json",
  "thiserror 2.0.21",
 ]
 

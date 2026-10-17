@@ -2,7 +2,7 @@ use super::super::contact_request_helpers::{
     private_descriptor, signed_call_signal, validate_call_signal_fields,
 };
 use super::super::{
-    gateway::{decode_mailbox_payloads, mailbox_send_result},
+    gateway::decode_mailbox_payloads,
     send_state::{MailboxSendResult, State},
     submission::outbound_send::OutboundMailboxSend,
 };
@@ -108,8 +108,8 @@ async fn send_call_signal(
     let payloads = decode_mailbox_payloads(&framed.payloads_hex)?;
     log_signal(&input, None);
     let result = outbound.send(&input.destination, &payloads, true).await?;
-    log_signal(&input, Some(&result.transaction_id));
-    Ok(mailbox_send_result(result, false, None))
+    log_signal(&input, Some(result.transaction_id()));
+    Ok(result.into_send_result(false, None))
 }
 
 fn log_signal(input: &CallSignalInput, transaction_id: Option<&str>) {

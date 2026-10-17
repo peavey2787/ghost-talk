@@ -117,6 +117,7 @@ pub(crate) fn insert_direct_message(
                     .unwrap_or_else(crate::now_ms),
                 txid: Some(envelope.transaction_id.clone()),
                 send_state: Some("delivered".into()),
+                carrier: envelope.via_swarm.then(|| ghost_chat::CARRIER_P2P.into()),
                 ..Default::default()
             },
         },

@@ -1,8 +1,8 @@
 use super::commands::send_mailbox_message;
 use super::{
     invoke::{
-        invoke, invoke_unit, json, BackupContact, BackupMessage, HydraControlProjection,
-        HydraMailboxResult, HydraRealtimeEnvelope, HydraRecoveryProjection,
+        invoke, invoke_mailbox, invoke_unit, json, BackupContact, BackupMessage,
+        HydraControlProjection, HydraMailboxResult, HydraRealtimeEnvelope, HydraRecoveryProjection,
         HydraSessionBindingProjection, MailboxSendResult, Profile, ProfileBackupPublishResult,
         ProfileBackupRestoreResult, SESSION_RESTORE_BODY,
     },
@@ -128,7 +128,7 @@ pub async fn send_realtime_carrier(
         .wallet
         .as_ref()
         .ok_or_else(|| "No wallet configured".to_string())?;
-    invoke(
+    invoke_mailbox(
         "mailbox_send_realtime_carrier",
         json!({
             "profileId": profile.id,
@@ -207,7 +207,7 @@ pub async fn send_session_end(
         .hydra_identity_id
         .as_deref()
         .ok_or_else(|| "HYDRA identity is unavailable".to_string())?;
-    invoke(
+    invoke_mailbox(
         "mailbox_send_session_end",
         json!({
             "profileId": profile.id,

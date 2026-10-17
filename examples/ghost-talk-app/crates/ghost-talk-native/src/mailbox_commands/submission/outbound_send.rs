@@ -1,8 +1,10 @@
 use crate::kaspa_gateway::KaspaGatewayState;
 use crate::wallet_commands::{parse_u64_decimal, WalletRuntimeState};
-use ghost_kaspa::wallet::{KaspaBroadcastResult, WalletPublic, WalletSecret};
+use ghost_domain::settings::SpendMode;
+use ghost_kaspa::wallet::{WalletPublic, WalletSecret};
 
 use super::super::monitor::gateway::MailboxSubmitContext;
+use super::spend_mode::MailboxSubmission;
 
 /// Owns the unlocked secret and parsed fee for one serialized outbound mailbox operation.
 /// Commands may borrow the secret for signing, but submission details stay centralized here.
@@ -54,7 +56,11 @@ impl<'a> OutboundMailboxSend<'a> {
         destination: &str,
         payloads: &[Vec<u8>],
         reuse_change: bool,
-    ) -> Result<KaspaBroadcastResult, String> {
+    ) -> Result<MailboxSubmission, String> {
+        if self.wallet_state.spend_mode(self.profile_id)? == SpendMode::NoSpend {
+            ghost_kaspa::validate_destination(destination)?;
+            return Ok(MailboxSubmission::swarm(self.public, destination, payloads));
+        }
         MailboxSubmitContext::new(
             self.gateway,
             self.wallet_state,
@@ -65,5 +71,6 @@ impl<'a> OutboundMailboxSend<'a> {
         )
         .send(destination, self.fee, payloads, reuse_change)
         .await
+        .map(MailboxSubmission::kaspa)
     }
 }

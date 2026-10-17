@@ -1,5 +1,6 @@
 //! Browser mailbox commands: contact requests, KKTP mailbox send/receive,
-//! control carriers, and realtime carriers over Kaspa.
+//! control carriers, and realtime carriers over Kaspa — or, for a no-spend
+//! profile, handed back as frames for the swarm mailbox.
 
 mod common;
 mod control;
@@ -21,6 +22,7 @@ pub(in crate::native::browser_host) async fn invoke(
     args: &Value,
 ) -> Result<Value, String> {
     match command {
+        "mailbox_set_spend_mode" => common::set_spend_mode(args),
         "mailbox_send_contact_request" => to_value(send_contact_request(args).await?),
         "hydra_receive_mailbox" => receive::receive(args),
         _ => to_value(send::invoke(command, args).await?),

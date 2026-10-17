@@ -17,6 +17,7 @@ ghost-domain = { path = "../ghost-domain" }
 ghost-api = { path = "../ghost-api" }
 ghost-chat = { path = "../ghost-chat" }
 ghost-media = { path = "../ghost-media" }
+ghost-rooms = { path = "../ghost-rooms" }
 base64.workspace = true
 sha2.workspace = true
 blake3.workspace = true

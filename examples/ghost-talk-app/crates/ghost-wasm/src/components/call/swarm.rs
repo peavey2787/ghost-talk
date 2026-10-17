@@ -1,9 +1,14 @@
-//! Node-level p2p-net swarm health for the sidebar indicator. This is the
-//! `ghost-talk-v1` swarm as a whole, separate from per-session route state.
+//! Node-level p2p-net swarm state: health for the sidebar indicator (the
+//! `ghost-talk-v1` swarm as a whole, separate from per-session route state)
+//! and the public room directory heard on it.
 
 use ghost_p2p::P2pNetEvent;
 use std::{cell::RefCell, collections::HashSet, rc::Rc};
 use yew::prelude::*;
+
+mod room_directory;
+pub use room_directory::RoomListings;
+pub(super) use room_directory::{use_room_directory_tracker, RoomDirectoryTracker};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum SwarmStatus {

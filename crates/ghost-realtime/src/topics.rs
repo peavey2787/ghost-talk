@@ -8,6 +8,10 @@ pub const CONTROL_TOPIC: &str = "ghost-talk/session/control/v1";
 pub const REALTIME_TOPIC: &str = "ghost-talk/session/realtime/v1";
 /// Shared voice carrier.
 pub const VOICE_TOPIC: &str = "ghost-talk/voice/v1";
+/// Shared no-spend mailbox carrier: GHST frames addressed by recipient digest.
+pub const MAILBOX_TOPIC: &str = "ghost-talk/mailbox/v1";
+/// Shared directory of signed public-room announcements.
+pub const ROOM_DIRECTORY_TOPIC: &str = "ghost-talk/rooms/v1";
 /// Prefix of per-room topics; see [`room_topic`].
 pub const ROOM_TOPIC_PREFIX: &str = "ghost-talk/room/v1/";
 /// Prefix of per-conversation topics; see [`session_topic`].
@@ -55,12 +59,18 @@ mod tests {
 
     #[test]
     fn shared_topics_are_versioned_and_distinct() {
-        let topics = [CONTROL_TOPIC, REALTIME_TOPIC, VOICE_TOPIC];
+        let topics = [
+            CONTROL_TOPIC,
+            REALTIME_TOPIC,
+            VOICE_TOPIC,
+            MAILBOX_TOPIC,
+            ROOM_DIRECTORY_TOPIC,
+        ];
         for topic in topics {
             assert!(topic.starts_with("ghost-talk/"));
             assert!(topic.ends_with("/v1"));
         }
-        assert_ne!(CONTROL_TOPIC, REALTIME_TOPIC);
-        assert_ne!(REALTIME_TOPIC, VOICE_TOPIC);
+        let distinct: std::collections::HashSet<_> = topics.into_iter().collect();
+        assert_eq!(distinct.len(), topics.len());
     }
 }

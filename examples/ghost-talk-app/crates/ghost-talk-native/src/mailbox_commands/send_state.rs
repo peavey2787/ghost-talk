@@ -1,6 +1,6 @@
 use super::gateway::decode_mailbox_payloads;
 pub(crate) use ghost_api::{
-    DirectoryLiveEvent, MailboxEvent, MailboxSendResult, NetworkStatusEvent, WalletLiveEvent,
+    DirectoryLiveEvent, MailboxSendResult, NetworkStatusEvent, WalletLiveEvent,
 };
 pub(crate) use ghost_kaspa::{wallet::WalletPublic, LiveTransactionObservation, PortalFacade};
 pub(crate) use std::{

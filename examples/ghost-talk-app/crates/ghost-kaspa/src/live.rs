@@ -10,6 +10,19 @@ pub fn fallback_live_event_id(block_hash: &str, tx_index: usize, payload: &[u8])
     hex::encode(hasher.finalize())
 }
 
+/// The mailbox event both hosts emit for one Kaspa-carried live observation.
+pub fn live_mailbox_event(
+    observation: ghost_core::TransactionObservation,
+) -> ghost_api::MailboxEvent {
+    ghost_api::MailboxEvent {
+        transaction_id: observation.txid,
+        blue_score: observation.daa_score.to_string(),
+        payload_hex: hex::encode(observation.payload),
+        block_time: None,
+        via_swarm: false,
+    }
+}
+
 /// Return true only for payloads owned by Ghost Talk/KasKold transport protocols.
 pub fn is_live_ghost_carrier(payload: &[u8]) -> bool {
     payload.starts_with(b"KKTP:")
@@ -30,7 +43,19 @@ pub fn is_live_ghost_carrier(payload: &[u8]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::is_live_ghost_carrier;
+    use super::{is_live_ghost_carrier, live_mailbox_event};
+
+    #[test]
+    fn live_observations_become_kaspa_carried_mailbox_events() {
+        let event = live_mailbox_event(ghost_core::TransactionObservation {
+            txid: "ab".into(),
+            daa_score: 7,
+            payload: b"GHST".to_vec(),
+        });
+        assert_eq!(event.blue_score, "7");
+        assert_eq!(event.payload_hex, "47485354");
+        assert!(!event.via_swarm && event.block_time.is_none());
+    }
 
     #[test]
     fn realtime_and_mailbox_carriers_are_live_but_other_payloads_are_not() {

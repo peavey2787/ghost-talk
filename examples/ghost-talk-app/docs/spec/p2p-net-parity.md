@@ -12,9 +12,16 @@ Persistent browser identity, IndexedDB durability, same-profile tab exclusion, l
 
 ## Authentication and fallback
 
-Transport announcements are sent only over the already-authenticated KKTP/HYDRA/Kaspa path; Kaspa is the signal layer. An announcement contains a p2p PeerId, bounded dial addresses, and capabilities. Before an incoming p2p packet is decrypted, Ghost requires the packet's GTR1 SID and HYDRA sender to match the active authenticated session and the source PeerId to match that session's transport binding.
+Transport announcements are sent only over the already-authenticated KKTP/HYDRA mailbox path: Kaspa in Kaspa spend mode, the swarm mailbox topic in No-spend mode. An announcement contains a p2p PeerId, bounded dial addresses, and capabilities. Before an incoming p2p packet is decrypted, Ghost requires the packet's GTR1 SID and HYDRA sender to match the active authenticated session and the source PeerId to match that session's transport binding.
 
 Realtime fallback preserves exact bytes. A realtime body is sealed once into GTR1; p2p-net receives those exact bytes; if p2p delivery fails, the Kaspa fallback publishes the same carrier. The fallback never reseals the body or advances HYDRA again.
+
+## Shared topics
+
+Besides per-session topics, every online node subscribes to two shared topics:
+
+- `ghost-talk/mailbox/v1` carries GTSM packets: a destination Kaspa address plus the exact KKTP/GHST carrier frames a Kaspa transaction would have carried. It is the No-spend mailbox carrier (see realtime.md, Spend mode). The frames are already end-to-end protected by KKTP/HYDRA; the topic only routes them.
+- `ghost-talk/rooms/v1` carries GTRA room announcements: a public room's id, name, policy, owner Hydra id and owner Kaspa address, signed by the owner's Kaspa address key under a dedicated signature domain. Owners re-publish every 60 s while online and re-sign before the listing TTL expires; listeners verify the signature and expiry before adding the room to the Discover → Rooms directory. Announcements cost no Kaspa fee. Kaspa-anchored room announcements are not implemented.
 
 ## Operator infrastructure
 

@@ -1,5 +1,5 @@
 use super::super::{
-    gateway::{decode_mailbox_payloads, mailbox_send_result, reassemble_mailbox_payloads},
+    gateway::{decode_mailbox_payloads, reassemble_mailbox_payloads},
     send_state::{MailboxSendResult, State},
     submission::outbound_send::OutboundMailboxSend,
 };
@@ -41,7 +41,7 @@ pub async fn mailbox_send_control(
         completes_pending_id,
     )
     .await;
-    Ok(mailbox_send_result(result, false, None))
+    Ok(result.into_send_result(false, None))
 }
 
 fn validate_control_payloads(payloads_hex: &[String]) -> Result<Vec<Vec<u8>>, String> {
@@ -127,7 +127,7 @@ pub async fn mailbox_retry_handshake_finish(
         (prepared.destination.clone(), payloads)
     };
     let result = outbound.send(&destination, &payloads, false).await?;
-    Ok(mailbox_send_result(result, true, None))
+    Ok(result.into_send_result(true, None))
 }
 
 fn validate_message_id(message_id: &str) -> Result<(), String> {
@@ -244,7 +244,7 @@ pub async fn mailbox_send_recovery_offer(
         &offer_hex,
     )
     .await?;
-    Ok(mailbox_send_result(result, true, None))
+    Ok(result.into_send_result(true, None))
 }
 
 async fn locked_recovery_payloads(

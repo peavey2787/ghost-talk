@@ -44,8 +44,8 @@ pub use route::{
     route, route_order, text_route, RealtimeCarrier, RouteDecision, RoutePreference, TextPreference,
 };
 pub use topics::{
-    room_topic, session_topic, session_topic_id, CONTROL_TOPIC, REALTIME_TOPIC, ROOM_TOPIC_PREFIX,
-    SESSION_TOPIC_PREFIX, VOICE_TOPIC,
+    room_topic, session_topic, session_topic_id, CONTROL_TOPIC, MAILBOX_TOPIC, REALTIME_TOPIC,
+    ROOM_DIRECTORY_TOPIC, ROOM_TOPIC_PREFIX, SESSION_TOPIC_PREFIX, VOICE_TOPIC,
 };
 pub use transport::{
     GhostP2pTransport, P2pFuture, P2pIncoming, P2pInfrastructure, P2pRouteState, P2pStartConfig,

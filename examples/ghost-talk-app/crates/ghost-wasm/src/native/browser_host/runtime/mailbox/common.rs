@@ -1,11 +1,29 @@
-use ghost_api::MailboxSendResult;
+use ghost_api::{MailboxSendResult, SwarmDelivery};
+use ghost_domain::settings::SpendMode;
 use ghost_kaspa::wallet::{WalletPublic, WalletSecret};
 use serde_json::Value;
+use std::{cell::RefCell, collections::HashMap};
 
 use crate::native::browser_host::{
     kaspa::{endpoint_override, profile_portal},
     support::util::{required, required_str},
 };
+
+thread_local! {
+    static SPEND_MODES: RefCell<HashMap<String, SpendMode>> = RefCell::new(HashMap::new());
+}
+
+/// Record whether this profile's mailbox sends spend Kaspa or go to the swarm.
+pub(in crate::native::browser_host) fn set_spend_mode(args: &Value) -> Result<Value, String> {
+    let profile_id = required_str(args, "profileId")?.to_owned();
+    let mode: SpendMode = required(args, "spendMode")?;
+    SPEND_MODES.with(|modes| modes.borrow_mut().insert(profile_id, mode));
+    Ok(Value::Null)
+}
+
+fn spend_mode(profile_id: &str) -> SpendMode {
+    SPEND_MODES.with(|modes| modes.borrow().get(profile_id).copied().unwrap_or_default())
+}
 
 pub(in crate::native::browser_host) struct BrowserWallet {
     pub(in crate::native::browser_host) profile_id: String,
@@ -38,6 +56,15 @@ impl BrowserWallet {
         pending_id: Option<String>,
     ) -> Result<MailboxSendResult, String> {
         ghost_kaspa::validate_destination(destination)?;
+        if spend_mode(&self.profile_id) == SpendMode::NoSpend {
+            return Ok(swarm_send_result(
+                &self.public,
+                destination,
+                &payloads,
+                pending,
+                pending_id,
+            ));
+        }
         let portal = profile_portal(
             &self.profile_id,
             &self.public,
@@ -65,7 +92,36 @@ impl BrowserWallet {
             public: self.public.projection(),
             pending_handshake: pending,
             pending_id,
+            swarm: None,
         })
+    }
+}
+
+/// A no-spend send: nothing is signed into a Kaspa transaction; the caller
+/// publishes the exact frames on the swarm mailbox. The id of the last frame
+/// stands in for the transaction id, as the last transaction's id does for a
+/// fragmented Kaspa send.
+fn swarm_send_result(
+    public: &WalletPublic,
+    destination: &str,
+    payloads: &[Vec<u8>],
+    pending: bool,
+    pending_id: Option<String>,
+) -> MailboxSendResult {
+    MailboxSendResult {
+        transaction_id: payloads
+            .last()
+            .map(|frame| ghost_protocol::swarm_frame_id(frame))
+            .unwrap_or_default(),
+        fee_sompi: "0".into(),
+        mailbox_output_sompi: "0".into(),
+        public: public.projection(),
+        pending_handshake: pending,
+        pending_id,
+        swarm: Some(SwarmDelivery {
+            destination: destination.to_owned(),
+            frames_hex: payloads.iter().map(hex::encode).collect(),
+        }),
     }
 }
 

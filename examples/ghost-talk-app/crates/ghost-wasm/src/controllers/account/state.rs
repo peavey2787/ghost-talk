@@ -1,3 +1,5 @@
+use ghost_domain::settings::SpendMode;
+
 use crate::model::{
     Profile, ProfilePatch, Settings, WalletHistoryEntry, WalletHistoryResult, WalletProjection,
     WalletSnapshot,
@@ -77,6 +79,12 @@ fn apply_backup_boolean(settings: &mut Settings, field: &str, checked: bool) -> 
         _ => return false,
     }
     true
+}
+
+pub(crate) fn spend_mode_patch(profile: &Profile, spend_mode: SpendMode) -> ProfilePatch {
+    let mut settings = profile.settings.clone();
+    settings.spend_mode = spend_mode;
+    settings_patch(profile, settings)
 }
 
 fn settings_patch(profile: &Profile, after: Settings) -> ProfilePatch {

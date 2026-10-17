@@ -172,6 +172,20 @@ impl ChatService {
         true
     }
 
+    /// Record a non-Kaspa physical carrier (e.g. `CARRIER_P2P`) for a message.
+    pub fn mark_message_carrier(
+        chats: &mut ChatStore,
+        chat_id: &str,
+        message_id: &str,
+        carrier: &str,
+    ) -> bool {
+        let Some(message) = message_by_id_mut(chats, chat_id, message_id) else {
+            return false;
+        };
+        message.carrier = Some(carrier.to_owned());
+        true
+    }
+
     pub fn mark_message_sending(chats: &mut ChatStore, chat_id: &str, message_id: &str) -> bool {
         let Some(message) = message_by_id_mut(chats, chat_id, message_id) else {
             return false;

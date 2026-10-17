@@ -28,6 +28,7 @@ mod broadcast;
 mod events;
 mod kasia;
 mod media;
+mod swarm;
 pub(crate) use events::{
     browser_wallet_snapshot, clear_debug_log, debug_log_snapshot, hydra_debug_state, listen,
     load_remembered_unlock, record_debug, set_debug_logging, set_remembered_unlock,
@@ -40,3 +41,4 @@ pub(crate) use kasia::{
 };
 
 pub(crate) use media::{archive_plan, archive_publish, import_local_media, sign_manifest};
+pub(crate) use swarm::{set_spend_mode, sign_room_announcement};

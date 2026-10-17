@@ -13,6 +13,8 @@ pub struct ReadyEnvelope {
     pub envelope_hex: String,
     pub transaction_id: String,
     pub block_time: Option<u64>,
+    /// Reassembled from swarm-carried frames: not stored on Kaspa.
+    pub via_swarm: bool,
 }
 
 fn absorb_mailbox_events(wallet: &mut WalletRecord, events: &[MailboxEvent]) {
@@ -65,6 +67,7 @@ fn new_frame_bucket(frame: &Frame, event: &MailboxEvent) -> PendingFrameBucket {
         parts: Default::default(),
         txids: Default::default(),
         block_time: event.block_time,
+        via_swarm: event.via_swarm,
     }
 }
 
@@ -128,6 +131,7 @@ fn ready_envelopes(wallet: &WalletRecord) -> Vec<ReadyEnvelope> {
                 envelope_hex,
                 transaction_id,
                 block_time: bucket.block_time,
+                via_swarm: bucket.via_swarm,
             });
         }
     }
@@ -241,6 +245,7 @@ mod tests {
         let ready = MailboxService::ready(&wallet);
         assert_eq!(ready.len(), 1);
         assert_eq!(ready[0].envelope_hex, "aabbccdd");
+        assert!(!ready[0].via_swarm);
         MailboxService::remove(&mut wallet, id);
         assert!(MailboxService::ready(&wallet).is_empty());
     }
@@ -265,5 +270,21 @@ mod tests {
         MailboxService::absorb(&mut wallet, &[valid.clone(), valid]);
         assert_eq!(MailboxService::ready(&wallet).len(), 1);
         assert_eq!(wallet.mailbox_seen_txids.len(), 1);
+    }
+
+    #[test]
+    fn swarm_frames_reassemble_marked_as_swarm_carried() {
+        let mut wallet = WalletRecord::default();
+        let id = "ffeeddccbbaa99887766554433221100";
+        let event = MailboxEvent {
+            transaction_id: "4".repeat(64),
+            payload_hex: frame(id, 0, 1, "aabb"),
+            via_swarm: true,
+            ..Default::default()
+        };
+        MailboxService::absorb(&mut wallet, &[event]);
+        let ready = MailboxService::ready(&wallet);
+        assert_eq!(ready.len(), 1);
+        assert!(ready[0].via_swarm);
     }
 }

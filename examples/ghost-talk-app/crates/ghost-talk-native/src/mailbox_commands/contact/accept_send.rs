@@ -1,6 +1,6 @@
 use super::super::contact_request_helpers::{accepted_contact_request, signed_contact_accept};
 use super::super::{
-    gateway::{decode_mailbox_payloads, mailbox_send_result},
+    gateway::decode_mailbox_payloads,
     send_state::{MailboxSendResult, State},
     submission::outbound_send::OutboundMailboxSend,
 };
@@ -99,10 +99,10 @@ async fn send_contact_accept(
     log_contact_accept_sent(
         &input.profile_id,
         &prepared.accepted.request_id,
-        &result.transaction_id,
+        result.transaction_id(),
         &prepared.destination,
     );
-    Ok(mailbox_send_result(result, true, None))
+    Ok(result.into_send_result(true, None))
 }
 
 async fn prepare_accept(

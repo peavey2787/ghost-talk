@@ -3,39 +3,25 @@ use ghost_api::{HydraIncomingRequestProjection, HydraMailboxResult, MailboxSendR
 use ghost_kaspa::wallet::{WalletPublic, WalletSecret};
 use serde_json::Value;
 
-use crate::native::browser_host::{
-    kaspa::{endpoint_override, profile_portal},
-    runtime::session,
-    support::util::{required, required_str},
-    HYDRA_RUNTIMES,
-};
+use super::common::{frame, BrowserWallet};
+use crate::native::browser_host::{runtime::session, support::util::required_str, HYDRA_RUNTIMES};
 
 pub(super) async fn send_contact_request(args: &Value) -> Result<MailboxSendResult, String> {
-    let profile_id = required_str(args, "profileId")?;
-    let password = required_str(args, "password")?;
+    let mut wallet = BrowserWallet::open(args)?;
     let destination = required_str(args, "destination")?;
-    ghost_kaspa::validate_destination(destination)?;
     let request_id = required_str(args, "requestId")?;
-    let sealed: Vec<u8> = required(args, "sealed")?;
-    let projection: crate::model::WalletProjection = required(args, "public")?;
-    let public = WalletPublic::from_projection(&projection);
-    let secret: WalletSecret = ghost_storage::open_json(password, &sealed, "wallet vault")?;
-    ghost_kaspa::wallet::validate_public_projection(&secret, &public)?;
-    let request = build_contact_request(args, &secret, &public)?;
-    let frames = ghost_protocol::fragment(ghost_core::Id128::new_random(), &request.encode()?)?;
-    let portal =
-        profile_portal(profile_id, &public, endpoint_override(args, "wrpcEndpoint")).await?;
-    let (transaction_id, public) =
-        send_frames(&portal, &secret, public, destination, frames).await?;
-    session::remember_contact_request(profile_id, request_id)?;
-    Ok(MailboxSendResult {
-        transaction_id,
-        fee_sompi: "0".into(),
-        mailbox_output_sompi: "0".into(),
-        public: public.projection(),
-        pending_handshake: true,
-        pending_id: Some(request_id.to_owned()),
-    })
+    let request = build_contact_request(args, &wallet.secret, &wallet.public)?;
+    let sent = wallet
+        .send(
+            args,
+            destination,
+            frame(&request.encode()?)?,
+            true,
+            Some(request_id.to_owned()),
+        )
+        .await?;
+    session::remember_contact_request(&wallet.profile_id, request_id)?;
+    Ok(sent)
 }
 
 fn build_contact_request(
@@ -67,24 +53,6 @@ fn build_contact_request(
     signed?;
     request.encode()?;
     Ok(request)
-}
-
-async fn send_frames(
-    portal: &ghost_kaspa::PortalFacade,
-    secret: &WalletSecret,
-    mut public: WalletPublic,
-    destination: &str,
-    frames: Vec<Vec<u8>>,
-) -> Result<(String, WalletPublic), String> {
-    let mut transaction_id = String::new();
-    for payload in frames {
-        let sent =
-            ghost_kaspa::wallet::send_payload(portal, secret, &public, destination, 0, &payload)
-                .await?;
-        transaction_id = sent.transaction_id;
-        public = sent.public;
-    }
-    Ok((transaction_id, public))
 }
 
 pub(in crate::native::browser_host) fn receive_contact_request(

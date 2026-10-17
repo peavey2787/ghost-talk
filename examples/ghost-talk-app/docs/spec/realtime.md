@@ -68,6 +68,10 @@ Direct transport details such as TCP, QUIC, relay, DCUtR, WebSocket, or WebRTC-d
 
 Chat text is anchored on Kaspa by default: it is durable and recoverable from chain history. A profile may choose **p2p-net preferred** (p2p-net while connected, otherwise Kaspa) or **p2p-net only** (never stored on Kaspa; not sent without a connected route). p2p-net text is sealed by the same authenticated HYDRA session, is excluded from Kaspa backups, and every such message is marked "p2p · not stored on Kaspa". Together with Auto, this keeps Kaspa usage to the signed signalling and fallback traffic.
 
+## Spend mode
+
+Each profile has a spend mode, switched from the sidebar: **Kaspa** (default) or **No-spend**. In Kaspa mode every mailbox carrier (KKTP handshake, contact request/accept, text, signals) is broadcast as a Kaspa transaction. In No-spend mode the host prepares exactly the same carrier frames but returns them instead of broadcasting; the client publishes them on the shared swarm mailbox topic (`ghost-talk/mailbox/v1`) as GTSM packets addressed to the recipient's Kaspa address. Receivers filter GTSM packets by their own receive/change addresses and feed them through the same mailbox pipeline as Kaspa observations, so the KKTP handshake, HYDRA sealing and replay protection are unchanged. No-spend traffic needs no funds, is not stored on Kaspa, cannot be recovered from chain history, and only reaches peers that are online on the swarm at the same time. No-spend mode also starts the swarm node regardless of the realtime route.
+
 ## Implementation status
 
 The browser realtime path now uses the shared p2p-net WASM backend. Ghost no longer owns a browser WebRTC/SDP/ICE stack. Authenticated transport announcements bind p2p PeerId to the active HYDRA identity and SID, and Auto preserves exact GTR1 bytes when falling back from p2p-net to Kaspa.

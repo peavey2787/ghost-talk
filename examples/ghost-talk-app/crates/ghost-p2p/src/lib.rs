@@ -20,4 +20,6 @@ pub use ghost_realtime::{
     P2pSubscription, SessionPeerBinding,
 };
 #[cfg(target_arch = "wasm32")]
-pub use wasm::{P2pNetEventSubscription, P2pNetSubscription, P2pNetTransport};
+pub use wasm::{
+    P2pNetEventSubscription, P2pNetSubscription, P2pNetTopicSubscription, P2pNetTransport,
+};

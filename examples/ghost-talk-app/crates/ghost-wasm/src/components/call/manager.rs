@@ -1,9 +1,7 @@
 use ghost_contacts::ContactService;
 use ghost_domain::identity::PeerBinding;
 
-use ghost_domain::call::{CallEvent, CallManager};
-use ghost_p2p::{P2pNetTransport, P2pRouteState};
-use ghost_talk_wasm::{BrowserVoiceReceiver, BrowserVoiceSender};
+use ghost_domain::call::CallEvent;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
@@ -15,7 +13,7 @@ use crate::{
     random_id,
 };
 mod runtime_sync;
-use runtime_sync::{reset_call_owner, sync_profile_ref, use_realtime_sender};
+use runtime_sync::use_call_runtime;
 
 use super::{
     active_call, apply_call_command, can_start_call, close_media, media, p2p_route, presentation,
@@ -36,6 +34,7 @@ pub struct LiveCallManagerProps {
     pub on_select: Callback<String>,
     pub on_update: Callback<ProfilePatch>,
     pub on_error: Callback<String>,
+    pub on_swarm_mailbox: Callback<crate::model::WalletLiveEvent>,
     #[prop_or_default]
     pub children: Children,
 }
@@ -69,6 +68,7 @@ pub fn live_call_manager(props: &LiveCallManagerProps) -> Html {
     use_call_event_effect(props, runtime.clone());
     p2p_route::use_p2p_effect(&props.profile, runtime.clone());
     p2p_route::use_session_announce_effect(&props.profile, runtime.clone());
+    p2p_route::use_room_announcer(runtime.clone());
     use_realtime_effect(props, runtime.clone());
     use_connecting_effect(runtime.clone());
     let context = CallContext {
@@ -80,6 +80,7 @@ pub fn live_call_manager(props: &LiveCallManagerProps) -> Html {
     let actions = call_actions(&runtime, current.clone());
     html! {
         <ContextProvider<super::SwarmStatus> context={runtime.swarm.status()}>
+        <ContextProvider<super::RoomListings> context={runtime.rooms.listings()}>
         <ContextProvider<CallContext> context={context}>
           <ContextProvider<RoomVoiceContext> context={room_voice}>
           <ContextProvider<super::DirectTextContext> context={super::direct_text::context(&runtime)}>
@@ -88,54 +89,8 @@ pub fn live_call_manager(props: &LiveCallManagerProps) -> Html {
           </ContextProvider<super::DirectTextContext>>
           </ContextProvider<RoomVoiceContext>>
         </ContextProvider<CallContext>>
+        </ContextProvider<super::RoomListings>>
         </ContextProvider<super::SwarmStatus>>
-    }
-}
-
-#[hook]
-fn use_call_runtime(
-    props: &LiveCallManagerProps,
-    render_epoch: UseStateHandle<u64>,
-) -> CallRuntime {
-    let profile_ref = use_mut_ref(|| props.profile.clone());
-    sync_profile_ref(&profile_ref, &props.profile);
-    let call_manager = use_mut_ref(CallManager::default);
-    let call_owner = use_mut_ref(|| props.profile.id.clone());
-    reset_call_owner(&call_manager, &call_owner, &props.profile.id);
-    let sender_ref = use_mut_ref(|| None::<BrowserVoiceSender>);
-    let receiver = use_mut_ref(BrowserVoiceReceiver::new);
-    let room_voice_id = use_state(|| None::<String>);
-    let room_voice_ref = use_mut_ref(|| None::<String>);
-    let room_sequence = use_mut_ref(|| 0u64);
-    let room_broadcast_session = use_state(|| None::<String>);
-    let room_broadcast_ref = use_mut_ref(|| None::<String>);
-    let p2p = use_mut_ref(P2pNetTransport::default);
-    let p2p_state = use_state(|| P2pRouteState::Unavailable);
-    let p2p_subscriptions = use_mut_ref(std::collections::HashSet::<String>::new);
-    let p2p_generation = use_mut_ref(|| 0u64);
-    let swarm = super::swarm::use_swarm_tracker();
-    let realtime = use_realtime_sender(props, &profile_ref, &render_epoch, &p2p, &p2p_state);
-    CallRuntime {
-        profile_ref,
-        call_manager,
-        render_epoch,
-        sender_ref,
-        receiver,
-        room_voice_id,
-        room_voice_ref,
-        room_sequence,
-        room_broadcast_session,
-        room_broadcast_ref,
-        p2p,
-        p2p_state,
-        p2p_subscriptions,
-        p2p_generation,
-        swarm,
-        realtime,
-        password: props.password.clone(),
-        on_select: props.on_select.clone(),
-        on_update: props.on_update.clone(),
-        on_error: props.on_error.clone(),
     }
 }
 

@@ -45,4 +45,8 @@ pub use realtime::{
     MAX_P2P_DIAL_ADDRESSES, MAX_P2P_DIAL_ADDRESS_BYTES, REALTIME_INNER_PREFIX,
 };
 
+pub use events::{
+    swarm_frame_id, swarm_recipient_tag, SwarmMailboxPacket, GTSM_MAGIC, GTSM_VERSION,
+};
+
 pub use direct_text::{DirectTextV1, DIRECT_TEXT_PREFIX, MAX_DIRECT_TEXT_BYTES};

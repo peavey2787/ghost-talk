@@ -14,6 +14,8 @@ pub(super) fn apply_success(
             "Chat request sent. The first message will deliver after acceptance.".into()
         } else if sent.pending_handshake {
             "Re-establishing the encrypted HYDRA session. Your message is attached to the handshake and will deliver when it completes.".into()
+        } else if sent.swarm.is_some() {
+            "Encrypted message sent over the swarm: no Kaspa fee, not stored on Kaspa.".into()
         } else {
             "Encrypted message submitted to the Kaspa carrier.".into()
         },
@@ -50,6 +52,14 @@ fn update_sent_message(plan: &mut OutgoingPlan, sent: &MailboxSendResult) {
         sent.pending_id.clone(),
         stage,
     );
+    if sent.swarm.is_some() {
+        ghost_chat::ChatService::mark_message_carrier(
+            &mut plan.current.chats,
+            &plan.chat.id,
+            &plan.wire_id,
+            ghost_chat::CARRIER_P2P,
+        );
+    }
 }
 
 pub(super) fn apply_failure(

@@ -26,6 +26,8 @@ pub struct WalletRuntimeState {
     // waiting to become visible through the node.
     pub(crate) outbound_locks: Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>,
     pub(crate) utxo_events: Mutex<HashMap<String, tokio::sync::watch::Sender<Vec<String>>>>,
+    /// Per-profile mailbox carrier; see `mailbox_commands::submission::spend_mode`.
+    pub(crate) spend_modes: Mutex<HashMap<String, ghost_domain::settings::SpendMode>>,
 }
 
 impl WalletRuntimeState {

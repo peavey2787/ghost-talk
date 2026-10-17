@@ -1,6 +1,7 @@
 use super::invoke::{
-    invoke, invoke_unit, json, BroadcastResult, MailboxSendResult, Profile, PublicGhostProfile,
-    PublishedGhostDescriptor, ResolvedGhostPeer, WalletProjection, WalletRecovery,
+    invoke, invoke_mailbox, invoke_unit, json, BroadcastResult, MailboxSendResult, Profile,
+    PublicGhostProfile, PublishedGhostDescriptor, ResolvedGhostPeer, WalletProjection,
+    WalletRecovery,
 };
 
 mod mailbox_request;
@@ -113,7 +114,7 @@ pub async fn send_contact_request(
 ) -> Result<MailboxSendResult, String> {
     let context =
         mailbox_request::MailboxRequestContext::from_profile(profile, password, destination)?;
-    invoke(
+    invoke_mailbox(
         "mailbox_send_contact_request",
         context.contact_request(request_id, None, None),
     )
@@ -136,7 +137,7 @@ pub async fn send_call_signal(
         .hydra_identity_id
         .as_deref()
         .ok_or_else(|| "HYDRA identity is unavailable".to_string())?;
-    invoke(
+    invoke_mailbox(
         "mailbox_send_call_signal",
         json!({
             "profileId": profile.id,
@@ -165,7 +166,7 @@ pub async fn send_call_contact_request(
 ) -> Result<MailboxSendResult, String> {
     let context =
         mailbox_request::MailboxRequestContext::from_profile(profile, password, destination)?;
-    invoke(
+    invoke_mailbox(
         "mailbox_send_contact_request",
         context.contact_request(request_id, None, Some(call_id)),
     )
@@ -182,7 +183,7 @@ pub async fn send_room_contact_request(
 ) -> Result<MailboxSendResult, String> {
     let context =
         mailbox_request::MailboxRequestContext::from_profile(profile, password, destination)?;
-    invoke(
+    invoke_mailbox(
         "mailbox_send_contact_request",
         context.contact_request(request_id, Some((room_id, room_name)), None),
     )
@@ -202,7 +203,7 @@ pub async fn send_contact_accept(
         .hydra_identity_id
         .as_deref()
         .ok_or_else(|| "HYDRA identity is unavailable".to_string())?;
-    invoke(
+    invoke_mailbox(
         "mailbox_send_contact_accept",
         json!({
             "profileId": profile.id,

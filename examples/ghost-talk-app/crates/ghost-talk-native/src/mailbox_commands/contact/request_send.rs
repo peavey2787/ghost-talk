@@ -3,9 +3,9 @@ use super::super::contact_request_helpers::{
     validate_contact_request_id, ContactBootstrap,
 };
 use super::super::{
-    gateway::{decode_mailbox_payloads, mailbox_send_result},
+    gateway::decode_mailbox_payloads,
     send_state::{MailboxSendResult, State},
-    submission::outbound_send::OutboundMailboxSend,
+    submission::{outbound_send::OutboundMailboxSend, spend_mode::MailboxSubmission},
 };
 use ghost_kaspa::wallet::WalletPublic;
 
@@ -109,8 +109,8 @@ async fn send_contact_request(
     let runtime = hydra_state.runtime(&input.profile_id)?;
     let prepared = prepare_request(&runtime, outbound.secret(), &input, bootstrap).await?;
     let result = submit_request(&outbound, &runtime, &input, &prepared).await?;
-    log_request_sent(&input, &result.transaction_id);
-    Ok(mailbox_send_result(result, true, Some(input.request_id)))
+    log_request_sent(&input, result.transaction_id());
+    Ok(result.into_send_result(true, Some(input.request_id)))
 }
 
 async fn prepare_request(
@@ -158,7 +158,7 @@ async fn submit_request(
     runtime: &std::sync::Arc<tokio::sync::Mutex<crate::hydra_commands::HydraProfileRuntime>>,
     input: &ContactRequestInput,
     prepared: &PreparedContactRequest,
-) -> Result<ghost_kaspa::wallet::KaspaBroadcastResult, String> {
+) -> Result<MailboxSubmission, String> {
     if prepared.expects_acceptance {
         set_pending_contact_request(runtime, &input.request_id, true).await?;
     }
@@ -188,7 +188,7 @@ async fn clear_failed_request(
     request_id: &str,
     expects_acceptance: bool,
     error: String,
-) -> Result<ghost_kaspa::wallet::KaspaBroadcastResult, String> {
+) -> Result<MailboxSubmission, String> {
     if !expects_acceptance {
         return Err(error);
     }

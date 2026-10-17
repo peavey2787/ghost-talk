@@ -12,7 +12,7 @@ use super::callbacks::{
     app_error_callback, call_chat_select_callback, call_event_handled_callback,
     chat_select_callback, clear_contact_prefill_callback, close_debug_callback,
     open_debug_callback, realtime_handled_callback, room_add_contact_callback, snapshot_callback,
-    tab_callback, wallet_public_callback,
+    swarm_mailbox_callback, tab_callback, wallet_public_callback,
 };
 
 pub(crate) fn app_shell(
@@ -29,6 +29,7 @@ pub(crate) fn app_shell(
     let on_call_event_handled = call_event_handled_callback(state.clone(), live.clone());
     let call_update = call_profile_update_callback(state.clone(), live.clone());
     let on_error = app_error_callback(state.app_status.clone());
+    let on_swarm_mailbox = swarm_mailbox_callback(state.clone(), live.clone());
     html! {
       <LiveCallManager
         profile={active.clone()}
@@ -40,9 +41,10 @@ pub(crate) fn app_shell(
         on_select={on_select}
         on_update={call_update}
         {on_error}
+        {on_swarm_mailbox}
       >
         <main class="app">
-          <Sidebar profile={active.clone()} tab={(*state.tab).clone()} selected_chat_id={(*state.selected_chat_id).clone()} network_status={(*state.network_status).clone()} reconnect_attempts={*state.reconnect_attempts} on_tab={tab_callback(state.clone(), live.clone())} on_switch_user={switch_user}/>
+          <Sidebar profile={active.clone()} tab={(*state.tab).clone()} selected_chat_id={(*state.selected_chat_id).clone()} network_status={(*state.network_status).clone()} reconnect_attempts={*state.reconnect_attempts} on_tab={tab_callback(state.clone(), live.clone())} on_switch_user={switch_user} on_update={update_profile.clone()}/>
           <section class="workspace">{app_status_view(state.app_status.clone())}{content}</section>
           <DebugLogWindow profile_id={active.id} open={*state.debug_open} on_close={close_debug_callback(state.debug_open.clone())}/>
         </main>

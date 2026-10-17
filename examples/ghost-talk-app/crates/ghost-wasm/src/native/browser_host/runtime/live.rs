@@ -1,4 +1,4 @@
-use ghost_api::{MailboxEvent, WalletLiveEvent};
+use ghost_api::WalletLiveEvent;
 use ghost_kaspa::{LiveBlockEvent, LiveTransactionObservation, PortalFacade};
 use kaspa_portal::network::{wrpc::block_added::OwnedBlockAddedNotification, NetworkApi};
 use std::{cell::Cell, cell::RefCell, collections::HashMap, rc::Rc};
@@ -241,12 +241,7 @@ fn handle_live_block(profile_id: &str, network: &str, event: LiveBlockEvent) {
     let mailbox = event
         .observations
         .into_iter()
-        .map(|observation| MailboxEvent {
-            transaction_id: observation.txid,
-            blue_score: observation.daa_score.to_string(),
-            payload_hex: hex::encode(observation.payload),
-            block_time: None,
-        })
+        .map(ghost_kaspa::live_mailbox_event)
         .collect();
     let live = WalletLiveEvent {
         profile_id: profile_id.to_owned(),

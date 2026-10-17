@@ -12,4 +12,5 @@ default = []
 [dependencies]
 ghost-domain = { path = "../ghost-domain" }
 serde.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true

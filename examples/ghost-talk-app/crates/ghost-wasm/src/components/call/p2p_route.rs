@@ -6,12 +6,15 @@ mod announce;
 mod control;
 mod events;
 mod lifecycle;
+mod room_announcer;
 mod sessions;
+mod shared_topics;
 mod subscription;
 
 pub(super) use announce::start_session;
 pub(super) use control::process_transport_control;
 pub(super) use lifecycle::use_p2p_effect;
+pub(super) use room_announcer::use_room_announcer;
 pub(super) use sessions::use_session_announce_effect;
 
 use super::CallRuntime;
@@ -24,10 +27,5 @@ fn trace(runtime: &CallRuntime, event: &'static str, details: String) {
 }
 
 fn route_is_automatic(runtime: &CallRuntime) -> bool {
-    runtime
-        .profile_ref
-        .borrow()
-        .settings
-        .route
-        .eq_ignore_ascii_case("auto")
+    runtime.profile_ref.borrow().settings.runs_swarm()
 }

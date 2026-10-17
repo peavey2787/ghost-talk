@@ -1,6 +1,4 @@
-use super::super::send_state::{
-    LiveBlockStream, LiveTransactionObservation, MailboxEvent, PortalFacade,
-};
+use super::super::send_state::{LiveBlockStream, LiveTransactionObservation, PortalFacade};
 use ghost_kaspa::wallet::WalletPublic;
 use std::time::Duration;
 pub(crate) const STALE_SPEND_RETRY_ATTEMPTS: usize = 20;
@@ -271,15 +269,6 @@ pub(crate) fn remember_newest_public_profile(
         return;
     }
     latest.insert(address, (score, profile));
-}
-
-pub(crate) fn to_live_mailbox_event(observation: LiveTransactionObservation) -> MailboxEvent {
-    MailboxEvent {
-        transaction_id: observation.txid,
-        blue_score: observation.daa_score.to_string(),
-        payload_hex: hex::encode(observation.payload),
-        block_time: None,
-    }
 }
 
 #[cfg(test)]

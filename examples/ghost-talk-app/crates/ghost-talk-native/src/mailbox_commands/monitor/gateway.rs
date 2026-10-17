@@ -1,9 +1,6 @@
 use super::super::{
     delivery_ack::{next_monitor_generation, remember_monitor_public, WalletMonitorWorker},
-    send_state::{
-        AppHandle, HashMap, MailboxSendResult, MonitorState, NetworkStatusEvent, PortalFacade,
-        State,
-    },
+    send_state::{AppHandle, HashMap, MonitorState, NetworkStatusEvent, PortalFacade, State},
 };
 #[expect(clippy::too_many_arguments, reason = "stable flat Tauri IPC contract")]
 #[tauri::command]
@@ -192,21 +189,6 @@ impl<'a> MailboxSubmitContext<'a> {
     }
 }
 
-pub(crate) fn mailbox_send_result(
-    result: ghost_kaspa::wallet::KaspaBroadcastResult,
-    pending_handshake: bool,
-    pending_id: Option<String>,
-) -> MailboxSendResult {
-    MailboxSendResult {
-        transaction_id: result.transaction_id,
-        fee_sompi: result.fee_sompi,
-        mailbox_output_sompi: MAILBOX_OUTPUT_SOMPI.to_string(),
-        public: crate::wallet_commands::wallet_projection(&result.public),
-        pending_handshake,
-        pending_id,
-    }
-}
-
 pub(crate) fn decode_mailbox_payloads(payloads_hex: &[String]) -> Result<Vec<Vec<u8>>, String> {
     if payloads_hex.is_empty() || payloads_hex.len() > ghost_core::MAX_FRAGMENTS {
         return Err("prepared Ghost Talk carrier has an invalid physical fragment count".into());
@@ -290,7 +272,7 @@ fn validate_reassembled_size(total: usize, maximum: usize) -> Result<(), String>
 }
 
 use super::super::payload_send::send_mailbox_payloads_via_gateway;
-use ghost_kaspa::wallet::{WalletPublic, MAILBOX_OUTPUT_SOMPI};
+use ghost_kaspa::wallet::WalletPublic;
 use std::{
     sync::{Arc, Mutex},
     time::{Duration, Instant},

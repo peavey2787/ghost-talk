@@ -23,4 +23,5 @@ pub(crate) use recovery_control::{
 pub(crate) use request_send::mailbox_send_contact_request;
 pub(crate) use session_end::mailbox_send_session_end;
 pub(crate) use signal_send::mailbox_send_call_signal;
-use submission::{gateway_helpers, payload_send};
+pub(crate) use spend_mode::mailbox_set_spend_mode;
+use submission::{gateway_helpers, payload_send, spend_mode};

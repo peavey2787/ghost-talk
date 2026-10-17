@@ -1,7 +1,7 @@
 use super::super::{
     delivery_ack::WalletMonitorWorker,
     gateway::emit_network_status,
-    gateway_helpers::{live_public_profile_updates, to_live_mailbox_event},
+    gateway_helpers::live_public_profile_updates,
     send_state::{
         DirectoryLiveEvent, LiveTransactionObservation, WalletLiveEvent, MAILBOX_SCAN_INTERVAL,
     },
@@ -65,7 +65,7 @@ impl WalletMonitorWorker {
                 checkpoint: self.checkpoint.clone(),
                 mailbox: observations
                     .into_iter()
-                    .map(to_live_mailbox_event)
+                    .map(ghost_kaspa::live_mailbox_event)
                     .collect(),
             },
         );

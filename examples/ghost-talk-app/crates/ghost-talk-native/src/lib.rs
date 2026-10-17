@@ -42,7 +42,7 @@ use mailbox_commands::{
     mailbox_retry_handshake_finish, mailbox_send_call_signal, mailbox_send_contact_accept,
     mailbox_send_contact_request, mailbox_send_control, mailbox_send_delivery_ack,
     mailbox_send_message, mailbox_send_realtime_carrier, mailbox_send_recovery_offer,
-    mailbox_send_session_end, wallet_monitor_start, wallet_monitor_stop,
+    mailbox_send_session_end, mailbox_set_spend_mode, wallet_monitor_start, wallet_monitor_stop,
     wallet_monitor_update_public, MonitorState,
 };
 use media_commands::{
@@ -50,8 +50,8 @@ use media_commands::{
     media_manifest_sign,
 };
 use peer_commands::{
-    lookup_ghost_profile, publish_ghost_descriptor, resolve_ghost_peer, NameResolverState,
-    PublicDirectoryState,
+    lookup_ghost_profile, publish_ghost_descriptor, resolve_ghost_peer, room_announcement_sign,
+    NameResolverState, PublicDirectoryState,
 };
 use profile_state_commands::{profile_state_load, profile_state_save};
 use remembered_unlock_commands::{remembered_unlock_load, remembered_unlock_set};
@@ -97,6 +97,7 @@ macro_rules! native_handler {
             kaspa_archive_plan,
             kaspa_archive_publish,
             media_manifest_sign,
+            room_announcement_sign,
             media_import_local,
             media_fetch_verified,
             kasia_identity,
@@ -159,6 +160,7 @@ macro_rules! native_handler {
             mailbox_send_recovery_offer,
             mailbox_send_session_end,
             mailbox_send_delivery_ack,
+            mailbox_set_spend_mode,
             wallet_monitor_start,
             wallet_monitor_update_public,
             wallet_monitor_stop

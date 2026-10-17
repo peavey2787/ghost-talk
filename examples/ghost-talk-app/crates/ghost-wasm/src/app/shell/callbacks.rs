@@ -1,4 +1,4 @@
-use crate::model::{WalletProjection, WalletSnapshot};
+use crate::model::{WalletLiveEvent, WalletProjection, WalletSnapshot};
 use yew::prelude::*;
 
 use super::super::state::{AppRuntime, AppState};
@@ -21,6 +21,16 @@ pub(crate) fn call_event_handled_callback(
         let mut next = runtime.call_events.borrow().clone();
         next.retain(|event| event.id() != id);
         runtime.replace_call_events(&state, next);
+    })
+}
+
+/// Swarm-carried mailbox frames enter the same pipeline as Kaspa ones.
+pub(crate) fn swarm_mailbox_callback(
+    state: AppState,
+    runtime: AppRuntime,
+) -> Callback<WalletLiveEvent> {
+    Callback::from(move |event: WalletLiveEvent| {
+        super::super::state::handle_wallet_live_event(event, state.clone(), runtime.clone());
     })
 }
 

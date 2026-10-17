@@ -232,3 +232,7 @@ pub struct GhostCallInviteContext {
 
 mod contact_request;
 pub use contact_request::GhostContactRequest;
+mod swarm_mailbox;
+pub use swarm_mailbox::{
+    swarm_frame_id, swarm_recipient_tag, SwarmMailboxPacket, GTSM_MAGIC, GTSM_VERSION,
+};

@@ -1,5 +1,4 @@
 use super::super::{
-    gateway::mailbox_send_result,
     send_state::{MailboxSendResult, State},
     submission::outbound_send::OutboundMailboxSend,
 };
@@ -92,7 +91,7 @@ async fn finish_message_send(
         context.contact_id,
         context.message_id,
         &prepared,
-        &result.transaction_id,
+        result.transaction_id(),
     );
     release_prepared_delivery(
         hydra_state,
@@ -103,7 +102,7 @@ async fn finish_message_send(
     )
     .await?;
     let pending = prepared.pending_id.is_some();
-    Ok(mailbox_send_result(result, pending, prepared.pending_id))
+    Ok(result.into_send_result(pending, prepared.pending_id))
 }
 
 async fn prepare_locked_send(

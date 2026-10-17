@@ -79,6 +79,17 @@ pub struct MailboxSendResult {
     pub pending_handshake: bool,
     #[serde(default)]
     pub pending_id: Option<String>,
+    /// Set instead of a Kaspa submission when the profile sends without
+    /// spending: the caller publishes these frames on the swarm mailbox.
+    #[serde(default)]
+    pub swarm: Option<SwarmDelivery>,
+}
+
+/// The exact GHST frames of one no-spend mailbox send and their destination.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SwarmDelivery {
+    pub destination: String,
+    pub frames_hex: Vec<String>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]

@@ -1,5 +1,27 @@
 use serde::{Deserialize, Serialize};
 
+/// Who pays for Ghost Talk traffic. `Kaspa` anchors mailbox traffic on chain
+/// (fees, durable history). `NoSpend` sends the same signed/sealed mailbox
+/// frames over the p2p-net swarm only: no Kaspa fees, nothing stored on chain.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SpendMode {
+    #[default]
+    Kaspa,
+    NoSpend,
+}
+
+impl SpendMode {
+    pub const ALL: [Self; 2] = [Self::Kaspa, Self::NoSpend];
+
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Kaspa => "Kaspa",
+            Self::NoSpend => "No-spend",
+        }
+    }
+}
+
 /// Canonical durable user settings shared by every frontend/runtime surface.
 /// Keep this model free of UI framework types and process-local state.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -7,6 +29,8 @@ use serde::{Deserialize, Serialize};
 pub struct Settings {
     #[serde(default = "default_route")]
     pub route: String,
+    #[serde(default)]
+    pub spend_mode: SpendMode,
     #[serde(default = "default_stego")]
     pub stego: String,
     /// Chat text carrier: "Kaspa" (durable, default), "P2P preferred", or
@@ -42,6 +66,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             route: default_route(),
+            spend_mode: SpendMode::Kaspa,
             stego: default_stego(),
             text_route: default_text_route(),
             contacts_backup_kaspa: true,
@@ -58,6 +83,14 @@ impl Default for Settings {
     }
 }
 
+impl Settings {
+    /// The p2p-net node runs for the Auto realtime route and whenever the
+    /// profile sends without spending (the swarm is then its only carrier).
+    pub fn runs_swarm(&self) -> bool {
+        self.route.eq_ignore_ascii_case("auto") || self.spend_mode == SpendMode::NoSpend
+    }
+}
+
 pub fn default_route() -> String {
     "Auto".to_string()
 }
@@ -69,4 +102,31 @@ pub fn default_stego() -> String {
 }
 pub fn yes() -> bool {
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Settings, SpendMode};
+
+    #[test]
+    fn spend_mode_defaults_to_kaspa() {
+        let settings: Settings = serde_json::from_str("{}").unwrap();
+        assert_eq!(settings.spend_mode, SpendMode::Kaspa);
+        let labels = SpendMode::ALL.map(SpendMode::label);
+        assert_eq!(labels, ["Kaspa", "No-spend"]);
+        let wire = serde_json::to_string(&SpendMode::NoSpend).unwrap();
+        assert_eq!(wire, "\"noSpend\"");
+    }
+
+    #[test]
+    fn no_spend_runs_the_swarm_even_on_the_kaspa_only_route() {
+        let mut settings = Settings {
+            route: "Kaspa only".into(),
+            ..Settings::default()
+        };
+        assert!(!settings.runs_swarm());
+        settings.spend_mode = SpendMode::NoSpend;
+        assert!(settings.runs_swarm());
+        assert!(Settings::default().runs_swarm());
+    }
 }

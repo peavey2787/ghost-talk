@@ -1,4 +1,4 @@
-use super::{invoke, json, MailboxSendResult, Profile};
+use super::{invoke_mailbox, json, MailboxSendResult, Profile};
 
 struct MailboxSendMode<'a> {
     allow_handshake: bool,
@@ -23,7 +23,7 @@ async fn send_mailbox_message_mode(
         .hydra_identity_id
         .as_deref()
         .ok_or_else(|| "HYDRA identity is unavailable".to_string())?;
-    invoke(
+    invoke_mailbox(
         "mailbox_send_message",
         json!({
             "profileId": profile.id,
@@ -134,7 +134,7 @@ pub async fn send_mailbox_reaction(
         .hydra_identity_id
         .as_deref()
         .ok_or_else(|| "HYDRA identity is unavailable".to_string())?;
-    invoke(
+    invoke_mailbox(
         "mailbox_send_message",
         json!({
             "profileId": profile.id,

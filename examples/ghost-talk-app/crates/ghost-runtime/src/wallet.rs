@@ -17,6 +17,8 @@ pub struct PendingFrameBucket {
     pub txids: BTreeMap<String, String>,
     #[serde(default, rename = "blockTime")]
     pub block_time: Option<u64>,
+    #[serde(default, rename = "viaSwarm")]
+    pub via_swarm: bool,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]

@@ -1,6 +1,6 @@
 use super::{
-    invoke, json, HydraControlProjection, HydraMailboxResult, HydraRecoveryProjection,
-    MailboxSendResult, Profile,
+    invoke, invoke_mailbox, json, HydraControlProjection, HydraMailboxResult,
+    HydraRecoveryProjection, MailboxSendResult, Profile,
 };
 use crate::native::invoke::Value;
 
@@ -13,7 +13,7 @@ pub async fn send_mailbox_control(
         .wallet
         .as_ref()
         .ok_or_else(|| "No wallet configured".to_string())?;
-    invoke(
+    invoke_mailbox(
         "mailbox_send_control",
         json!({
             "profileId": profile.id,
@@ -116,7 +116,7 @@ pub async fn send_recovery_offer(
         .hydra_identity_id
         .as_deref()
         .ok_or_else(|| "HYDRA identity is unavailable".to_string())?;
-    invoke(
+    invoke_mailbox(
         "mailbox_send_recovery_offer",
         json!({
             "profileId": profile.id,
@@ -149,7 +149,7 @@ pub async fn send_delivery_ack(
         .hydra_identity_id
         .as_deref()
         .ok_or_else(|| "HYDRA identity is unavailable".to_string())?;
-    invoke(
+    invoke_mailbox(
         "mailbox_send_delivery_ack",
         json!({
             "profileId": profile.id,

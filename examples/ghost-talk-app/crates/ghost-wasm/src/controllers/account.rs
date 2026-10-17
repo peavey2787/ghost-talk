@@ -14,8 +14,8 @@ pub(crate) use identity::{
     IdentitySetup,
 };
 pub(crate) use state::{
-    apply_history_result, apply_wallet_progress, auto_login_patch, update_boolean_setting,
-    update_setting, wallet_endpoint_patch,
+    apply_history_result, apply_wallet_progress, auto_login_patch, spend_mode_patch,
+    update_boolean_setting, update_setting, wallet_endpoint_patch,
 };
 pub(crate) use transactions::{
     broadcast_signer_send_and_patch, consolidate_and_patch, prepare_signer_send,

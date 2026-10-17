@@ -2,7 +2,7 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use ghost_kaspa::wallet::WalletPublic;
 
 use super::{
-    gateway::{decode_mailbox_payloads, mailbox_send_result},
+    gateway::decode_mailbox_payloads,
     send_state::{authenticated_destination, MailboxSendResult, State},
     submission::outbound_send::OutboundMailboxSend,
 };
@@ -53,7 +53,7 @@ pub async fn mailbox_send_realtime_carrier(
         wrpc_endpoint.as_deref(),
     )?;
     let result = outbound.send(&destination, &payloads, true).await?;
-    Ok(mailbox_send_result(result, false, None))
+    Ok(result.into_send_result(false, None))
 }
 
 /// The authenticated peer route for the exact active KKTP session whose SID

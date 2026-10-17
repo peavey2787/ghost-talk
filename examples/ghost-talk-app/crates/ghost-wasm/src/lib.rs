@@ -19,6 +19,8 @@ mod realtime_replay;
 #[cfg(any(target_arch = "wasm32", test))]
 mod storage;
 #[cfg(target_arch = "wasm32")]
+mod swarm_carrier;
+#[cfg(target_arch = "wasm32")]
 mod ui_assets;
 #[cfg(target_arch = "wasm32")]
 mod view_models;

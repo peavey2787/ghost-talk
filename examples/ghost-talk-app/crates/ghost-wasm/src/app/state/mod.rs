@@ -1,9 +1,13 @@
 mod listeners;
 mod root;
+mod spend_mode;
 mod store;
 
-pub(crate) use listeners::{live_profile_by_id, use_native_event_listeners};
+pub(crate) use listeners::{
+    handle_wallet_live_event, live_profile_by_id, use_native_event_listeners,
+};
 pub(crate) use root::App;
+pub(crate) use spend_mode::use_spend_mode_sync;
 pub(crate) use store::{use_app_runtime, use_app_state, AppRuntime, AppState};
 
 pub(crate) use crate::{

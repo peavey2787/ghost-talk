@@ -74,6 +74,16 @@ pub async fn invoke<T: DeserializeOwned>(command: &str, args: Value) -> Result<T
     serde_wasm_bindgen::from_value(value).map_err(|error| format!("{command} response: {error}"))
 }
 
+/// A mailbox send. In no-spend mode the host returns the frames instead of
+/// broadcasting them, and the send only counts once they reach the swarm.
+pub async fn invoke_mailbox(command: &str, args: Value) -> Result<MailboxSendResult, String> {
+    let result: MailboxSendResult = invoke(command, args).await?;
+    if let Some(delivery) = &result.swarm {
+        crate::swarm_carrier::deliver(delivery).await?;
+    }
+    Ok(result)
+}
+
 pub async fn invoke_unit(command: &str, args: Value) -> Result<(), String> {
     if !is_tauri() {
         super::browser_host::invoke(command, args).await?;
