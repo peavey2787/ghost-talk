@@ -22,7 +22,7 @@ export async function restoreIdentity(page, label, mnemonic) {
   await page.getByPlaceholder('word1 word2 …').fill(mnemonic);
   await page.getByRole('button', { name: 'Restore Ghost Talk ID' }).click();
   await expect(page.locator('.sidebar nav')).toBeVisible({ timeout: LONG });
-  await expect(page.locator('.network-dot.connected')).toBeVisible({ timeout: LONG });
+  await expect(page.locator('.kaspa-status.connected')).toBeVisible({ timeout: LONG });
 }
 
 export async function nav(page, name) {
