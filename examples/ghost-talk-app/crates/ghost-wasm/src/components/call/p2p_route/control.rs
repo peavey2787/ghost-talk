@@ -45,7 +45,12 @@ pub(in crate::components::call) async fn process_transport_control(
         } else {
             "announce-received"
         },
-        format!("chat={} peer={}", chat.id, announcement.peer_id),
+        format!(
+            "chat={} sid={} peer={}",
+            chat.id,
+            chat.session_sid().unwrap_or_default(),
+            announcement.peer_id
+        ),
     );
     let new_binding = remember_received(&chat, announcement);
     dial(&runtime, announcement).await;

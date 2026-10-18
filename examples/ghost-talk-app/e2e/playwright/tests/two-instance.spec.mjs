@@ -36,15 +36,7 @@ test.beforeAll(async ({ browser }) => {
   }
 });
 
-test.afterEach(async ({}, testInfo) => {
-  if (testInfo.status === testInfo.expectedStatus) return;
-  for (const instance of [alice, bob]) {
-    const entries = await app.debugLog(instance.page).catch((error) => [`debug log unavailable: ${error}`]);
-    await testInfo.attach(`${instance.name}-debug-log`, { body: entries.join('\n'), contentType: 'text/plain' });
-    console.log(`==== ${instance.name} protocol debug`);
-    for (const entry of entries.filter((e) => !e.includes('live-block')).slice(-150)) console.log(`  ${entry.slice(0, 300)}`);
-  }
-});
+test.afterEach(async ({}, testInfo) => app.dumpDebugOnFailure(testInfo, [alice, bob]));
 
 test.afterAll(async () => {
   await alice?.context.close();
@@ -52,6 +44,8 @@ test.afterAll(async () => {
 });
 
 async function voiceCall(caller, callee) {
+  // Voice assertions must see this call's traffic, not an earlier test's.
+  for (const instance of [caller, callee]) await app.markDebug(instance.page);
   await app.startCall(caller.page);
   await app.acceptIncomingCall(callee.page);
   await app.expectCallConnected(caller.page);

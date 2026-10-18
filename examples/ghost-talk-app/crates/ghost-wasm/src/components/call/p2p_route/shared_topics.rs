@@ -71,6 +71,8 @@ fn receive_mail(runtime: &CallRuntime, packet: &[u8]) {
         return;
     }
     if let Some(event) = mailbox_event(runtime, packet) {
+        let frames = event.mailbox.len();
+        trace(runtime, "swarm-mail-received", format!("frames={frames}"));
         runtime.on_swarm_mailbox.emit(event);
     }
 }

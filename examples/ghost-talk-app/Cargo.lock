@@ -180,7 +180,7 @@ dependencies = [
  "educe",
  "fnv",
  "hashbrown 0.15.5",
- "itertools 0.13.0",
+ "itertools",
  "num-bigint",
  "num-integer",
  "num-traits",
@@ -200,7 +200,7 @@ dependencies = [
  "arrayvec",
  "digest 0.10.7",
  "educe",
- "itertools 0.13.0",
+ "itertools",
  "num-bigint",
  "num-traits",
  "paste",
@@ -1334,7 +1334,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c54e03a951783e8b327515db3f2a2fd0e3bed362a96b066f341ce66ed49b4ead"
 dependencies = [
  "data-encoding",
- "syn 3.0.9",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -3522,15 +3522,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itertools"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
-dependencies = [
- "either",
-]
-
-[[package]]
 name = "itoa"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5260,7 +5251,7 @@ dependencies = [
 [[package]]
 name = "p2p-net"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net#9656f8f6a554dfb203aab8cb48c4228dca10d426"
+source = "git+https://github.com/peavey2787/p2p-net#dbb7dc967597ebb54bd7f64ac81b2e2677f18a40"
 dependencies = [
  "async-trait",
  "blake3",
@@ -5303,7 +5294,7 @@ dependencies = [
 [[package]]
 name = "p2p-net-gossipsub"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net#9656f8f6a554dfb203aab8cb48c4228dca10d426"
+source = "git+https://github.com/peavey2787/p2p-net#dbb7dc967597ebb54bd7f64ac81b2e2677f18a40"
 dependencies = [
  "async-channel",
  "asynchronous-codec",
@@ -5332,7 +5323,7 @@ dependencies = [
 [[package]]
 name = "p2p-net-relay"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net#9656f8f6a554dfb203aab8cb48c4228dca10d426"
+source = "git+https://github.com/peavey2787/p2p-net#dbb7dc967597ebb54bd7f64ac81b2e2677f18a40"
 dependencies = [
  "asynchronous-codec",
  "bytes",
@@ -5355,7 +5346,7 @@ dependencies = [
 [[package]]
 name = "p2p-net-webrtc"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net#9656f8f6a554dfb203aab8cb48c4228dca10d426"
+source = "git+https://github.com/peavey2787/p2p-net#dbb7dc967597ebb54bd7f64ac81b2e2677f18a40"
 dependencies = [
  "async-trait",
  "futures",
@@ -5380,7 +5371,7 @@ dependencies = [
 [[package]]
 name = "p2p-net-webrtc-websys"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net#9656f8f6a554dfb203aab8cb48c4228dca10d426"
+source = "git+https://github.com/peavey2787/p2p-net#dbb7dc967597ebb54bd7f64ac81b2e2677f18a40"
 dependencies = [
  "async-trait",
  "bytes",
@@ -5890,7 +5881,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b570b25f7617e43d59005d0990ccb79e950a423952cea19671b7a876da390adf"
 dependencies = [
  "anyhow",
- "itertools 0.14.0",
+ "itertools",
  "proc-macro2",
  "quote",
  "syn 2.0.119",

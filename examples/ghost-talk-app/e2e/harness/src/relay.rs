@@ -4,7 +4,7 @@
 
 use std::time::Duration;
 
-use ghost_realtime::{ghost_node_config, P2pInfrastructure};
+use ghost_realtime::{ghost_node_config, P2pInfrastructure, MAILBOX_TOPIC, ROOM_DIRECTORY_TOPIC};
 use p2p_net::{NodeProfile, PublicBootstrapConfig};
 use serde_json::json;
 
@@ -34,6 +34,13 @@ pub async fn run(network: &str) -> Result<(), String> {
     let node = p2p_net::start_node(config)
         .await
         .map_err(|error| error.to_string())?;
+    // Browsers only ever connect to this relay, so it joins the shared swarm
+    // topics itself; gossip between peers with no session yet (No-spend mail,
+    // room listings) then flows through its mesh.
+    let mut shared = Vec::new();
+    for topic in [MAILBOX_TOPIC, ROOM_DIRECTORY_TOPIC] {
+        shared.push(node.subscribe(topic).await.map_err(|error| error.to_string())?);
+    }
     let addresses = browser_addresses(&node).await;
     if addresses.is_empty() {
         return Err("relay has no browser-dialable WebRTC-direct LAN address".into());
@@ -45,6 +52,7 @@ pub async fn run(network: &str) -> Result<(), String> {
     tokio::signal::ctrl_c()
         .await
         .map_err(|error| error.to_string())?;
+    drop(shared);
     node.shutdown().await;
     Ok(())
 }

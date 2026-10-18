@@ -101,7 +101,7 @@ export async function acceptIncomingCall(page) {
 }
 
 export async function expectCallConnected(page) {
-  await expect(page.locator('.voice-call-modal .call-state', { hasText: 'Connected' })).toBeVisible({ timeout: LONG });
+  await expect(page.locator('.voice-call-modal .call-state:not(.call-route)', { hasText: 'Connected' })).toBeVisible({ timeout: LONG });
 }
 
 export async function hangUp(page) {
@@ -132,11 +132,31 @@ export async function debugLog(page) {
   return entries.map((entry) => entry.replace(/\s+/g, ' '));
 }
 
-/** Wait until the debug log contains every fragment on one entry. */
+/** On failure, attach and print each instance's recent protocol debug log. */
+export async function dumpDebugOnFailure(testInfo, instances) {
+  if (testInfo.status === testInfo.expectedStatus) return;
+  for (const instance of instances) {
+    const entries = await debugLog(instance.page).catch((error) => [`debug log unavailable: ${error}`]);
+    await testInfo.attach(`${instance.name}-debug-log`, { body: entries.join('\n'), contentType: 'text/plain' });
+    console.log(`==== ${instance.name} protocol debug`);
+    for (const entry of entries.filter((e) => !e.includes('live-block')).slice(-150)) console.log(`  ${entry.slice(0, 300)}`);
+  }
+}
+
+/** Entries logged before the mark (each is unique by timestamp and sequence). */
+const debugBaselines = new WeakMap();
+
+/** Make later `expectDebug` calls ignore everything logged so far. */
+export async function markDebug(page) {
+  debugBaselines.set(page, new Set(await debugLog(page)));
+}
+
+/** Wait until one entry logged since the last mark contains every fragment. */
 export async function expectDebug(page, ...fragments) {
   await expect
     .poll(async () => {
-      const entries = await debugLog(page);
+      const baseline = debugBaselines.get(page) || new Set();
+      const entries = (await debugLog(page)).filter((entry) => !baseline.has(entry));
       return entries.some((entry) => fragments.every((fragment) => entry.includes(fragment)));
     }, { timeout: LONG, intervals: [3000] })
     .toBe(true);

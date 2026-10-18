@@ -22,6 +22,7 @@ Besides per-session topics, every online node subscribes to two shared topics:
 
 - `ghost-talk/mailbox/v1` carries GTSM packets: a destination Kaspa address plus the exact KKTP/GHST carrier frames a Kaspa transaction would have carried. It is the No-spend mailbox carrier (see realtime.md, Spend mode). The topic also carries GTSQ missed-mail queries and the held packets replayed in answer. The frames are already end-to-end protected by KKTP/HYDRA; the topic only routes them.
 - `ghost-talk/rooms/v1` carries GTRA room announcements: a public room's id, name, policy, owner Hydra id and owner Kaspa address, signed by the owner's Kaspa address key under a dedicated signature domain. Each signed listing carries its own expiry (swarm listings 10 min, Kaspa listings 24 h, at most 7 days). Owners re-publish every 60 s while online and re-sign at half-life; listeners verify the signature and expiry before adding the room to the Discover → Rooms directory, and a newer but shorter listing does not cut a longer one short. Swarm announcements cost no Kaspa fee. In Kaspa mode the owner can also choose **Announce on Kaspa**, which publishes the same signed GTRA payload to the owner's stable address for the normal network fee. Live Kaspa observers admit it into the same directory.
+- Peers that share no session yet meet on these two topics only through a common relay. Browsers cannot dial each other directly, so a Ghost Talk relay subscribes to both topics itself and the gossip mesh forms through it (the E2E relay does this).
 
 ## Operator infrastructure
 

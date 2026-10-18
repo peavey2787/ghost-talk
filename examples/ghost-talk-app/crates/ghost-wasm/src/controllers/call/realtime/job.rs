@@ -119,19 +119,30 @@ async fn try_p2p(
     }
     match send_p2p_bounded(snapshot, sealed).await {
         Ok(()) => Ok(true),
-        Err(error) if decision.fallback.is_none() => Err(error),
+        Err(error) if decision.fallback.is_none() => {
+            record_send_failure(snapshot, sealed, &error);
+            Err(error)
+        }
         Err(error) => {
-            fall_back_to_kaspa(snapshot, error);
+            fall_back_to_kaspa(snapshot, sealed, error);
             Ok(false)
         }
     }
 }
 
-fn fall_back_to_kaspa(snapshot: &SenderSnapshot, error: String) {
-    if snapshot.profile.settings.debug_logging {
-        crate::controllers::debug::record("realtime", "p2p-send-failed", error);
-    }
+fn fall_back_to_kaspa(snapshot: &SenderSnapshot, sealed: &HydraRealtimeEnvelope, error: String) {
+    record_send_failure(snapshot, sealed, &error);
     snapshot.p2p_state.set(P2pRouteState::KaspaFallback);
+}
+
+fn record_send_failure(snapshot: &SenderSnapshot, sealed: &HydraRealtimeEnvelope, error: &str) {
+    if snapshot.profile.settings.debug_logging {
+        crate::controllers::debug::record(
+            "realtime",
+            "p2p-send-failed",
+            format!("sid={} {error}", sealed.session_sid),
+        );
+    }
 }
 
 /// A stalled p2p send must not hold the serial realtime queue.
@@ -141,12 +152,30 @@ async fn send_p2p_bounded(
     snapshot: &SenderSnapshot,
     sealed: &HydraRealtimeEnvelope,
 ) -> Result<(), String> {
-    let send = send_p2p(snapshot, sealed);
+    let send = send_p2p_until_bound(snapshot, sealed);
     let timeout = gloo_timers::future::TimeoutFuture::new(P2P_SEND_TIMEOUT_MS);
     futures_util::pin_mut!(send);
     match futures_util::future::select(send, timeout).await {
         Either::Left((result, _)) => result,
-        Either::Right(_) => Err("p2p-net send timed out".to_string()),
+        Either::Right(_) => Err("p2p-net send did not succeed in time".to_string()),
+    }
+}
+
+/// Pause between p2p attempts while the peer's binding for a freshly rotated
+/// SID is still in flight.
+const P2P_RETRY_MS: u32 = 250;
+
+/// Retries the same sealed bytes until the bounded window closes; a failed
+/// publish delivered nothing, so a retry can never duplicate a message.
+async fn send_p2p_until_bound(
+    snapshot: &SenderSnapshot,
+    sealed: &HydraRealtimeEnvelope,
+) -> Result<(), String> {
+    loop {
+        match send_p2p(snapshot, sealed).await {
+            Ok(()) => return Ok(()),
+            Err(_) => gloo_timers::future::TimeoutFuture::new(P2P_RETRY_MS).await,
+        }
     }
 }
 
