@@ -23,6 +23,7 @@ if exist "%ProgramFiles%\LLVM\bin\clang.exe" (
   set "CC_wasm32_unknown_unknown=%ProgramFiles%\LLVM\bin\clang.exe"
   set "AR_wasm32_unknown_unknown=%ProgramFiles%\LLVM\bin\llvm-ar.exe"
 )
+call scripts\tooling\update-p2p-net.cmd || goto :report
 call scripts\tooling\ensure-wasm-target.cmd || goto :report
 
 echo ==^> trunk build --release

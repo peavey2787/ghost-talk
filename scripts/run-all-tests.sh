@@ -41,6 +41,8 @@ printf 'No filters are accepted: default/all-feature tests, integration, doctest
 run "$PYTHON" examples/ghost-talk-app/scripts/check-test-matrix.py
 run "$PYTHON" examples/ghost-talk-app/scripts/check-architecture.py
 
+# Always build against the newest p2p-net main, not the last locked commit.
+run bash "$ROOT/scripts/tooling/update-p2p-net.sh"
 run cargo fmt --all -- --check
 # Native compilation deliberately precedes rustup/WASM provisioning so broken
 # source cannot be masked by an optional-target setup failure.

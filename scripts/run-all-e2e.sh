@@ -23,6 +23,7 @@ done
 
 run() { printf '\n==> %s\n' "$*"; "$@"; }
 
+run bash "$ROOT/scripts/tooling/update-p2p-net.sh"
 run bash "$ROOT/scripts/tooling/ensure-wasm-target.sh"
 rm -rf "$ROOT/target/build/frontend"
 (cd "$APP/crates/ghost-wasm" && run trunk build --release)

@@ -21,6 +21,9 @@ if errorlevel 1 goto :done
 "%PYTHON_EXE%" %PYTHON_ARGS% examples\ghost-talk-app\scripts\check-architecture.py
 if errorlevel 1 goto :done
 
+rem Always build against the newest p2p-net main, not the last locked commit.
+call scripts\tooling\update-p2p-net.cmd
+if errorlevel 1 goto :done
 cargo fmt --all -- --check
 if errorlevel 1 goto :done
 rem Native compilation must succeed before optional WASM target provisioning.
