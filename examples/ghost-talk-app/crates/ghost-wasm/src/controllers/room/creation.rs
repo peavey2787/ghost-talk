@@ -5,7 +5,7 @@ use super::{append_chat, append_room, append_tombstone, wallet_patch};
 pub(crate) fn create_room(
     profile: &Profile,
     name: String,
-    mode: ghost_rooms::RoomMode,
+    access: ghost_rooms::RoomAccess,
 ) -> Result<(String, ProfilePatch), String> {
     if name.trim().is_empty() {
         return Err("Room name is required.".into());
@@ -17,17 +17,13 @@ pub(crate) fn create_room(
     let owner_kaspa_address =
         primary_room_address(profile).ok_or_else(|| "This ID has no Kaspa address.".to_string())?;
     let room_id = crate::random_id()?;
-    let policies = ghost_rooms::RoomPolicies::for_mode(mode);
     let room = ghost_rooms::RoomService::new_room(ghost_rooms::NewRoom {
         id: room_id.clone(),
         name: name.trim().to_string(),
         owner_hydra_id,
         owner_kaspa_address,
         owner_label: profile.label.clone(),
-        access: policies.access,
-        text_policy: policies.text,
-        audio_policy: policies.audio,
-        broadcast_enabled: policies.broadcast,
+        access,
         pending_acceptance: false,
         revision: 1,
         members: Vec::new(),

@@ -1,5 +1,4 @@
 use super::{Chat, Contact, Room, RoomTombstone, Settings, WalletRecord};
-use ghost_broadcast::{CreatorProfile, PodcastEpisode, PodcastShow, StationProfile};
 use ghost_kasia::KasiaContactMapping;
 
 /// Explicit durable chat transition emitted by the owning application command.
@@ -51,14 +50,6 @@ pub(crate) struct SettingsDelta {
     pub(crate) after: Settings,
 }
 
-#[derive(Clone, Debug)]
-pub(crate) enum BroadcastDelta {
-    Creator(CreatorProfile),
-    Station(StationProfile),
-    Show(PodcastShow),
-    Episode(PodcastEpisode),
-}
-
 /// One precisely-scoped application mutation. No variant contains a Profile or
 /// a whole domain collection, so persistence never reconstructs intent by
 /// diffing complete snapshots.
@@ -67,7 +58,6 @@ pub(crate) enum ProfileDelta {
     AutoLogin(bool),
     PublicAvatar(Option<ghost_media::MediaReference>),
     KasiaContact(KasiaContactMapping),
-    Broadcast(BroadcastDelta),
     Contact(ContactDelta),
     Chat(ChatDelta),
     Room(RoomDelta),
@@ -112,22 +102,6 @@ impl ProfilePatch {
     }
     pub(crate) fn kasia_contact(&mut self, value: KasiaContactMapping) {
         self.deltas.push(ProfileDelta::KasiaContact(value));
-    }
-    pub(crate) fn creator(&mut self, value: CreatorProfile) {
-        self.deltas
-            .push(ProfileDelta::Broadcast(BroadcastDelta::Creator(value)));
-    }
-    pub(crate) fn station(&mut self, value: StationProfile) {
-        self.deltas
-            .push(ProfileDelta::Broadcast(BroadcastDelta::Station(value)));
-    }
-    pub(crate) fn show(&mut self, value: PodcastShow) {
-        self.deltas
-            .push(ProfileDelta::Broadcast(BroadcastDelta::Show(value)));
-    }
-    pub(crate) fn episode(&mut self, value: PodcastEpisode) {
-        self.deltas
-            .push(ProfileDelta::Broadcast(BroadcastDelta::Episode(value)));
     }
     pub(crate) fn chat_upsert(&mut self, before: Option<Chat>, after: Chat) {
         if before.as_ref() != Some(&after) {

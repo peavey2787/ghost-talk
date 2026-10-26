@@ -56,6 +56,10 @@ pub(super) async fn send(
         .await
         .map(Some);
     }
+    if job.delivery == RealtimeDelivery::Video && *snapshot.p2p_state != P2pRouteState::Connected {
+        // Never spend a HYDRA ratchet step on a frame that cannot be sent.
+        return Err("Video needs a connected p2p-net route.".into());
+    }
     // Advance HYDRA exactly once. Every physical carrier gets these exact GTR1
     // bytes, so p2p failure cannot cause a second ratchet send or a second
     // ciphertext for the same logical realtime message.
@@ -66,7 +70,7 @@ pub(super) async fn send(
         &job.body,
     )
     .await?;
-    if try_p2p(snapshot, decision(snapshot, job.delivery), &sealed).await? {
+    if try_p2p(snapshot, job.delivery, &sealed).await? {
         trace_sent(snapshot, job, "p2p-net");
         return Ok(None);
     }
@@ -98,7 +102,7 @@ fn decision(snapshot: &SenderSnapshot, delivery: RealtimeDelivery) -> RouteDecis
     let connected = *snapshot.p2p_state == P2pRouteState::Connected;
     let automatic = snapshot.profile.settings.route.eq_ignore_ascii_case("auto");
     match delivery {
-        RealtimeDelivery::DirectOnly => RouteDecision {
+        RealtimeDelivery::DirectOnly | RealtimeDelivery::Video => RouteDecision {
             primary: RealtimeCarrier::P2pNet,
             fallback: None,
         },
@@ -111,13 +115,14 @@ fn decision(snapshot: &SenderSnapshot, delivery: RealtimeDelivery) -> RouteDecis
 /// same sealed bytes; `Err` when p2p-net failed and no fallback is allowed.
 async fn try_p2p(
     snapshot: &SenderSnapshot,
-    decision: RouteDecision,
+    delivery: RealtimeDelivery,
     sealed: &HydraRealtimeEnvelope,
 ) -> Result<bool, String> {
+    let decision = decision(snapshot, delivery);
     if decision.primary != RealtimeCarrier::P2pNet {
         return Ok(false);
     }
-    match send_p2p_bounded(snapshot, sealed).await {
+    match send_p2p_bounded(snapshot, sealed, send_budget_ms(delivery)).await {
         Ok(()) => Ok(true),
         Err(error) if decision.fallback.is_none() => {
             record_send_failure(snapshot, sealed, &error);
@@ -148,12 +153,24 @@ fn record_send_failure(snapshot: &SenderSnapshot, sealed: &HydraRealtimeEnvelope
 /// A stalled p2p send must not hold the serial realtime queue.
 const P2P_SEND_TIMEOUT_MS: u32 = 3_000;
 
+/// A video frame is worth at most one frame interval of queue time.
+const VIDEO_SEND_TIMEOUT_MS: u32 = 400;
+
+fn send_budget_ms(delivery: RealtimeDelivery) -> u32 {
+    if delivery == RealtimeDelivery::Video {
+        VIDEO_SEND_TIMEOUT_MS
+    } else {
+        P2P_SEND_TIMEOUT_MS
+    }
+}
+
 async fn send_p2p_bounded(
     snapshot: &SenderSnapshot,
     sealed: &HydraRealtimeEnvelope,
+    budget_ms: u32,
 ) -> Result<(), String> {
     let send = send_p2p_until_bound(snapshot, sealed);
-    let timeout = gloo_timers::future::TimeoutFuture::new(P2P_SEND_TIMEOUT_MS);
+    let timeout = gloo_timers::future::TimeoutFuture::new(budget_ms);
     futures_util::pin_mut!(send);
     match futures_util::future::select(send, timeout).await {
         Either::Left((result, _)) => result,

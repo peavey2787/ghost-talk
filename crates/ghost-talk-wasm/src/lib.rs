@@ -7,8 +7,9 @@ use ghost_talk::VoiceCodec;
 mod browser;
 #[cfg(target_arch = "wasm32")]
 pub use browser::{
-    blob_to_bytes, create_opus_media_recorder, microphone_stream, preferred_opus_mime,
-    stop_stream_tracks, BrowserVoiceReceiver, BrowserVoiceSender,
+    blob_to_bytes, clear_video_frames, create_opus_media_recorder, microphone_stream,
+    preferred_opus_mime, show_video_frame, stop_stream_tracks, BrowserVideoSender,
+    BrowserVoiceReceiver, BrowserVoiceSender,
 };
 
 /// Perform raw browser property lookup without imposing subsystem-specific error text.

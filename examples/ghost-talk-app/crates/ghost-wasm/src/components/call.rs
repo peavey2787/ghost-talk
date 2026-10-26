@@ -1,7 +1,7 @@
 use crate::model::{CallRecord, Chat, Profile, ProfilePatch, WalletLiveEvent};
 use ghost_domain::call::{CallEvent, CallManager};
 use ghost_p2p::{P2pNetTransport, P2pRouteState};
-use ghost_talk_wasm::{BrowserVoiceReceiver, BrowserVoiceSender};
+use ghost_talk_wasm::{BrowserVideoSender, BrowserVoiceReceiver, BrowserVoiceSender};
 use std::{cell::RefCell, collections::HashSet, rc::Rc};
 use yew::prelude::*;
 
@@ -11,6 +11,7 @@ mod direct_text;
 pub(crate) mod identity;
 mod manager;
 mod media;
+use media::video;
 mod p2p_route;
 mod presentation;
 mod room_voice;
@@ -32,14 +33,13 @@ struct CallRuntime {
     render_epoch: UseStateHandle<u64>,
     sender_ref: Rc<RefCell<Option<BrowserVoiceSender>>>,
     receiver: Rc<RefCell<BrowserVoiceReceiver>>,
+    /// Camera capture shared by the live call and Room voice.
+    video: BrowserVideoSender,
     room_voice_id: UseStateHandle<Option<String>>,
     /// Live mirror of `room_voice_id` for audio callbacks: a state handle
     /// captured by a long-lived closure keeps reading its render's value.
     room_voice_ref: Rc<RefCell<Option<String>>>,
     room_sequence: Rc<RefCell<u64>>,
-    room_broadcast_session: UseStateHandle<Option<String>>,
-    /// Live mirror of `room_broadcast_session` for the audio callback.
-    room_broadcast_ref: Rc<RefCell<Option<String>>>,
     p2p: Rc<RefCell<P2pNetTransport>>,
     p2p_state: UseStateHandle<P2pRouteState>,
     p2p_subscriptions: Rc<RefCell<HashSet<String>>>,
@@ -66,8 +66,16 @@ pub(crate) struct RoomVoiceContext {
     pub(crate) active_room_id: Option<String>,
     pub(crate) join: Callback<String>,
     pub(crate) leave: Callback<()>,
-    pub(crate) broadcast_session: Option<String>,
-    pub(crate) set_broadcast_session: Callback<Option<String>>,
+    pub(crate) video: VideoControls,
+}
+
+/// Camera state for the call modal and Room voice card.
+#[derive(Clone, PartialEq)]
+pub(crate) struct VideoControls {
+    pub(crate) on: bool,
+    /// Video only travels over a connected p2p-net route.
+    pub(crate) available: bool,
+    pub(crate) toggle: Callback<()>,
 }
 
 impl CallRuntime {
@@ -75,7 +83,23 @@ impl CallRuntime {
     fn p2p(&self) -> P2pNetTransport {
         self.p2p.borrow().clone()
     }
+
+    /// The one microphone sender, created on first use.
+    fn voice_sender(&self) -> Result<BrowserVoiceSender, String> {
+        // Bind first: an `if let` scrutinee's `borrow()` would otherwise stay
+        // alive through the `else` branch and make its `borrow_mut()` panic.
+        let existing = self.sender_ref.borrow().clone();
+        if let Some(existing) = existing {
+            return Ok(existing);
+        }
+        let created = BrowserVoiceSender::new()?;
+        *self.sender_ref.borrow_mut() = Some(created.clone());
+        Ok(created)
+    }
 }
+
+pub(crate) use presentation::video_button;
+pub(crate) use video::{room_tile, LOCAL_TILE};
 
 /// An unanswered call stops ringing after 30 s.
 const RING_TIMEOUT_MS: u32 = 30_000;
@@ -163,6 +187,7 @@ fn close_media(runtime: &CallRuntime) {
         sender.close();
     }
     runtime.receiver.borrow().reset();
+    video::stop(runtime);
 }
 
 fn fail_runtime_call(runtime: &CallRuntime, call_id: &str, message: String) {

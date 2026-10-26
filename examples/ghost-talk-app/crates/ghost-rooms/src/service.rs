@@ -1,4 +1,4 @@
-use crate::{ChannelPolicy, Room, RoomAccess, RoomBan, RoomMember, RoomMessage, RoomStore};
+use crate::{Room, RoomAccess, RoomBan, RoomMember, RoomMessage, RoomStore};
 use ghost_domain::reaction::merge_reactions;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -9,9 +9,6 @@ pub struct NewRoom {
     pub owner_kaspa_address: String,
     pub owner_label: String,
     pub access: RoomAccess,
-    pub text_policy: ChannelPolicy,
-    pub audio_policy: ChannelPolicy,
-    pub broadcast_enabled: bool,
     pub pending_acceptance: bool,
     pub revision: u64,
     pub members: Vec<RoomMember>,
@@ -23,9 +20,6 @@ pub struct RoomState {
     pub owner_kaspa_address: String,
     pub owner_label: String,
     pub access: RoomAccess,
-    pub text_policy: ChannelPolicy,
-    pub audio_policy: ChannelPolicy,
-    pub broadcast_enabled: bool,
     pub revision: u64,
     pub members: Vec<RoomMember>,
     pub bans: Vec<RoomBan>,
@@ -52,9 +46,6 @@ impl RoomService {
             owner_kaspa_address: input.owner_kaspa_address,
             owner_label: input.owner_label,
             access: input.access,
-            text_policy: input.text_policy,
-            audio_policy: input.audio_policy,
-            broadcast_enabled: input.broadcast_enabled,
             pending_acceptance: input.pending_acceptance,
             revision: input.revision,
             members: input.members,

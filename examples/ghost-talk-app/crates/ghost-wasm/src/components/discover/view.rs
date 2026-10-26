@@ -22,7 +22,6 @@ pub fn discover_view(props: &DiscoverProps) -> Html {
     let status = use_state(String::new);
     let busy = use_state(|| false);
     let section = use_state(|| DiscoverSection::People);
-    let room_filter = use_state(|| None::<ghost_rooms::RoomMode>);
     let heard_rooms = use_context::<crate::components::call::RoomListings>()
         .map(|listings| listings.fresh())
         .unwrap_or_default();
@@ -42,7 +41,7 @@ pub fn discover_view(props: &DiscoverProps) -> Html {
             {render_section_tabs(section.clone())}
             {if *section == DiscoverSection::Rooms {
                 html! {<>
-                    {rooms::render_room_directory(props, &heard_rooms, room_filter, kaspa_announce::Busy { status: status.clone(), busy: busy.clone() })}
+                    {rooms::render_room_directory(props, &heard_rooms, kaspa_announce::Busy { status: status.clone(), busy: busy.clone() })}
                     {status_view(&status)}
                 </>}
             } else {

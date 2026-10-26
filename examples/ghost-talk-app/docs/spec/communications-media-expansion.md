@@ -6,19 +6,11 @@ This document defines the implemented ownership contract for Ghost Talk's commun
 
 Public Ghost profiles retain Kaspa/HYDRA identity as the cryptographic fallback and may expose a display name, one primary KNS or `.k` name, verified-name observations, avatar media, description/interests, capabilities, and a profile signature. A profile name claim is never trusted by itself. `GhostNameResolver` normalizes the claim, resolves the correct namespace, verifies current ownership against the profile identity/address, and owns bounded cache expiration/revalidation/invalidation.
 
-The same verified identity projection is used by profiles, contacts, chat, calls, Rooms, discovery, creator/station metadata, radio, and podcasts. Users without KNS/`.k` remain fully supported through raw Kaspa/HYDRA identity.
+The same verified identity projection is used by profiles, contacts, chat, calls, Rooms, and discovery. Users without KNS/`.k` remain fully supported through raw Kaspa/HYDRA identity.
 
 ## Shared media
 
-`ghost-media` is the common media owner for avatars, recordings, podcasts, broadcast archives, and later chat/Room attachments. It owns:
-
-- `MediaReference` content-addressed identity and location metadata;
-- `GhostMediaManifest`, canonical signing bytes, signature metadata, and strict manifest validation;
-- content/chunk hashing and independently verifiable archive carriers;
-- local content-addressed storage and verified retrieval;
-- persistent verified archive chunk caching and final reconstruction verification.
-
-No profile-, podcast-, radio-, or archive-specific content store is allowed. Caches and mirrors are never trusted for integrity.
+`ghost-media` is the common media owner for avatars and later chat/Room attachments. It owns the `MediaReference` content-addressed identity and location metadata and content hashing/verification. No consumer-specific content store is allowed. Caches and mirrors are never trusted for integrity.
 
 ## Kasia and KaChat interoperability
 
@@ -48,57 +40,15 @@ Kasia protocol -> Kaspa L1 -> Kasia Indexer -> ghost-kasia -> Ghost Talk
 
 `ghost-indexer` never parses Kasia payloads. `ghost-kasia` never depends on `ghost-indexer`. `ghost-protocol`, `ghost-hydra`, and `ghost-chat` never depend on `ghost-kasia`.
 
-## Rooms, stages, radio, and Room voice
+## Rooms, Room voice, and Room video
 
-`ghost-rooms` remains authoritative for membership, access, roles, bans, moderation, invitations, revisions, text policy, and audio policy. `RoomAccess` models Private, InviteOnly, Unlisted, and Public.
+`ghost-rooms` is authoritative for Room membership, access, roles, moderation, invitations, revisions, Room messages, and their reactions. `RoomAccess` is exactly `Private` (invitation only, never listed) or `Public` (announced to the swarm, optionally on Kaspa, and listed in Discover → Rooms). Every participant may send text, react, and join Room voice and video; there are no mode presets, presenter/audience roles, or per-Room text/audio policies.
 
-Private group, community voice, stage, and radio are `RoomMode`/policy presets over the same Room system. `Off`, `Interactive`, and `PresentersOnly` audio authorization is enforced from Room roles. There is no parallel stage/radio Room implementation.
-
-Room voice uses the existing Ghost `BrowserVoiceSender`/receiver and encrypted realtime path. The Room owner relays authorized speakers to other members where required. Incoming audio is checked against Room membership/policy before playback. No second microphone or Room-specific capture stack exists.
-
-## Shared live-media pipeline
-
-The canonical live path is:
-
-```text
-BrowserVoiceSender
-      -> encoded Ghost VoiceChunk units
-      -> Room encrypted realtime distribution
-      -> optional BroadcastPipeline fan-out
-             -> RTMP/RTMPS sink
-             -> local recording sink
-```
-
-`ghost-broadcast::BroadcastPipeline` owns fan-out and sink-failure isolation. Additional sinks consume the same encoded input; they do not open another capture device. Browser-generated independently decodable WebM/Ogg units are retained as the source stream. Local recording finalizes those units through FFmpeg concat/remux. RTMP adapts the units to one persistent AAC/FLV publisher without introducing a second microphone owner.
-
-RTMP stream keys use a redacting/zeroizing `RtmpSecret`. They are never chain data, normal debug output, public configuration, or crash-report fields. RTMP/RTMPS URLs are explicitly validated.
-
-## Permanent Kaspa archive
-
-Permanent archival is optional and explicitly confirmed. The implementation:
-
-1. derives the content-addressed media id;
-2. plans the actual archive payload sizes through the existing Kaspa transaction fee planner;
-3. shows/accepts a maximum confirmed cost before spending;
-4. persists archive progress before every submission;
-5. records an in-flight chunk intent before broadcast;
-6. reconciles uncertain in-flight submissions from Kaspa history before retrying;
-7. commits exact transaction ids and chunk hashes;
-8. reconstructs media from those transaction locators;
-9. verifies every chunk and the final root content hash;
-10. stores only verified chunks/results in the persistent media cache.
-
-An interruption therefore resumes from durable progress rather than restarting the archive or risking duplicate permanent publication.
-
-## Podcasts and creator/station profiles
-
-`ghost-broadcast::BroadcastCatalog` owns durable creator, station, show, and episode metadata. Creator/station records reuse Ghost identity/name/media primitives instead of creating another account/authentication system. A station references its owning creator and authoritative live Room; presenter authority remains in Room roles.
-
-A completed local broadcast recording is already a `MediaReference`. Podcast publishing references that existing asset directly. Episodes may attach a signed `GhostMediaManifest` and may optionally reference a permanent Kaspa archive of the same content.
+Room voice and video reuse the shared `BrowserVoiceSender`/receiver and `BrowserVideoSender` from the `ghost-talk-wasm` SDK over the encrypted realtime routes. A member sends to the Room owner, which relays to every other member over each member's authenticated session. Incoming media is checked against Room membership and the hop (sender or owner) before playback. Video is p2p-net only: frames are never carried on Kaspa, are dropped when p2p-net is not connected, and only the newest frame per peer waits in the realtime queue.
 
 ## Security-state UX
 
-The implemented presentation distinguishes the relevant security/egress states, including `🛡 Ghost PQ`, `🔒 Kasia`, private/public Room state, `📡 External RTMP`, and `💾 Local Recording`. Permanent Kaspa publication requires a separate explicit confirmation and cost bound. Kasia is never represented as equivalent to Ghost PQ; external RTMP is outside Ghost's security boundary.
+The implemented presentation distinguishes the relevant security/egress states, including `🛡 Ghost PQ`, `🔒 Kasia`, and private/public Room state. Kasia is never represented as equivalent to Ghost PQ.
 
 ## Subsystem ownership
 
@@ -109,10 +59,10 @@ ghost-chat        Ghost-native conversation domain
 ghost-kasia       Kasia codec/crypto/indexer/contact compatibility
 ghost-contacts    contacts/profile domain
 ghost-names       KNS/.k resolution and verification
-ghost-rooms       membership/access/roles/policies
-ghost-talk        reusable voice/session SDK
-ghost-media       shared media identity/manifests/archive carriers
-ghost-broadcast   live fan-out, RTMP, recording, creator/podcast metadata
+ghost-rooms       membership/access/roles
+ghost-talk        reusable voice/video/session SDK
+ghost-media       shared content-addressed media identity
+
 ghost-indexer     rebuildable verified Ghost L1 discovery index
 ghost-runtime     authoritative durable application state
 ghost-wasm        Web presentation/platform adapter
@@ -123,4 +73,4 @@ Simple hashing, verification, codecs, validators, and value objects stay direct 
 
 ## Qualification
 
-The source implementation covers the 28-stage communications/media plan through architecture and automated regression surfaces. The final commercial gate still requires exact-revision evidence for funded independent-process interoperability, device/audio HIL, supported-platform behavior, production background delivery, keystore/biometrics, group cryptographic lifecycle, UI/platform parity, and release signing. Those external requirements must not be marked complete by source tests alone.
+The source implementation is covered by architecture and automated regression surfaces. The final commercial gate still requires exact-revision evidence for funded independent-process interoperability, device/audio HIL, supported-platform behavior, production background delivery, keystore/biometrics, group cryptographic lifecycle, UI/platform parity, and release signing. Those external requirements must not be marked complete by source tests alone.

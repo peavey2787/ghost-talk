@@ -72,29 +72,6 @@ async fn fetch_address(base: &str, address: &str) -> Result<Vec<WalletHistoryEnt
         .collect())
 }
 
-pub(in crate::native::browser_host) async fn raw_payloads(
-    network: &str,
-    address: &str,
-) -> Result<BTreeMap<String, Vec<u8>>, String> {
-    let values = fetch_raw_address(ghost_core::kaspa_rest_base(network), address).await?;
-    Ok(values
-        .into_iter()
-        .filter_map(|value| {
-            let id = value
-                .get("transaction_id")
-                .or_else(|| value.get("transactionId"))?
-                .as_str()?
-                .to_owned();
-            let payload = value
-                .get("payload")
-                .and_then(Value::as_str)
-                .and_then(|payload| hex::decode(payload).ok())
-                .unwrap_or_default();
-            Some((id, payload))
-        })
-        .collect())
-}
-
 pub(in crate::native::browser_host) async fn backup_payloads(
     network: &str,
     addresses: &[String],

@@ -37,6 +37,5 @@ sha2.workspace = true
 base64.workspace = true
 ghost-media = { path = "../ghost-media" }
 ghost-rooms = { path = "../ghost-rooms" }
-ghost-broadcast = { path = "../ghost-broadcast" }
 ghost-kasia = { path = "../ghost-kasia", features = ["native"] }
 ghost-indexer = { path = "../ghost-indexer" }

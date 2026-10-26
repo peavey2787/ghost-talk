@@ -1,7 +1,7 @@
 use crate::components::{
     call::LiveCallManager, chat::ChatView, contacts::ContactsView, debug::DebugLogWindow,
     discover::DiscoverView, rooms::RoomsView, settings::SettingsView, sidebar::Sidebar,
-    simple::GamesView, studio::StudioView, wallet::KaspaWallet,
+    wallet::KaspaWallet,
 };
 use crate::model::{Profile, ProfilePatch};
 use yew::prelude::*;
@@ -84,10 +84,6 @@ fn secondary_tab_content(
     update_profile: Callback<ProfilePatch>,
 ) -> Html {
     match tab {
-        "Studio" => {
-            html! { <StudioView profile={active.clone()} password={(*state.session_password).clone()} on_update={update_profile}/> }
-        }
-        "Games" => html! { <GamesView/> },
         "Kaspa" => {
             html! { <KaspaWallet profile={active.clone()} password={(*state.session_password).clone()} snapshot={(*state.snapshot).clone()} on_update={update_profile} on_snapshot={snapshot_callback(state.snapshot.clone())}/> }
         }

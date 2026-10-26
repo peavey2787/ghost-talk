@@ -26,10 +26,8 @@ ghost-api = { path = "../ghost-api" }
 ghost-kaskold = { path = "../ghost-kaskold" }
 ghost-runtime = { path = "../ghost-runtime" }
 ghost-media = { path = "../ghost-media" }
-ghost-broadcast = { path = "../ghost-broadcast" }
 ghost-kasia = { path = "../ghost-kasia", default-features = false, features = ["crypto"] }
 ghost-talk-wasm = { path = "../../../../crates/ghost-talk-wasm" }
-ghost-talk = { path = "../../../../crates/ghost-talk" }
 ghost-storage = { path = "../ghost-storage" }
 ghost-kaspa = { path = "../ghost-kaspa", features = ["upstream"] }
 ghost-indexer = { path = "../ghost-indexer" }

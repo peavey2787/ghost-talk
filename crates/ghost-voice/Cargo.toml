@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.98"
 license = "GPL-2.0-or-later"
-description = "Ghost Talk voice wire formats (1:1 call and Room voice packets) and the voice route policy"
+description = "Ghost Talk live media wire formats (1:1 call and Room voice/video packets) and the voice route policy"
 repository = "https://github.com/peavey2787/ghost-talk"
 homepage = "https://github.com/peavey2787/ghost-talk"
-keywords = ["voice", "realtime", "opus", "kaspa", "p2p"]
+keywords = ["voice", "video", "realtime", "opus", "p2p"]
 categories = ["multimedia::audio", "network-programming"]
 publish = false
 

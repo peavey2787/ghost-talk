@@ -5,7 +5,7 @@
 - UI cannot grant cryptographic authorization.
 - Manual wallet + mailbox unlock is the default for each app session. Once unlocked, the password stays only in process memory and can authorize KAS sends unless the user enables per-send password re-entry.
 - Disabling the session unlock prompt is an explicit device-trust mode: changing the policy requires the current wallet password, and an authenticated AES-GCM-protected unlock-equivalent credential is stored separately from profile JSON in app-local storage. The UI warns that local application-data compromise can then open both wallet and messaging identity.
-- Audience cannot create traffic accepted as Presenter.
+
 - Blocked contacts are rejected before application delivery.
 - Bound every untrusted length/count; reject conflicting fragments.
 - Replay/duplicate delivery is idempotent.

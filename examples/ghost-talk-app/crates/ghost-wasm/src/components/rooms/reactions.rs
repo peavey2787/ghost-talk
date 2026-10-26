@@ -13,7 +13,7 @@ pub(crate) fn render_room_reactions(
     let summary =
         crate::components::chat::reaction_ui::render_summary(&message.reactions, own_reaction);
     let picker = own_actor
-        .filter(|actor| room.can_react(actor) && !room.pending_acceptance())
+        .filter(|actor| room.is_participant(actor) && !room.pending_acceptance())
         .map(|_| {
             crate::components::chat::reaction_ui::render_picker(
                 own_reaction,

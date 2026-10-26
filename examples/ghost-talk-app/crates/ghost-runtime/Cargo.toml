@@ -17,5 +17,4 @@ ghost-contacts = { path = "../ghost-contacts" }
 ghost-domain = { path = "../ghost-domain" }
 ghost-rooms = { path = "../ghost-rooms" }
 ghost-kasia = { path = "../ghost-kasia", default-features = false }
-ghost-broadcast = { path = "../ghost-broadcast" }
 ghost-media = { path = "../ghost-media" }

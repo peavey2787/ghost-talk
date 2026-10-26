@@ -16,8 +16,8 @@ pub use backup::{
 };
 pub use capabilities::{
     default_capabilities, select_conversation_mode, ConversationMode, ProtocolAvailability,
-    GHOST_AVATAR_V1, GHOST_BROADCAST_V1, GHOST_MEDIA_V1, GHOST_PROFILE_V2, GHOST_ROOM_VOICE_V1,
-    HYDRA_PQ, KASIA_V1, KASPA_MAILBOX, KKTP_V2, PRIVATE_BOOTSTRAP,
+    GHOST_AVATAR_V1, GHOST_MEDIA_V1, GHOST_PROFILE_V2, GHOST_ROOM_VOICE_V1, HYDRA_PQ, KASIA_V1,
+    KASPA_MAILBOX, KKTP_V2, PRIVATE_BOOTSTRAP,
 };
 pub use events::{
     DebugLogEntry, DebugLogSnapshot, DirectoryLiveEvent, MailboxEvent, NetworkStatusEvent,
@@ -29,10 +29,7 @@ pub use hydra::{
     HydraRecoveryProjection, HydraRoomInviteProjection, HydraSessionBindingProjection,
     HydraSessionEndedProjection, ReceivedProjection,
 };
-pub use media::{
-    BroadcastSinkFailure, BroadcastStartRequest, BroadcastStopResult, KaspaArchivePlan,
-    KaspaArchivePublishResult, VerifiedMedia,
-};
+pub use media::VerifiedMedia;
 pub use metadata::{app_info, AppInfo};
 pub use peer::{PeerRouteRegistration, PublicGhostProfile, ResolvedGhostPeer};
 pub use wallet::{

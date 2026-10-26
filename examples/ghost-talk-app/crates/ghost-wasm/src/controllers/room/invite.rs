@@ -73,7 +73,7 @@ fn member_from_peer(profile: &Profile, peer: &ResolvedGhostPeer) -> RoomMember {
             .unwrap_or_else(|| peer.kaspa_address.clone()),
         kaspa_address: peer.kaspa_address.clone(),
         hydra_handle,
-        role: ghost_rooms::Role::Audience,
+        role: ghost_rooms::Role::Member,
     }
 }
 

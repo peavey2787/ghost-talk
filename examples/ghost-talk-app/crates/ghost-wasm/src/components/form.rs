@@ -15,12 +15,6 @@ pub(crate) fn textarea_input(state: UseStateHandle<String>) -> Callback<InputEve
     })
 }
 
-pub(crate) fn checkbox_input(state: UseStateHandle<bool>) -> Callback<Event> {
-    Callback::from(move |event: Event| {
-        state.set(event.target_unchecked_into::<HtmlInputElement>().checked());
-    })
-}
-
 pub(crate) fn select_value(on_value: Callback<String>) -> Callback<Event> {
     Callback::from(move |event: Event| {
         on_value.emit(event.target_unchecked_into::<HtmlSelectElement>().value());

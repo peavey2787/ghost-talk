@@ -1,8 +1,6 @@
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use ghost_api::VerifiedMedia;
-use ghost_media::{
-    content_hash, verify_content, GhostMediaManifest, MediaLocation, MediaReference,
-};
+use ghost_media::{content_hash, verify_content, MediaLocation, MediaReference};
 use js_sys::Uint8Array;
 use serde_json::Value;
 use std::{cell::RefCell, collections::HashMap};
@@ -13,7 +11,7 @@ use web_sys::Response;
 use super::support::util::{required, required_str, to_value};
 
 const MEDIA_KEY_PREFIX: &str = "ghost-talk.media.v1.";
-const MAX_BROWSER_MEDIA_BYTES: usize = ghost_kaspa::MAX_ARCHIVE_BYTES;
+const MAX_BROWSER_MEDIA_BYTES: usize = 512 * 1024 * 1024;
 const MAX_PERSISTED_ASSET_BYTES: usize = 4 * 1024 * 1024;
 
 thread_local! {
@@ -24,39 +22,8 @@ pub(super) async fn invoke(command: &str, args: &Value) -> Result<Value, String>
     match command {
         "media_import_local" => import_local(args),
         "media_fetch_verified" => fetch_verified(args).await,
-        "media_manifest_sign" => sign_manifest(args),
-        "kaspa_archive_plan" | "kaspa_archive_publish" => {
-            super::runtime::archive::invoke(command, args).await
-        }
         _ => Err(format!("unknown browser media command: {command}")),
     }
-}
-
-fn sign_manifest(args: &Value) -> Result<Value, String> {
-    const DOMAIN: &[u8] = b"GhostMediaManifest/v1";
-    let request = args
-        .get("request")
-        .ok_or("browser command argument request is missing")?;
-    let password = required_str(request, "password")?;
-    let sealed: Vec<u8> = required(request, "sealed")?;
-    let projection: crate::model::WalletProjection = required(request, "public")?;
-    let public = ghost_kaspa::wallet::WalletPublic::from_projection(&projection);
-    let secret: ghost_kaspa::wallet::WalletSecret =
-        ghost_storage::open_json(password, &sealed, "wallet vault")?;
-    ghost_kaspa::wallet::validate_public_projection(&secret, &public)?;
-    let mut manifest: GhostMediaManifest = required(request, "manifest")?;
-    manifest.validate()?;
-    let private_key =
-        ghost_kaspa::wallet::private_key_for_address(&secret, &public, &manifest.creator)?;
-    let signing = manifest.signing_bytes()?;
-    manifest.creator_signature = ghost_kaspa::sign_domain_message(&private_key, DOMAIN, &signing)?;
-    ghost_kaspa::verify_domain_message(
-        &manifest.creator,
-        &manifest.creator_signature,
-        DOMAIN,
-        &signing,
-    )?;
-    to_value(manifest)
 }
 
 fn import_local(args: &Value) -> Result<Value, String> {
@@ -96,9 +63,6 @@ async fn fetch_verified(args: &Value) -> Result<Value, String> {
     let bytes = match &reference.location {
         MediaLocation::Local => load_local(&reference)?,
         MediaLocation::Remote(url) => fetch_remote(url.as_str()).await?,
-        MediaLocation::KaspaArchive(locator) => {
-            super::runtime::archive::fetch(&reference, locator.as_str()).await?
-        }
     };
     validate_bytes(&reference, &bytes)?;
     to_value(VerifiedMedia {
@@ -115,10 +79,7 @@ fn load_local(reference: &MediaReference) -> Result<Vec<u8>, String> {
     let encoded = browser_storage()?
         .get_item(&media_key(&reference.media_id))
         .map_err(crate::native::invoke::js_error)?
-        .ok_or_else(|| {
-            "browser-local media is no longer available; re-import the downloaded recording"
-                .to_string()
-        })?;
+        .ok_or_else(|| "browser-local media is no longer available; import it again".to_string())?;
     let bytes = STANDARD
         .decode(encoded)
         .map_err(|error| format!("browser-local media cache is corrupt: {error}"))?;

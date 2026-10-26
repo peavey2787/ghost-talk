@@ -21,6 +21,9 @@ enum RealtimeDelivery {
     KaspaRealtime,
     /// Ephemeral chat text: p2p-net only, never stored on Kaspa.
     DirectOnly,
+    /// One camera frame: p2p-net only, dropped when p2p-net is down, and
+    /// superseded by any newer frame for the same chat still in the queue.
+    Video,
     DurableControl,
 }
 
@@ -105,6 +108,22 @@ impl RealtimeSender {
             chat_id,
             body,
             delivery: RealtimeDelivery::KaspaRealtime,
+            on_complete: None,
+        });
+    }
+
+    /// Queue one camera frame. Video never travels over Kaspa, and only the
+    /// newest frame per chat waits in the queue so audio and text are never
+    /// stuck behind stale video.
+    pub(crate) fn enqueue_video(&self, chat_id: String, body: String) {
+        self.inner
+            .borrow_mut()
+            .queue
+            .retain(|job| job.delivery != RealtimeDelivery::Video || job.chat_id != chat_id);
+        self.enqueue_job(RealtimeJob {
+            chat_id,
+            body,
+            delivery: RealtimeDelivery::Video,
             on_complete: None,
         });
     }
@@ -232,8 +251,9 @@ impl RealtimeSender {
             callback.emit(Err(error.clone()));
         }
         match job.delivery {
-            // The composer reports direct-text failures (and may fall back).
-            RealtimeDelivery::DirectOnly => {}
+            // The composer reports direct-text failures (and may fall back);
+            // a lost video frame is replaced by the next one.
+            RealtimeDelivery::DirectOnly | RealtimeDelivery::Video => {}
             RealtimeDelivery::DurableControl => {
                 on_error.emit(format!("Call signaling failed: {error}"))
             }

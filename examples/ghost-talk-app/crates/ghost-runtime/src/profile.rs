@@ -1,7 +1,4 @@
 use ghost_api::PublicGhostProfile;
-use ghost_broadcast::{
-    BroadcastCatalog, CreatorProfile, PodcastEpisode, PodcastShow, StationProfile,
-};
 use ghost_chat::ChatStore;
 use ghost_contacts::ContactStore;
 use ghost_domain::{call::MAX_SEEN_CALL_SIGNAL_IDS, settings::Settings};
@@ -41,8 +38,6 @@ pub struct Profile {
     #[serde(default)]
     kasia_contacts: KasiaContactMap,
     #[serde(default)]
-    broadcast_catalog: BroadcastCatalog,
-    #[serde(default)]
     seen_call_signal_ids: Vec<String>,
     #[serde(default)]
     pub wallet: Option<WalletRecord>,
@@ -70,7 +65,6 @@ impl Profile {
             public_directory: Vec::new(),
             public_avatar: None,
             kasia_contacts: KasiaContactMap::default(),
-            broadcast_catalog: BroadcastCatalog::default(),
             seen_call_signal_ids: Vec::new(),
             wallet: None,
             settings: Settings::default(),
@@ -129,31 +123,6 @@ impl Profile {
     /// Replaces a Kasia mapping through its domain-owned map.
     pub fn upsert_kasia_contact(&mut self, mapping: ghost_kasia::KasiaContactMapping) {
         self.kasia_contacts.upsert(mapping);
-    }
-
-    /// Read-only creator/station/show/episode catalog.
-    pub fn broadcast_catalog(&self) -> &BroadcastCatalog {
-        &self.broadcast_catalog
-    }
-
-    /// Adds or replaces one creator profile through the broadcast domain owner.
-    pub fn upsert_creator(&mut self, value: CreatorProfile) {
-        self.broadcast_catalog.upsert_creator(value);
-    }
-
-    /// Adds or replaces one station profile through the broadcast domain owner.
-    pub fn upsert_station(&mut self, value: StationProfile) {
-        self.broadcast_catalog.upsert_station(value);
-    }
-
-    /// Adds or replaces one podcast show through the broadcast domain owner.
-    pub fn upsert_show(&mut self, value: PodcastShow) {
-        self.broadcast_catalog.upsert_show(value);
-    }
-
-    /// Adds or replaces one podcast episode through the broadcast domain owner.
-    pub fn upsert_episode(&mut self, value: PodcastEpisode) {
-        self.broadcast_catalog.upsert_episode(value);
     }
 
     /// Returns whether a signed call signal has already been processed.

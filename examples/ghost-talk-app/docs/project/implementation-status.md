@@ -19,21 +19,15 @@ Capability selection prefers Ghost PQ for a new peer when both are advertised. A
 
 `ghost-indexer` owns the rebuildable verified current-state projection used for Ghost public-profile discovery. It indexes Ghost-native L1 descriptors only. Kasia history/discovery stays behind the Kasia indexer and is never absorbed by the Ghost indexer.
 
-## Rooms, voice, and broadcast
+## Rooms, voice, and video
 
-`ghost-rooms` is authoritative for Room membership, access, roles, moderation, invitations, revisions, text policy, audio policy, Room messages, and their reactions. Room reactions use the same canonical Ghost reaction vocabulary; member reactions are authenticated to the Room owner and relayed without creating a parallel message system. `RoomAccess` supports Private, InviteOnly, Unlisted, and Public. Private groups, community voice, stages, and radio are policy presets over the same Room model; there is no parallel stage/radio room type.
+`ghost-rooms` is authoritative for Room membership, access, roles, moderation, invitations, revisions, Room messages, and their reactions. `RoomAccess` is exactly `Private` (invitation only, never listed) or `Public` (announced to the swarm, optionally on Kaspa, and listed in Discover → Rooms). Every participant may send text, react, and join Room voice and video; there are no mode presets, presenter/audience roles, or per-Room text/audio policies.
 
-Room voice reuses the existing `BrowserVoiceSender`/receiver and encrypted realtime routes. `Off`, `Interactive`, and `PresentersOnly` are enforced through the authoritative Room policy and roles before capture, relay, or playback. The same encoded Ghost voice units can feed Room delivery and the broadcast fan-out; no second microphone/capture owner is introduced.
+Room voice and video reuse the shared `BrowserVoiceSender`/receiver and `BrowserVideoSender` from the `ghost-talk-wasm` SDK over the encrypted realtime routes. A member sends to the Room owner, which relays to every other member over each member's authenticated session. Incoming media is checked against Room membership and the hop (sender or owner) before playback. Video is p2p-net only: frames are never carried on Kaspa, are dropped when p2p-net is not connected, and only the newest frame per peer waits in the realtime queue.
 
-`ghost-broadcast` owns live fan-out, isolated sinks, RTMP/RTMPS destinations, recording adapters, creator/station/show/episode metadata, and podcast publication metadata. RTMP stream keys use redacting/zeroizing secret storage and are not included in ordinary debug output. A failed sink is isolated from healthy sinks. Local recording consumes the same encoded Ghost voice units and finalizes them through FFmpeg without recapturing the microphone.
+## Shared media
 
-Studio workflows create/update creator, station, show, and episode records through typed profile deltas. A completed broadcast recording is reused as the podcast episode media asset rather than being re-recorded. Station live state references the authoritative Room.
-
-## Shared media and permanent archive
-
-`ghost-media` owns media identity, content hashes, signed manifest signing bytes/validation, chunk metadata, Kaspa archive carriers, and integrity verification. Local assets are content-addressed. Retrieved avatars, recordings, and archived media are exposed only after hash/size verification.
-
-Permanent Kaspa archival uses verified independently-addressed chunks, live wallet-aware fee planning, an explicit maximum-cost confirmation, persisted per-chunk progress, in-flight reconciliation after uncertain submissions, exact transaction locators, verified persistent chunk caching, and final root-hash reconstruction. An uncertain in-flight transaction is reconciled from Kaspa history before any resend to avoid duplicate permanent publication.
+`ghost-media` owns content-addressed media references (`MediaReference`, `content_hash`, `verify_content`). Avatars are exposed only after hash verification.
 
 ## Quality and release status
 

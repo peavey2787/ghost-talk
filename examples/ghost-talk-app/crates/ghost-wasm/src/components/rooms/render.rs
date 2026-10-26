@@ -145,17 +145,15 @@ pub(crate) fn render_create_room_form(ui: &RoomsUi, create: &Callback<MouseEvent
     html! {
         <form class="inline-form room-create-form" onsubmit={prevent_submit()}>
             <input value={(*ui.name).clone()} oninput={input(ui.name.clone())} placeholder="Room name"/>
-            <select value={(*ui.mode).clone()} onchange={{
-                let mode = ui.mode.clone();
+            <select aria-label="Room access" value={(*ui.access).clone()} onchange={{
+                let access = ui.access.clone();
                 Callback::from(move |event: Event| {
                     let select: HtmlSelectElement = event.target_unchecked_into();
-                    mode.set(select.value());
+                    access.set(select.value());
                 })
             }}>
-                <option value="private">{"Private group"}</option>
-                <option value="community">{"Community voice"}</option>
-                <option value="stage">{"Stage"}</option>
-                <option value="radio">{"Radio"}</option>
+                <option value="private">{"Private"}</option>
+                <option value="public">{"Public"}</option>
             </select>
             <button type="submit" class="primary" disabled={ui.name.trim().is_empty()} onclick={create.clone()}>{"Create"}</button>
         </form>
@@ -218,7 +216,7 @@ pub(crate) fn render_room_chat(
             {render_room_header(props, ui, actions, room, is_owner)}
             {render_pending_acceptance(ui, actions, room)}
             {render_room_messages(props, ui, room)}
-            {render_room_voice(ui, room)}
+            {render_room_voice(ui, room, props.profile.hydra_identity_id.as_deref())}
             {render_room_composer(ui, actions, room)}
             {render_room_roster(props, ui, actions, room, is_owner)}
         </div>

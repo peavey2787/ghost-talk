@@ -1,5 +1,6 @@
+pub(super) mod video;
+
 use ghost_domain::call::CallEvent;
-use ghost_talk_wasm::BrowserVoiceSender;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
@@ -8,7 +9,9 @@ use crate::{
     model::{CallPhase, CallRecord, Chat},
 };
 
-use super::{active_call, apply_call_command, fail_runtime_call, p2p_route, CallRuntime};
+use super::{
+    active_call, apply_call_command, fail_runtime_call, p2p_route, CallRuntime, VideoControls,
+};
 
 pub(super) fn start_connected_media(runtime: CallRuntime, chat: Chat) {
     p2p_route::start_session(runtime.clone(), chat);
@@ -34,34 +37,40 @@ pub(super) fn start_connected_media(runtime: CallRuntime, chat: Chat) {
 }
 
 async fn start_capture(runtime: CallRuntime) -> Result<(), String> {
-    // Bind first: an `if let` scrutinee's `borrow()` would otherwise stay alive
-    // through the `else` branch and make its `borrow_mut()` panic.
-    let existing = runtime.sender_ref.borrow().clone();
-    let sender = if let Some(existing) = existing {
-        existing
-    } else {
-        let created = BrowserVoiceSender::new()?;
-        *runtime.sender_ref.borrow_mut() = Some(created.clone());
-        created
-    };
-    sender
+    runtime
+        .voice_sender()?
         .start(move |encoded| {
-            let Some(call) = active_call(&runtime) else {
-                return;
-            };
-            if call.phase != CallPhase::Connected {
-                return;
+            if let Some((call_id, chat_id)) = connected_call(&runtime) {
+                let packet = LiveVoicePacket::audio(call_id, &encoded);
+                if let Ok(body) = live_voice::encode_live(&packet) {
+                    runtime.realtime.enqueue(chat_id, body);
+                }
             }
-            let Some(chat_id) = call.chat_id.clone() else {
-                return;
-            };
-            let packet = LiveVoicePacket::audio(call.call_id.clone(), &encoded);
-            let Ok(body) = live_voice::encode_live(&packet) else {
-                return;
-            };
-            runtime.realtime.enqueue(chat_id, body);
         })
         .await
+}
+
+/// Camera controls for the connected call.
+pub(super) fn video_controls(runtime: &CallRuntime) -> VideoControls {
+    video::controls(runtime, send_video_frame)
+}
+
+fn send_video_frame(runtime: &CallRuntime, frame: Vec<u8>) {
+    if let Some((call_id, chat_id)) = connected_call(runtime) {
+        let packet = LiveVoicePacket::video(call_id, &frame);
+        if let Ok(body) = live_voice::encode_live(&packet) {
+            runtime.realtime.enqueue_video(chat_id, body);
+        }
+    }
+}
+
+/// The connected call's id and chat, when media may flow.
+fn connected_call(runtime: &CallRuntime) -> Option<(String, String)> {
+    let call = active_call(runtime)?;
+    if call.phase != CallPhase::Connected {
+        return None;
+    }
+    Some((call.call_id, call.chat_id?))
 }
 
 pub(super) fn play_audio(runtime: &CallRuntime, call: &CallRecord, packet: &LiveVoicePacket) {
@@ -73,6 +82,15 @@ pub(super) fn play_audio(runtime: &CallRuntime, call: &CallRecord, packet: &Live
     };
     if let Err(error) = runtime.receiver.borrow().receive_encoded(&bytes) {
         runtime.on_error.emit(error);
+    }
+}
+
+pub(super) fn show_video(call: &CallRecord, packet: &LiveVoicePacket) {
+    if call.phase != CallPhase::Connected {
+        return;
+    }
+    if let Some(frame) = packet.video_bytes() {
+        ghost_talk_wasm::show_video_frame(video::CALL_TILE, &frame);
     }
 }
 

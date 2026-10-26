@@ -2,8 +2,8 @@ use ghost_contacts::ContactService;
 use ghost_rooms::{RoomService, RoomTombstoneService};
 
 use crate::model::{
-    BroadcastDelta, ChatDelta, ContactDelta, Profile, ProfileDelta, ProfilePatch, RoomDelta,
-    RoomTombstoneDelta, Settings, WalletStateService,
+    ChatDelta, ContactDelta, Profile, ProfileDelta, ProfilePatch, RoomDelta, RoomTombstoneDelta,
+    Settings, WalletStateService,
 };
 
 /// Apply one typed command result to the latest authoritative profile.
@@ -50,7 +50,6 @@ fn apply_owner_delta(profile: &mut Profile, delta: ProfileDelta) {
 fn apply_extension_delta(profile: &mut Profile, delta: ProfileDelta) {
     match delta {
         ProfileDelta::KasiaContact(value) => profile.upsert_kasia_contact(value),
-        ProfileDelta::Broadcast(delta) => apply_broadcast_delta(profile, delta),
         other => apply_runtime_delta(profile, other),
     }
 }
@@ -64,15 +63,6 @@ fn apply_runtime_delta(profile: &mut Profile, delta: ProfileDelta) {
             WalletStateService::reconcile(&mut profile.wallet, delta.before.as_ref(), delta.after);
         }
         _ => unreachable!("ProfileDelta routed to the wrong persistence owner"),
-    }
-}
-
-fn apply_broadcast_delta(profile: &mut Profile, delta: BroadcastDelta) {
-    match delta {
-        BroadcastDelta::Creator(value) => profile.upsert_creator(value),
-        BroadcastDelta::Station(value) => profile.upsert_station(value),
-        BroadcastDelta::Show(value) => profile.upsert_show(value),
-        BroadcastDelta::Episode(value) => profile.upsert_episode(value),
     }
 }
 

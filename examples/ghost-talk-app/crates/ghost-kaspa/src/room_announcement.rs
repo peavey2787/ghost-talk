@@ -33,14 +33,13 @@ pub fn verify_room_announcement(announcement: &RoomAnnouncement) -> Result<(), S
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ghost_rooms::{RoomMode, ROOM_ANNOUNCEMENT_VERSION};
+    use ghost_rooms::ROOM_ANNOUNCEMENT_VERSION;
 
     fn announcement(owner: &str) -> RoomAnnouncement {
         RoomAnnouncement {
             version: ROOM_ANNOUNCEMENT_VERSION,
             room_id: "ab".repeat(16),
             name: "Lobby".into(),
-            mode: RoomMode::Stage,
             member_count: 3,
             owner_label: "Host".into(),
             owner_kaspa_address: owner.into(),

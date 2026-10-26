@@ -23,7 +23,7 @@ export function relayAddresses() {
 /** A separate browser context = a separate Ghost Talk installation. */
 export async function launchInstance(browser, name) {
   const context = await browser.newContext({
-    permissions: ['microphone'],
+    permissions: ['microphone', 'camera'],
     viewport: { width: 1280, height: 860 },
   });
   const page = await context.newPage();

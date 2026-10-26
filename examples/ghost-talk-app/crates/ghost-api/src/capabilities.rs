@@ -9,7 +9,6 @@ pub const GHOST_PROFILE_V2: &str = "ghost-profile-v2";
 pub const GHOST_AVATAR_V1: &str = "ghost-avatar-v1";
 pub const GHOST_ROOM_VOICE_V1: &str = "ghost-room-voice-v1";
 pub const GHOST_MEDIA_V1: &str = "ghost-media-v1";
-pub const GHOST_BROADCAST_V1: &str = "ghost-broadcast-v1";
 
 /// User-visible protocol mode for one-to-one conversations.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -91,7 +90,6 @@ pub fn default_capabilities() -> Vec<String> {
         GHOST_AVATAR_V1,
         GHOST_ROOM_VOICE_V1,
         GHOST_MEDIA_V1,
-        GHOST_BROADCAST_V1,
     ]
     .into_iter()
     .map(str::to_owned)

@@ -87,7 +87,7 @@ pub fn live_call_manager(props: &LiveCallManagerProps) -> Html {
           <ContextProvider<RoomVoiceContext> context={room_voice}>
           <ContextProvider<super::DirectTextContext> context={super::direct_text::context(&runtime)}>
             {for props.children.iter()}
-            {presentation::call_modal(current, &runtime.p2p_state, &actions)}
+            {presentation::call_modal(current, &runtime.p2p_state, &actions, &media::video_controls(&runtime))}
           </ContextProvider<super::DirectTextContext>>
           </ContextProvider<RoomVoiceContext>>
         </ContextProvider<CallContext>>
@@ -174,7 +174,11 @@ fn use_realtime_effect(props: &LiveCallManagerProps, runtime: CallRuntime) {
 
 pub(super) fn process_realtime_control(control: RealtimeControl, runtime: CallRuntime) -> bool {
     if let Some(packet) = live_voice::decode_room_voice(&control.body) {
-        super::room_voice::process(control, packet, runtime);
+        super::room_voice::process_voice(control, packet, runtime);
+        return true;
+    }
+    if let Some(packet) = live_voice::decode_room_video(&control.body) {
+        super::room_voice::process_video(control, packet, runtime);
         return true;
     }
     if let Some(body) = live_voice::decode_p2p_control(&control.body) {

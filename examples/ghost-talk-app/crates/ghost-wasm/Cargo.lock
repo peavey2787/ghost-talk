@@ -1023,7 +1023,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c54e03a951783e8b327515db3f2a2fd0e3bed362a96b066f341ce66ed49b4ead"
 dependencies = [
  "data-encoding",
- "syn 1.0.109",
+ "syn 3.0.9",
 ]
 
 [[package]]
@@ -1604,22 +1604,12 @@ dependencies = [
 name = "ghost-api"
 version = "0.1.0"
 dependencies = [
- "ghost-broadcast",
  "ghost-chat",
  "ghost-core",
  "ghost-domain",
  "ghost-hydra",
  "ghost-media",
  "serde",
-]
-
-[[package]]
-name = "ghost-broadcast"
-version = "0.1.0"
-dependencies = [
- "ghost-media",
- "serde",
- "zeroize",
 ]
 
 [[package]]
@@ -1744,11 +1734,9 @@ dependencies = [
 name = "ghost-media"
 version = "0.1.0"
 dependencies = [
- "base64 0.22.1",
  "blake3",
  "hex",
  "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -1806,7 +1794,6 @@ name = "ghost-runtime"
 version = "0.1.0"
 dependencies = [
  "ghost-api",
- "ghost-broadcast",
  "ghost-chat",
  "ghost-contacts",
  "ghost-domain",
@@ -1842,6 +1829,7 @@ dependencies = [
 name = "ghost-talk-wasm"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "ghost-talk",
  "gloo-timers 0.3.0",
  "js-sys",
@@ -1871,7 +1859,6 @@ dependencies = [
  "getrandom 0.3.4",
  "getrandom 0.4.3",
  "ghost-api",
- "ghost-broadcast",
  "ghost-chat",
  "ghost-contacts",
  "ghost-core",
@@ -1888,7 +1875,6 @@ dependencies = [
  "ghost-rooms",
  "ghost-runtime",
  "ghost-storage",
- "ghost-talk",
  "ghost-talk-wasm",
  "ghost-voice",
  "gloo-timers 0.3.0",
@@ -4013,7 +3999,7 @@ dependencies = [
 [[package]]
 name = "p2p-net"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net#9850636b468dc78ab75bf34287b4d44e74ca2fa3"
+source = "git+https://github.com/peavey2787/p2p-net#566424a7b314520e2bb1e61b10b6afb9e8189f3c"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -4057,7 +4043,7 @@ dependencies = [
 [[package]]
 name = "p2p-net-gossipsub"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net#9850636b468dc78ab75bf34287b4d44e74ca2fa3"
+source = "git+https://github.com/peavey2787/p2p-net#566424a7b314520e2bb1e61b10b6afb9e8189f3c"
 dependencies = [
  "async-channel",
  "asynchronous-codec",
@@ -4086,7 +4072,7 @@ dependencies = [
 [[package]]
 name = "p2p-net-relay"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net#9850636b468dc78ab75bf34287b4d44e74ca2fa3"
+source = "git+https://github.com/peavey2787/p2p-net#566424a7b314520e2bb1e61b10b6afb9e8189f3c"
 dependencies = [
  "asynchronous-codec",
  "bytes",
@@ -4109,7 +4095,7 @@ dependencies = [
 [[package]]
 name = "p2p-net-webrtc"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net#9850636b468dc78ab75bf34287b4d44e74ca2fa3"
+source = "git+https://github.com/peavey2787/p2p-net#566424a7b314520e2bb1e61b10b6afb9e8189f3c"
 dependencies = [
  "async-trait",
  "futures",
@@ -4134,7 +4120,7 @@ dependencies = [
 [[package]]
 name = "p2p-net-webrtc-websys"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net#9850636b468dc78ab75bf34287b4d44e74ca2fa3"
+source = "git+https://github.com/peavey2787/p2p-net#566424a7b314520e2bb1e61b10b6afb9e8189f3c"
 dependencies = [
  "async-trait",
  "bytes",

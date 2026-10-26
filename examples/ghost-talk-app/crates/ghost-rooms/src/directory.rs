@@ -75,7 +75,6 @@ impl RoomDirectory {
 
 fn same_listing(left: &RoomAnnouncement, right: &RoomAnnouncement) -> bool {
     left.name == right.name
-        && left.mode == right.mode
         && left.owner_label == right.owner_label
         && left.owner_kaspa_address == right.owner_kaspa_address
 }
@@ -88,13 +87,13 @@ fn is_fresh(announcement: &RoomAnnouncement, now_ms: u64) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{announcement::tests::room, RoomMode, SWARM_LISTING_LIFETIME_MS};
+    use crate::{announcement::tests::room, RoomAccess, SWARM_LISTING_LIFETIME_MS};
 
     const TTL: u64 = SWARM_LISTING_LIFETIME_MS;
 
     fn listing(id: u8, name: &str, issued_at_ms: u64) -> RoomAnnouncement {
         let mut announcement =
-            RoomAnnouncement::for_room(&room(RoomMode::CommunityVoice), issued_at_ms, TTL).unwrap();
+            RoomAnnouncement::for_room(&room(RoomAccess::Public), issued_at_ms, TTL).unwrap();
         announcement.room_id = format!("{id:02x}").repeat(16);
         announcement.name = name.into();
         announcement

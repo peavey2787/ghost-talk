@@ -12,4 +12,3 @@ ghost-chat = { path = "../ghost-chat" }
 ghost-hydra = { path = "../ghost-hydra" }
 ghost-domain = { path = "../ghost-domain" }
 ghost-media = { path = "../ghost-media" }
-ghost-broadcast = { path = "../ghost-broadcast" }

@@ -53,13 +53,13 @@ def check_identity_media_room_contracts() -> None:
     if "ghost-media" not in _manifest_dependencies("ghost-api"):
         fail("profile avatars must use ghost-media MediaReference instead of profile-local image types")
 
-    media_tokens = ("pub struct MediaReference", "pub struct GhostMediaManifest", "verify_content")
+    media_tokens = ("pub struct MediaReference", "pub fn content_hash", "pub fn verify_content")
     if any(token not in media for token in media_tokens):
-        fail("ghost-media must own content identity, manifests, and integrity verification")
+        fail("ghost-media must own content identity and integrity verification")
 
-    room_tokens = ("pub enum RoomAccess", "InviteOnly", "Unlisted", "Public", "pub fn access(&self)")
+    room_tokens = ("pub enum RoomAccess", "Private", "Public", "pub fn access(&self)", "pub fn is_participant")
     if any(token not in rooms for token in room_tokens):
-        fail("ghost-rooms must own explicit Private/InviteOnly/Unlisted/Public access policy")
+        fail("ghost-rooms must own explicit Private/Public access and participant policy")
 
 
 def check_ghost_kasia_indexer_boundary() -> None:
@@ -92,66 +92,20 @@ def check_ghost_kasia_indexer_boundary() -> None:
         if any(token not in source for token in required):
             fail("ghost-indexer must own verified, rebuildable Ghost L1 current-state indexing")
 
-def check_media_broadcast_interop_completion() -> None:
-    broadcast_dir = APP_CRATES / "ghost-broadcast"
-    kasia_dir = APP_CRATES / "ghost-kasia"
-    indexer_dir = APP_CRATES / "ghost-indexer"
-    if not broadcast_dir.is_dir() or not kasia_dir.is_dir() or not indexer_dir.is_dir():
-        fail("communications/media expansion requires ghost-broadcast, ghost-kasia, and ghost-indexer owners")
-        return
+def check_room_voice_and_interop_contracts() -> None:
+    for owner in ("ghost-kasia", "ghost-indexer"):
+        if not (APP_CRATES / owner).is_dir():
+            fail(f"interoperability requires the {owner} owner")
+            return
 
-    broadcast = _source_text("ghost-broadcast")
-    broadcast_manifest = _manifest_dependencies("ghost-broadcast")
-    required_broadcast = (
-        "pub struct BroadcastPipeline",
-        "pub struct FileRecordingSink",
-        "pub struct FfmpegRtmpSink",
-        "pub struct RtmpSecret",
-        "ZeroizeOnDrop",
-        "fn fan_out",
-    )
-    if any(token not in broadcast for token in required_broadcast):
-        fail("ghost-broadcast must own shared fan-out, recording, RTMP, and redacted secret handling")
-    if "ghost-media" not in broadcast_manifest:
-        fail("ghost-broadcast metadata must reuse ghost-media references/manifests")
-
-    rooms = _source_text("ghost-rooms")
-    if "pub struct ChannelRoom" in rooms:
-        fail("stage/radio must be Room policy presets, not a parallel ChannelRoom implementation")
-    for token in ("RoomMode::Stage", "RoomMode::Radio", "ChannelPolicy::PresentersOnly"):
-        if token not in rooms:
-            fail("ghost-rooms must express stage/radio behavior through authoritative Room policies")
-            break
-
-    room_voice = text(APP_CRATES / "ghost-wasm" / "src" / "components" / "call" / "room_voice.rs")
-    required_room_voice = ("BrowserVoiceSender", "room.can_speak", "push_broadcast", "encode_room_voice")
-    if any(token not in room_voice for token in required_room_voice):
-        fail("Room voice must reuse the existing Ghost voice sender and authoritative Room speaker policy")
+    call = APP_CRATES / "ghost-wasm" / "src" / "components" / "call"
+    room_voice = text(call / "room_voice.rs")
+    shared_sender = "fn voice_sender(&self) -> Result<BrowserVoiceSender, String>" in text(call.with_suffix(".rs"))
+    required_room_voice = ("runtime.voice_sender()", "room.is_participant", "encode_room_voice")
+    if not shared_sender or any(token not in room_voice for token in required_room_voice):
+        fail("Room voice must reuse the existing Ghost voice sender and authoritative Room membership")
     if "get_user_media" in room_voice or "MediaRecorder" in room_voice:
         fail("Room voice must not open a second browser capture/recording stack")
-
-    native_media = "\n".join(
-        text(path) for path in (APP_CRATES / "ghost-talk-native" / "src" / "media_commands").rglob("*.rs")
-    )
-    archive_tokens = (
-        "KaspaArchiveLocator",
-        "archive_cache::store_chunk",
-        "ArchiveProgress",
-        "mark_in_flight",
-        "max_cost_sompi",
-    )
-    if any(token not in native_media for token in archive_tokens):
-        fail("Kaspa media archival must provide verified caching, resumable progress, and a confirmed cost bound")
-
-    studio_root = APP_CRATES / "ghost-wasm" / "src" / "components" / "studio"
-    archive_ui = text(studio_root / "archive.rs")
-    catalog_ui = text(studio_root / "catalog.rs")
-    live_ui = text(studio_root / "live.rs")
-    studio_controller = text(APP_CRATES / "ghost-wasm" / "src" / "controllers" / "studio.rs")
-    if "struct ArchivePublishTask" not in archive_ui or "pub(crate) struct EpisodePublishRequest" not in studio_controller:
-        fail("Studio archive/episode publication must group async inputs instead of exceeding Clippy argument limits")
-    if "ui: &CatalogUi" not in catalog_ui or "let rtmp = if ui.rtmp_server.trim().is_empty()" not in live_ui:
-        fail("Studio catalog/live controls must retain Clippy-clean state grouping and explicit conditional rendering")
 
     capabilities = text(APP_CRATES / "ghost-api" / "src" / "capabilities.rs")
     capability_tokens = (
@@ -159,11 +113,10 @@ def check_media_broadcast_interop_completion() -> None:
         'pub const GHOST_AVATAR_V1: &str = "ghost-avatar-v1"',
         'pub const GHOST_ROOM_VOICE_V1: &str = "ghost-room-voice-v1"',
         'pub const GHOST_MEDIA_V1: &str = "ghost-media-v1"',
-        'pub const GHOST_BROADCAST_V1: &str = "ghost-broadcast-v1"',
         "established_ghost_never_falls_back_to_kasia",
     )
     if any(token not in capabilities for token in capability_tokens):
-        fail("capability discovery and executable no-silent-downgrade regression must cover the expansion")
+        fail("capability discovery and executable no-silent-downgrade regression must cover every capability")
 
     kasia = _source_text("ghost-kasia")
     kasia_tokens = (
@@ -180,11 +133,8 @@ def check_media_broadcast_interop_completion() -> None:
 
 def check_crap_safe_zero_coverage_boundaries() -> None:
     targets = (
-        (APP_CRATES / "ghost-rooms" / "src" / "model.rs", "allowed_by_policy"),
-        (APP_CRATES / "ghost-talk-native" / "src" / "broadcast_commands.rs", "validate_config"),
         (APP_CRATES / "ghost-talk-native" / "src" / "hydra_commands" / "session" / "projection.rs", "project_kktp_inner"),
         (APP_CRATES / "ghost-talk-native" / "src" / "mailbox_commands" / "handshake" / "handshake_send.rs", "validate_send_content"),
-        (APP_CRATES / "ghost-talk-native" / "src" / "media_commands" / "mod.rs", "validate_locator"),
     )
     for path, function in targets:
         bodies = {name: body for name, _start, _end, body in function_bodies(text(path))}

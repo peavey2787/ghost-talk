@@ -37,7 +37,7 @@ Every mutable domain has one write boundary:
 | chat threads/messages/reactions | `ChatService` | yes |
 | room state/messages/reactions | `RoomService` / `RoomTombstoneService` | yes |
 | Kasia contact routing | `KasiaContactMap` through typed profile deltas | yes |
-| creator/station/show/episode catalog | `BroadcastCatalog` through typed profile deltas | yes |
+
 | active calls | `ghost-domain::CallManager` | no |
 | wallet state in the WASM application | `WalletStateService` | yes |
 | mailbox frame/envelope lifecycle | `MailboxService` + mailbox pipeline using `PacketDisposition` | cursor/dedup only |
@@ -45,7 +45,6 @@ Every mutable domain has one write boundary:
 | native profile/storage lifetime | native storage root + HYDRA profile lease | process lifetime |
 
 The persisted `Profile` remains a storage aggregate for durable application data, but production subsystems do not use whole-profile replacement as an asynchronous conflict-resolution mechanism. `ProfilePatch` records domain deltas, and reconciliation applies only the changed domain to the latest durable profile. Contacts, chats, rooms, and wallet mutation are routed through their owners; the reconciliation module is the only deliberate durable-collection replacement boundary.
-
 
 ## Application interaction graph
 
@@ -71,11 +70,10 @@ KasiaPanel / selected-chat Advanced
   -> ghost-kasia + native Kaspa submission/indexer adapters
        -> typed KasiaContactMapping persistence delta
 
-Studio / Room voice
-  -> Studio/Room controllers
-  -> ghost-rooms + ghost-broadcast + ghost-media
-       -> typed creator/station/show/episode deltas
-       -> native broadcast/archive adapters
+Room voice and video
+  -> Room controllers
+  -> ghost-rooms + ghost-talk-wasm voice/video SDK
+       -> owner relay over authenticated realtime sessions
 
 MailboxService
   -> typed envelope result / ApplicationEvent
@@ -101,17 +99,13 @@ KNS and DotK remain address-resolution adapters, not identity owners. KNS preser
 
 ## Shared media ownership
 
-`ghost-media` owns content-addressed media primitives shared by profiles, broadcast recordings, podcasts, and permanent archives. `MediaReference` identifies content by cryptographic hash, size, content type, and location; `GhostMediaManifest` owns canonical signing bytes, chunk metadata, signature metadata, and strict validation. Local media and archive chunks are exposed only after size/hash verification. Profiles, creator/station artwork, recordings, and episodes therefore reference common media rather than maintaining consumer-specific stores.
+`ghost-media` owns content-addressed media references shared by profiles and avatars. `MediaReference` identifies content by cryptographic hash, size, content type, and location; local media is exposed only after hash verification.
 
-Permanent Kaspa archival extends the same owner with independently verifiable archive carriers and exact transaction locators. The native archive adapter persists per-media progress, records an in-flight intent before each submission, reconciles an uncertain submission from Kaspa history before any retry, enforces a user-confirmed current cost bound, stores only verified chunks in its persistent cache, and verifies the reconstructed root content hash.
+## Room access, voice, and video
 
-## Room access, voice, and broadcast policy
+`ghost-rooms` is authoritative for Room membership, access, roles, moderation, invitations, revisions, Room messages, and their reactions. `RoomAccess` is exactly `Private` (invitation only, never listed) or `Public` (announced to the swarm, optionally on Kaspa, and listed in Discover → Rooms). Every participant may send text, react, and join Room voice and video; there are no mode presets, presenter/audience roles, or per-Room text/audio policies.
 
-`ghost-rooms` is the only Room membership/policy owner. `RoomAccess` explicitly models `Private`, `InviteOnly`, `Unlisted`, and `Public`; room membership, bans, ownership, revisions, moderation, invitations, roles, text policy, and audio policy remain authoritative. Private groups, community voice, stages, and radio are policy presets over the same Room model; no separate channel/stage/radio room store exists.
-
-Room voice reuses the existing `ghost-talk` browser voice sender/receiver and encrypted realtime routes. `Off`, `Interactive`, and `PresentersOnly` are checked against Room roles before capture, relay, and playback. The same encoded `VoiceChunk` input can be forwarded to `ghost-broadcast::BroadcastPipeline`; broadcast sinks do not own another microphone or browser capture stack.
-
-`ghost-broadcast` owns live fan-out, sink failure isolation, RTMP/RTMPS adaptation, local recording finalization, and creator/station/show/episode metadata. RTMP stream keys are zeroized/redacted secret material. Local recordings reuse the encoded Ghost voice units and become content-addressed `MediaReference`s that podcast publication can reference directly.
+Room voice and video reuse the shared `BrowserVoiceSender`/receiver and `BrowserVideoSender` from the `ghost-talk-wasm` SDK over the encrypted realtime routes. A member sends to the Room owner, which relays to every other member over each member's authenticated session. Incoming media is checked against Room membership and the hop (sender or owner) before playback. Video is p2p-net only: frames are never carried on Kaspa, are dropped when p2p-net is not connected, and only the newest frame per peer waits in the realtime queue.
 
 ## Ghost/Kasia protocol and indexing boundary
 

@@ -2,7 +2,6 @@
 
 mod browser_host;
 mod invoke;
-pub(crate) use invoke::js_error;
 pub(crate) use invoke::{
     create_wallet, import_wallet, initialize_hydra, is_tauri, load_profile_state,
     save_profile_state, SESSION_RESTORE_BODY,
@@ -24,7 +23,6 @@ pub(crate) use restore::{
     send_delivery_ack, send_mailbox_control, send_realtime_carrier, send_recovery_offer,
     send_session_end,
 };
-mod broadcast;
 mod events;
 mod kasia;
 mod media;
@@ -35,10 +33,9 @@ pub(crate) use events::{
     start_wallet_monitor, update_wallet_monitor_public,
 };
 
-pub(crate) use broadcast::{push_broadcast, start_broadcast, stop_broadcast, BroadcastStopResult};
 pub(crate) use kasia::{
     kasia_history, received_kasia_handshakes, send_kasia_handshake, send_kasia_message,
 };
 
-pub(crate) use media::{archive_plan, archive_publish, import_local_media, sign_manifest};
+pub(crate) use media::import_local_media;
 pub(crate) use swarm::{room_announcement, set_spend_mode, AnnouncementCommand};

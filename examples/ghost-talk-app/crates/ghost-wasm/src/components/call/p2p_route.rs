@@ -27,6 +27,6 @@ fn trace(runtime: &CallRuntime, event: &'static str, details: String) {
     }
 }
 
-fn route_is_automatic(runtime: &CallRuntime) -> bool {
+pub(super) fn route_is_automatic(runtime: &CallRuntime) -> bool {
     runtime.profile_ref.borrow().settings.runs_swarm()
 }

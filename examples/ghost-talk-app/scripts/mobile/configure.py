@@ -18,8 +18,8 @@ ANDROID_PERMISSIONS = (
     "android.permission.CAMERA",
 )
 IOS_PRIVACY = {
-    "NSMicrophoneUsageDescription": "Ghost Talk uses the microphone for voice messages and calls you start.",
-    "NSCameraUsageDescription": "Ghost Talk uses the camera when you choose to capture media.",
+    "NSMicrophoneUsageDescription": "Ghost Talk uses the microphone for voice messages, calls and Room voice.",
+    "NSCameraUsageDescription": "Ghost Talk uses the camera for video when you turn it on in a call or Room.",
     "NSPhotoLibraryUsageDescription": "Ghost Talk accesses photos only when you choose media to share or use as a backup carrier.",
     "NSLocalNetworkUsageDescription": "Ghost Talk uses the local network for peer discovery and direct communication you enable.",
 }

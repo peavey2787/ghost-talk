@@ -1,5 +1,4 @@
 mod backup;
-mod broadcast;
 mod discover;
 mod hydra;
 mod interop;
@@ -35,9 +34,6 @@ async fn invoke_runtime(command: &str, args: &Value) -> Result<Value, String> {
     }
     if command.starts_with("profile_backup_") {
         return backup::invoke(command, args).await;
-    }
-    if command.starts_with("broadcast_") {
-        return broadcast::invoke(command, args);
     }
     if command == "publish_ghost_descriptor" {
         return discover::invoke(command, args).await;

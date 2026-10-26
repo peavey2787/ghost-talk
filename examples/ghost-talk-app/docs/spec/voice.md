@@ -1,11 +1,11 @@
-# Voice composition in the reference application
+# Voice and video composition in the reference application
 
 Ghost Talk's reusable media engine is the `crates/ghost-talk` SDK. This document describes only how the reference application composes that SDK with its communication stack.
 
 The application exposes two realtime carrier policies:
 
 - **Auto** — after the authenticated KKTP/HYDRA session is active, use p2p-net when an authenticated p2p binding is connected and fall back to Kaspa when p2p is unavailable or a p2p send fails.
-- **Kaspa only** — send call control and voice through the authenticated Kaspa carrier without attempting p2p delivery.
+- **Kaspa only** — send call control and voice (never video) through the authenticated Kaspa carrier without attempting p2p delivery.
 
 Physical transport selection is not a Ghost Talk concern. WebRTC-direct, WebSocket, Circuit Relay, TCP, QUIC, and any browser/native transport mechanics are internal to p2p-net/libp2p.
 
@@ -22,6 +22,14 @@ Transport fragmentation and transport ordering are never exposed as Ghost Talk m
 Request / Accept / Decline / Hang-up are application concepts owned by the Rust reference application. The audio variant contains opaque base64 of exactly one complete encoded `VoiceChunk`; it does not duplicate SDK sequence/codec fields.
 
 The caller does not enter connected state until the matching Accept arrives. The callee does not send microphone audio before accepting. Under Auto, later complete chunks can fall back from p2p-net to Kaspa without changing SDK media state.
+
+## Video
+
+`BrowserVideoSender` (in `ghost-talk-wasm`) owns camera acquisition and emits one JPEG frame (at most 320×240, quality 0.6) every 125 ms; `ghost-voice` bounds a frame to 96 KiB and requires a JPEG start-of-image marker before display. A 1:1 call carries frames as `kind: "video"` call packets; a Room carries them as `GHOST-ROOM-VIDEO-V1` packets relayed by the Room owner like Room voice.
+
+Video is p2p-net only. The Start video control is enabled only on an Auto route with a connected p2p-net binding. Frames are never carried on Kaspa: the realtime queue keeps only the newest frame per chat, skips sealing (and never spends a HYDRA ratchet step) when p2p-net is not connected, gives each frame a 400 ms send budget, and drops a lost frame silently because the next one replaces it. Received frames paint `img[data-ghost-video]` tiles; a tile with no frame for 2 s is cleared.
+
+Frame video is a deliberately simple, encrypted, relay-friendly design; it is not bandwidth-equivalent to a WebRTC codec stream, and Room video multiplies upload at the Room owner.
 
 ## Security and carrier behavior
 

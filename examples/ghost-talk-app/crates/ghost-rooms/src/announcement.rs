@@ -1,16 +1,16 @@
 //! Signed public-room advertisement, carried on the p2p-net room directory
 //! topic (short-lived, re-announced while the owner is online) or in a Kaspa
-//! transaction payload (long-lived, costs a fee). Only `RoomAccess::Public` rooms can produce one: private groups,
-//! invite-only and unlisted rooms are never announced. The owner signs the
+//! transaction payload (long-lived, costs a fee). Only `RoomAccess::Public`
+//! rooms can produce one; private rooms are never announced. The owner signs the
 //! canonical body with the Kaspa P2PK key of `owner_kaspa_address`; the host
 //! verifies that signature before a listing reaches the directory.
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Room, RoomAccess, RoomMode};
+use crate::{Room, RoomAccess};
 
 pub const GTRA_MAGIC: [u8; 4] = *b"GTRA";
-pub const ROOM_ANNOUNCEMENT_VERSION: u16 = 1;
+pub const ROOM_ANNOUNCEMENT_VERSION: u16 = 2;
 /// Kaspa domain-signature domain of a room announcement.
 pub const ROOM_ANNOUNCEMENT_SIGNATURE_DOMAIN: &[u8] = b"GhostTalk/RoomAnnouncement/v1";
 const MAX_ENCODED_BYTES: usize = 4 * 1024;
@@ -28,7 +28,6 @@ pub struct RoomAnnouncement {
     pub version: u16,
     pub room_id: String,
     pub name: String,
-    pub mode: RoomMode,
     pub member_count: u32,
     pub owner_label: String,
     pub owner_kaspa_address: String,
@@ -47,7 +46,6 @@ struct Signing<'a> {
     version: u16,
     room_id: &'a str,
     name: &'a str,
-    mode: RoomMode,
     member_count: u32,
     owner_label: &'a str,
     owner_kaspa_address: &'a str,
@@ -57,21 +55,16 @@ struct Signing<'a> {
 }
 
 impl RoomAnnouncement {
-    /// An unsigned announcement for a public room with a canonical public
-    /// mode, listed for `lifetime_ms`; `None` for every other room.
+    /// An unsigned announcement for an accepted public room, listed for
+    /// `lifetime_ms`; `None` for every other room.
     pub fn for_room(room: &Room, issued_at_ms: u64, lifetime_ms: u64) -> Option<Self> {
         if room.access() != RoomAccess::Public || room.pending_acceptance() {
             return None;
         }
-        let mode = room
-            .policies()
-            .mode()
-            .filter(|mode| *mode != RoomMode::PrivateGroup)?;
         let announcement = Self {
             version: ROOM_ANNOUNCEMENT_VERSION,
             room_id: room.id.clone(),
             name: room.name.trim().to_owned(),
-            mode,
             member_count: u32::try_from(room.members().len()).unwrap_or(u32::MAX),
             owner_label: room.owner_label.trim().to_owned(),
             owner_kaspa_address: room.owner_kaspa_address.clone(),
@@ -90,7 +83,6 @@ impl RoomAnnouncement {
             version: self.version,
             room_id: &self.room_id,
             name: &self.name,
-            mode: self.mode,
             member_count: self.member_count,
             owner_label: &self.owner_label,
             owner_kaspa_address: &self.owner_kaspa_address,
@@ -122,7 +114,6 @@ impl RoomAnnouncement {
 
     fn validate(&self) -> Result<(), String> {
         let valid = self.version == ROOM_ANNOUNCEMENT_VERSION
-            && self.mode != RoomMode::PrivateGroup
             && is_lower_hex(&self.room_id, 32)
             && is_lower_hex(&self.owner_hydra_id, 64)
             && bounded_text(&self.name, MAX_NAME_CHARS)
@@ -158,20 +149,16 @@ fn is_lower_hex(value: &str, length: usize) -> bool {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::{NewRoom, RoomPolicies, RoomService};
+    use crate::{NewRoom, RoomService};
 
-    pub(crate) fn room(mode: RoomMode) -> Room {
-        let policies = RoomPolicies::for_mode(mode);
+    pub(crate) fn room(access: RoomAccess) -> Room {
         RoomService::new_room(NewRoom {
             id: "ab".repeat(16),
             name: " Lobby ".into(),
             owner_hydra_id: "cd".repeat(32),
             owner_kaspa_address: "kaspa:qowner".into(),
             owner_label: "Host".into(),
-            access: policies.access,
-            text_policy: policies.text,
-            audio_policy: policies.audio,
-            broadcast_enabled: policies.broadcast,
+            access,
             pending_acceptance: false,
             revision: 0,
             members: Vec::new(),
@@ -180,20 +167,18 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn only_public_preset_rooms_are_announced() {
-        assert!(RoomAnnouncement::for_room(&room(RoomMode::PrivateGroup), 1, 10).is_none());
-        for mode in [RoomMode::CommunityVoice, RoomMode::Stage, RoomMode::Radio] {
-            let announcement = RoomAnnouncement::for_room(&room(mode), 7, 10).unwrap();
-            assert_eq!(announcement.mode, mode);
-            assert_eq!(announcement.name, "Lobby");
-            assert_eq!(announcement.issued_at_ms, 7);
-            assert_eq!(announcement.expires_at_ms, 17);
-        }
+    fn only_public_rooms_are_announced() {
+        assert!(RoomAnnouncement::for_room(&room(RoomAccess::Private), 1, 10).is_none());
+        let announcement = RoomAnnouncement::for_room(&room(RoomAccess::Public), 7, 10).unwrap();
+        assert_eq!(announcement.name, "Lobby");
+        assert_eq!(announcement.issued_at_ms, 7);
+        assert_eq!(announcement.expires_at_ms, 17);
     }
 
     #[test]
     fn announcement_round_trips_and_signing_excludes_the_signature() {
-        let mut announcement = RoomAnnouncement::for_room(&room(RoomMode::Stage), 9, 10).unwrap();
+        let mut announcement =
+            RoomAnnouncement::for_room(&room(RoomAccess::Public), 9, 10).unwrap();
         let unsigned = announcement.signing_bytes().unwrap();
         announcement.signature_hex = "ee".repeat(64);
         assert_eq!(announcement.signing_bytes().unwrap(), unsigned);
@@ -203,12 +188,16 @@ pub(crate) mod tests {
 
     #[test]
     fn malformed_announcements_fail_closed() {
-        let mut announcement = RoomAnnouncement::for_room(&room(RoomMode::Radio), 1, 10).unwrap();
+        let mut announcement =
+            RoomAnnouncement::for_room(&room(RoomAccess::Public), 1, 10).unwrap();
         assert!(RoomAnnouncement::decode(b"{}").is_err());
         assert!(RoomAnnouncement::decode(&[b'G'; MAX_ENCODED_BYTES + 1]).is_err());
-        announcement.mode = RoomMode::PrivateGroup;
-        assert!(announcement.encode().is_err());
-        announcement.mode = RoomMode::Radio;
+        announcement.version = 1;
+        assert!(
+            announcement.encode().is_err(),
+            "older listings are rejected"
+        );
+        announcement.version = ROOM_ANNOUNCEMENT_VERSION;
         announcement.room_id = "not-hex".into();
         assert!(announcement.signing_bytes().is_err());
         announcement.room_id = "ab".repeat(16);

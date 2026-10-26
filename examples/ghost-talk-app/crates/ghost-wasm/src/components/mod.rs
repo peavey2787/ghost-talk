@@ -9,11 +9,9 @@ pub mod contacts;
 pub mod discover;
 mod form;
 pub mod kasia;
-pub mod media_upload;
 pub mod recipient_input;
 pub mod rooms;
 mod shell;
-pub mod studio;
 
 pub use account::{identity, settings, wallet};
-pub use shell::{debug, sidebar, simple};
+pub use shell::{debug, sidebar};

@@ -5,7 +5,7 @@ use crate::controllers::call::RealtimeSender;
 use crate::model::{Profile, ProfilePatch, WalletProjection};
 use ghost_domain::call::CallManager;
 use ghost_p2p::{P2pNetTransport, P2pRouteState};
-use ghost_talk_wasm::{BrowserVoiceReceiver, BrowserVoiceSender};
+use ghost_talk_wasm::{BrowserVideoSender, BrowserVoiceReceiver, BrowserVoiceSender};
 use std::{cell::RefCell, rc::Rc};
 use yew::prelude::*;
 
@@ -25,11 +25,10 @@ pub(super) fn use_call_runtime(
     reset_call_owner(&call_manager, &call_owner, &props.profile.id);
     let sender_ref = use_mut_ref(|| None::<BrowserVoiceSender>);
     let receiver = use_mut_ref(BrowserVoiceReceiver::new);
+    let video = use_mut_ref(BrowserVideoSender::new).borrow().clone();
     let room_voice_id = use_state(|| None::<String>);
     let room_voice_ref = use_mut_ref(|| None::<String>);
     let room_sequence = use_mut_ref(|| 0u64);
-    let room_broadcast_session = use_state(|| None::<String>);
-    let room_broadcast_ref = use_mut_ref(|| None::<String>);
     let p2p = use_mut_ref(P2pNetTransport::default);
     let p2p_state = use_state(|| P2pRouteState::Unavailable);
     let p2p_subscriptions = use_mut_ref(std::collections::HashSet::<String>::new);
@@ -42,11 +41,10 @@ pub(super) fn use_call_runtime(
         render_epoch,
         sender_ref,
         receiver,
+        video,
         room_voice_id,
         room_voice_ref,
         room_sequence,
-        room_broadcast_session,
-        room_broadcast_ref,
         p2p,
         p2p_state,
         p2p_subscriptions,

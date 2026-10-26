@@ -1,6 +1,5 @@
 #![forbid(unsafe_code)]
 
-mod broadcast_commands;
 mod diagnostics;
 mod media_commands;
 mod persistence;
@@ -21,7 +20,6 @@ mod validation;
 mod wallet_commands;
 
 use backup_commands::{profile_backup_publish, profile_backup_restore};
-use broadcast_commands::{broadcast_push, broadcast_start, broadcast_stop, BroadcastRuntimeState};
 use debug_log::{debug_log_clear, debug_log_record, debug_log_set_enabled, debug_log_snapshot};
 use hydra_commands::{
     hydra_debug_state, hydra_ensure, hydra_initialize_from_wallet, hydra_leave_peer,
@@ -45,10 +43,7 @@ use mailbox_commands::{
     mailbox_send_session_end, mailbox_set_spend_mode, wallet_monitor_start, wallet_monitor_stop,
     wallet_monitor_update_public, MonitorState,
 };
-use media_commands::{
-    kaspa_archive_plan, kaspa_archive_publish, media_fetch_verified, media_import_local,
-    media_manifest_sign,
-};
+use media_commands::{media_fetch_verified, media_import_local};
 use peer_commands::{
     lookup_ghost_profile, publish_ghost_descriptor, resolve_ghost_peer, room_announcement_publish,
     room_announcement_sign, NameResolverState, PublicDirectoryState,
@@ -94,9 +89,6 @@ macro_rules! native_handler {
     () => {
         tauri::generate_handler![
             app_info,
-            kaspa_archive_plan,
-            kaspa_archive_publish,
-            media_manifest_sign,
             room_announcement_sign,
             room_announcement_publish,
             media_import_local,
@@ -106,9 +98,6 @@ macro_rules! native_handler {
             kasia_send_message,
             kasia_history,
             kasia_received_handshakes,
-            broadcast_start,
-            broadcast_push,
-            broadcast_stop,
             debug_log_set_enabled,
             debug_log_record,
             debug_log_snapshot,
@@ -180,7 +169,6 @@ pub fn run() {
             });
             Ok(())
         })
-        .manage(BroadcastRuntimeState::default())
         .manage(MonitorState::default())
         .manage(KaspaGatewayState::default())
         .manage(PublicDirectoryState::default())

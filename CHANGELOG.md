@@ -1,5 +1,11 @@
 # Changelog
 
+## r240
+
+- Ghost Talk is a chat app first: removed Studio, Games (including Pong), Radio, Community Voice, and Stage together with their crates (`ghost-broadcast`, `ghost-games`, `ghost-pong`, `ghost-kaspa-voice`), RTMP/recording sinks, creator/station/podcast catalog, and the permanent Kaspa media archive. Rooms are exactly Private (invitation only) or Public (listed in Discover); every participant may send text, react, and join Room voice and video. Room announcements move to v2 without a mode field, and the Discover room-type filter is gone.
+- Added camera video to 1:1 calls and Rooms. `ghost-talk-wasm` gains `BrowserVideoSender` (JPEG frames, 320×240, 8 fps) and `show_video_frame`; `ghost-voice` gains bounded, JPEG-validated video packets for calls and Rooms. Video travels over p2p-net only, never Kaspa; only the newest frame per chat waits in the realtime queue, so text and voice are never stuck behind video. Mobile shells request camera permission.
+- The architecture gates now enforce the reduced crate set and that Room voice and video reuse the shared voice/video senders and Room membership.
+
 ## r239
 
 - Completed the p2p-net migration so it actually builds and runs. r238 never resolved: libp2p 0.57's browser transports require the `wasm-bindgen 0.2.108` family while Rusty-Kaspa and the old HYDRA pin required `0.2.100`. Ghost Talk now imports its dependencies cleanly into one module: Kaspa access moved entirely to Kaspa Portal 1.1.0 (live BlockAdded, wallet UtxosChanged/VirtualDaaScoreChanged streams, dot.k UTXO/covenant verification and P2SH derivation), Rusty-Kaspa crates were removed, HYDRA moved to the aligned `d90b387` pin, KasKold 2.0 is imported from upstream (`peavey2787/KasKold` branch `v2`) instead of a vendored copy (its libraries now declare a compatible wasm-bindgen range, and Ghost Talk passes the new `approve(now_unix)` signing-policy clock), and `ghost-p2p` drives p2p-net's `WasmNode` in process. Architecture guards forbid Rusty-Kaspa dependencies, any vendored `external/` tree, a second p2p module, and split p2p-net or KasKold revisions.

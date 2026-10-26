@@ -39,12 +39,12 @@ from architecture.dependency_checks import (
 from architecture.mobile_checks import check_mobile_application_contracts
 from architecture.p2p_checks import check_p2p_net_boundary
 from architecture.parity_checks import (
-    check_cross_platform_command_parity, check_broadcast_transport_parity, check_shared_parity_owners,
+    check_cross_platform_command_parity, check_shared_parity_owners,
     check_browser_host_compile_contracts,
 )
 from architecture.expansion_checks import (
     check_identity_media_room_contracts, check_ghost_kasia_indexer_boundary,
-    check_media_broadcast_interop_completion, check_message_reaction_contracts,
+    check_room_voice_and_interop_contracts, check_message_reaction_contracts,
     check_kaskold_compatibility_and_ui_contracts, check_crap_safe_zero_coverage_boundaries,
 )
 
@@ -90,13 +90,12 @@ def main() -> int:
     check_native_frontend_contract()
     check_identity_media_room_contracts()
     check_ghost_kasia_indexer_boundary()
-    check_media_broadcast_interop_completion()
+    check_room_voice_and_interop_contracts()
     check_message_reaction_contracts()
     check_kaskold_compatibility_and_ui_contracts()
     check_crap_safe_zero_coverage_boundaries()
     check_mobile_application_contracts()
     check_cross_platform_command_parity()
-    check_broadcast_transport_parity()
     check_shared_parity_owners()
     check_browser_host_compile_contracts()
     check_release_engineering()
@@ -125,7 +124,7 @@ def main() -> int:
     print("PASS: runtime storage and HYDRA profile leases have single owners")
     print("PASS: DotK resolution pins the deployment and requires local derivation + live covenant proof")
     print("PASS: unified names, shared media, RoomAccess, and Ghost/Kasia indexer boundaries are enforced")
-    print("PASS: Room voice convergence, live fan-out, RTMP/recording, archive-resume, and no-downgrade contracts are enforced")
+    print("PASS: Room voice convergence and no-downgrade capability contracts are enforced")
     print("PASS: authenticated direct/Room message reaction ownership and concurrency contracts are enforced")
     print("PASS: KasKold 2.0 import/backup/signing and chat/Rooms UI compatibility contracts are enforced")
     print("PASS: known zero-coverage CRAP boundaries remain CC<=4")

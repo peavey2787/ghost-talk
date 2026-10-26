@@ -1,6 +1,5 @@
 #![forbid(unsafe_code)]
 
-mod archive;
 mod contact_preview;
 mod descriptor;
 mod history;
@@ -8,11 +7,6 @@ mod live;
 mod node_session;
 mod room_announcement;
 pub mod wallet;
-pub use archive::{
-    archive_plan, archive_remaining_cost, estimate_archive_chunk_fee, validate_archive_size,
-    ArchiveInFlightChunk, ArchivePlanRequest, ArchiveProgress, ArchivePublishRequest,
-    ARCHIVE_CHUNK_BYTES, ARCHIVE_PROGRESS_VERSION, MAX_ARCHIVE_BYTES,
-};
 pub use contact_preview::preview_contact_request;
 pub use descriptor::{build_private_descriptor, build_signed_descriptor};
 pub use history::project_wallet_history_entry;

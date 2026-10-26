@@ -24,7 +24,7 @@ pub(crate) fn prepare_reaction(
         .hydra_identity_id
         .clone()
         .ok_or_else(|| "HYDRA identity is unavailable.".to_string())?;
-    if !room.can_react(&sender_hydra_id) {
+    if !room.is_participant(&sender_hydra_id) {
         return Err("You are not an active member of this Room.".into());
     }
     let current = message.reaction_for(&sender_hydra_id);

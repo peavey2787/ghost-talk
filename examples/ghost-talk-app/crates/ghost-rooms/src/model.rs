@@ -1,15 +1,15 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{ChannelPolicy, Role};
+use crate::Role;
 use ghost_domain::reaction::{actor_reaction, set_actor_reaction, MessageReaction, ReactionKind};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum RoomAccess {
+    /// Joined by invitation only and never listed.
     #[default]
     Private,
-    InviteOnly,
-    Unlisted,
+    /// Announced to the swarm (and optionally Kaspa) and listed in Discover.
     Public,
 }
 
@@ -90,12 +90,6 @@ pub struct Room {
     #[serde(default)]
     pub(crate) access: RoomAccess,
     #[serde(default)]
-    pub(crate) text_policy: ChannelPolicy,
-    #[serde(default)]
-    pub(crate) audio_policy: ChannelPolicy,
-    #[serde(default)]
-    pub(crate) broadcast_enabled: bool,
-    #[serde(default)]
     pub(crate) pending_acceptance: bool,
     #[serde(default)]
     pub(crate) revision: u64,
@@ -114,53 +108,13 @@ impl Room {
     pub fn pending_acceptance(&self) -> bool {
         self.pending_acceptance
     }
-    pub fn text_policy(&self) -> ChannelPolicy {
-        self.text_policy
-    }
-    pub fn audio_policy(&self) -> ChannelPolicy {
-        self.audio_policy
-    }
-    pub fn broadcast_enabled(&self) -> bool {
-        self.broadcast_enabled
-    }
-    pub fn policies(&self) -> crate::RoomPolicies {
-        crate::RoomPolicies {
-            access: self.access,
-            text: self.text_policy,
-            audio: self.audio_policy,
-            broadcast: self.broadcast_enabled,
-        }
-    }
-    pub fn can_speak(&self, hydra_id: &str) -> bool {
-        self.allowed_by_policy(hydra_id, self.audio_policy)
-    }
-    pub fn can_broadcast(&self, hydra_id: &str) -> bool {
-        self.broadcast_enabled && self.can_speak(hydra_id)
-    }
-    pub fn can_send_text(&self, hydra_id: &str) -> bool {
-        self.allowed_by_policy(hydra_id, self.text_policy)
-    }
-    pub fn can_react(&self, hydra_id: &str) -> bool {
+    /// The owner and every member may text, talk, and react.
+    pub fn is_participant(&self, hydra_id: &str) -> bool {
         hydra_id == self.owner_hydra_id
             || self
                 .members
                 .iter()
                 .any(|member| member.hydra_handle.as_deref() == Some(hydra_id))
-    }
-    fn allowed_by_policy(&self, hydra_id: &str, policy: ChannelPolicy) -> bool {
-        let owner = hydra_id == self.owner_hydra_id;
-        let role = self
-            .members
-            .iter()
-            .find(|member| member.hydra_handle.as_deref() == Some(hydra_id))
-            .map(|member| member.role);
-        match policy {
-            ChannelPolicy::Off => false,
-            ChannelPolicy::Interactive => owner || role.is_some(),
-            ChannelPolicy::PresentersOnly => {
-                owner || matches!(role, Some(Role::Moderator | Role::Presenter))
-            }
-        }
     }
     pub fn revision(&self) -> u64 {
         self.revision
@@ -187,9 +141,6 @@ impl Room {
         self.owner_kaspa_address = state.owner_kaspa_address;
         self.owner_label = state.owner_label;
         self.access = state.access;
-        self.text_policy = state.text_policy;
-        self.audio_policy = state.audio_policy;
-        self.broadcast_enabled = state.broadcast_enabled;
         self.revision = state.revision;
         self.members = state.members;
         self.bans = state.bans;
@@ -241,12 +192,6 @@ pub enum RoomWire {
         owner_label: String,
         #[serde(default)]
         access: RoomAccess,
-        #[serde(default)]
-        text_policy: ChannelPolicy,
-        #[serde(default)]
-        audio_policy: ChannelPolicy,
-        #[serde(default)]
-        broadcast_enabled: bool,
         revision: u64,
         members: Vec<RoomMember>,
         bans: Vec<RoomBan>,

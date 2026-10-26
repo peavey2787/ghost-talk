@@ -57,23 +57,6 @@ pub(crate) fn load_bytes(app: &AppHandle, media_id: &str) -> Result<Vec<u8>, Str
     Ok(bytes)
 }
 
-pub(crate) fn load_if_present(app: &AppHandle, media_id: &str) -> Result<Option<Vec<u8>>, String> {
-    let path = local_path(app, media_id)?;
-    if !path.exists() {
-        return Ok(None);
-    }
-    load_bytes(app, media_id).map(Some)
-}
-
-pub(crate) fn remove_if_present(app: &AppHandle, media_id: &str) -> Result<(), String> {
-    let path = local_path(app, media_id)?;
-    if path.exists() {
-        fs::remove_file(path)
-            .map_err(|error| format!("remove corrupt local media cache: {error}"))?;
-    }
-    Ok(())
-}
-
 #[tauri::command]
 pub fn media_import_local(
     app: AppHandle,

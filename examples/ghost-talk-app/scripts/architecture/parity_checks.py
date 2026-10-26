@@ -52,40 +52,6 @@ def check_cross_platform_command_parity() -> None:
         fail("Android/iOS must share the same native Tauri command host as desktop")
 
 
-def check_broadcast_transport_parity() -> None:
-    api = text(APP_CRATES / "ghost-api" / "src" / "media.rs")
-    shared = text(APP_CRATES / "ghost-broadcast" / "src" / "relay.rs")
-    controller = text(APP_CRATES / "ghost-wasm" / "src" / "controllers" / "broadcast.rs")
-    relay = text(APP_CRATES / "ghost-wasm" / "src" / "controllers" / "broadcast" / "relay.rs")
-    studio = text(APP_CRATES / "ghost-wasm" / "src" / "components" / "studio" / "live.rs")
-    native = text(APP_CRATES / "ghost-talk-native" / "src" / "broadcast_commands.rs")
-    browser = text(APP_CRATES / "ghost-wasm" / "src" / "native" / "browser_host" / "broadcast.rs")
-    wasm_manifest = text(APP_CRATES / "ghost-wasm" / "Cargo.toml")
-    relay_spec = text(APP_CRATES.parent / "docs" / "spec" / "broadcast-relay.md")
-
-    required = (
-        (api, "pub relay_url: Option<String>"),
-        (shared, "pub enum RelayControl"),
-        (shared, "pub fn encode_relay_frame"),
-        (shared, "pub fn validate_relay_url"),
-        (controller, "relay::start"),
-        (controller, "relay::push"),
-        (controller, "relay::stop"),
-        (relay, "WebSocket::new"),
-        (relay, "MAX_PENDING_BYTES"),
-        (studio, "Broadcast relay"),
-        (studio, "Web/mobile live RTMP uses the configured relay"),
-        (native, "Android/iOS live RTMP requires a Ghost Talk broadcast relay"),
-        (browser, "Standalone Web live RTMP requires a Ghost Talk broadcast relay"),
-        (wasm_manifest, '"WebSocket"'),
-        (relay_spec, "ASCII GTRF"),
-        (relay_spec, "completed local recording can be explicitly archived to Kaspa"),
-    )
-    for source, token in required:
-        if token not in source:
-            fail(f"cross-platform broadcast parity is missing `{token}`")
-
-
 def check_shared_parity_owners() -> None:
     native_kaskold = text(APP_CRATES / "ghost-talk-native" / "src" / "kaskold_compat.rs")
     web_kaskold = text(APP_CRATES / "ghost-wasm" / "src" / "native" / "browser_host" / "interop" / "kaskold.rs")
@@ -100,20 +66,13 @@ def check_shared_parity_owners() -> None:
     if history_token not in shared_kaspa or any(history_token not in source for source in (native_history, web_history)):
         fail("native/Web wallet history classification must remain shared in ghost-kaspa")
 
-    shared_archive = text(APP_CRATES / "ghost-kaspa" / "src" / "archive.rs")
-    native_archive = text(APP_CRATES / "ghost-talk-native" / "src" / "media_commands" / "archive" / "mod.rs")
-    web_archive = text(APP_CRATES / "ghost-wasm" / "src" / "native" / "browser_host" / "runtime" / "archive" / "mod.rs")
-    if any(token not in shared_archive for token in ("archive_plan", "archive_remaining_cost", "ArchiveProgress")):
-        fail("native/Web Kaspa archive planning/progress must remain shared")
-    if "ghost_kaspa::archive_plan" not in native_archive or "ghost_kaspa::archive_plan" not in web_archive:
-        fail("native/Web Kaspa archive hosts must delegate planning to ghost-kaspa")
-
     native_address = text(APP_CRATES / "ghost-talk-native" / "src" / "wallet_commands" / "address.rs")
     native_publish = text(APP_CRATES / "ghost-talk-native" / "src" / "peer_commands" / "publish.rs")
+    native_announce = text(APP_CRATES / "ghost-talk-native" / "src" / "peer_commands" / "room_announcement.rs")
     if "pub(crate) fn stable_address" not in native_address:
         fail("native wallet commands must own stable receive-address selection")
-    if "crate::wallet_commands::stable_address" not in native_publish or "crate::wallet_commands::stable_address" not in native_archive:
-        fail("native profile publishing and Kaspa archive planning must share stable receive-address selection")
+    if any("crate::wallet_commands::stable_address" not in source for source in (native_publish, native_announce)):
+        fail("native profile publishing and room announcements must share stable receive-address selection")
     if "fn stable_address" in native_publish:
         fail("native peer publishing must not duplicate stable receive-address selection")
 
@@ -125,12 +84,9 @@ def check_browser_host_compile_contracts() -> None:
     credentials = text(browser / "support" / "credentials.rs")
     mailbox = text(browser / "runtime" / "mailbox.rs") + text(browser / "runtime" / "mailbox" / "request.rs")
     media = text(browser / "media.rs")
-    native = text(APP_CRATES / "ghost-wasm" / "src" / "native.rs")
-    relay = text(APP_CRATES / "ghost-wasm" / "src" / "controllers" / "broadcast" / "relay.rs")
 
-    for token in ("BroadcastStartRequest", "derivation_presets"):
-        if token not in api:
-            fail(f"ghost-api root must re-export browser-host dependency `{token}`")
+    if "derivation_presets" not in api:
+        fail("ghost-api root must re-export browser-host dependency `derivation_presets`")
     for token in ("fn decrypt_context", "fn decrypt_handshake", "debug::record"):
         if token not in kasia:
             fail(f"standalone Web Kasia adapter is missing compile contract `{token}`")
@@ -140,11 +96,8 @@ def check_browser_host_compile_contracts() -> None:
         fail("standalone Web remembered unlock must derive a namespaced credential key")
     if "Result<MailboxSendResult, String>" not in mailbox or "to_value(send_contact_request(args).await?)" not in mailbox:
         fail("browser mailbox contact-request dispatch must stay typed internally and serialize at the command boundary")
-    for token in ("fetch_remote(url.as_str())", "fetch(&reference, locator.as_str())"):
-        if token not in media:
-            fail(f"browser media dispatch must borrow owned location strings explicitly: `{token}`")
-    if "pub(crate) use invoke::js_error;" not in native or "crate::native::js_error" not in relay:
-        fail("broadcast relay must consume the narrow native JavaScript-error facade")
+    if "fetch_remote(url.as_str())" not in media:
+        fail("browser media dispatch must borrow owned location strings explicitly: `fetch_remote(url.as_str())`")
 
     restricted = "pub(in crate::native::browser_host)"
     required_helpers = {

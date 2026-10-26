@@ -48,7 +48,7 @@ async fn relay_member_reaction(
     actor_hydra_id: String,
     reaction: Option<ReactionKind>,
 ) -> Result<Profile, String> {
-    if actor_hydra_id != from || !room.can_react(from) {
+    if actor_hydra_id != from || !room.is_participant(from) {
         return Ok(profile);
     }
     let changed = ghost_rooms::RoomService::set_message_reaction(
@@ -88,7 +88,7 @@ fn accept_owner_reaction(
     actor_hydra_id: &str,
     reaction: Option<ReactionKind>,
 ) {
-    if from != room.owner_hydra_id || !room.can_react(actor_hydra_id) {
+    if from != room.owner_hydra_id || !room.is_participant(actor_hydra_id) {
         return;
     }
     let _ = ghost_rooms::RoomService::set_message_reaction(
@@ -109,7 +109,7 @@ fn target_exists(room: &Room, target_message_id: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::target_exists;
-    use ghost_rooms::{ChannelPolicy, NewRoom, RoomAccess, RoomService};
+    use ghost_rooms::{NewRoom, RoomAccess, RoomService};
 
     #[wasm_bindgen_test::wasm_bindgen_test]
     fn reaction_target_must_exist() {
@@ -120,9 +120,6 @@ mod tests {
             owner_kaspa_address: "kaspa:owner".into(),
             owner_label: "Owner".into(),
             access: RoomAccess::Private,
-            text_policy: ChannelPolicy::Interactive,
-            audio_policy: ChannelPolicy::Interactive,
-            broadcast_enabled: false,
             pending_acceptance: false,
             revision: 0,
             members: Vec::new(),

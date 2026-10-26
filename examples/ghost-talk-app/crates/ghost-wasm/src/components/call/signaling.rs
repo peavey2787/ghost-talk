@@ -210,10 +210,17 @@ pub(super) fn process_live_packet(
 
 fn apply_live_packet(runtime: &CallRuntime, call: &CallRecord, packet: &LiveVoicePacket) {
     match packet.kind.as_str() {
+        "audio" => media::play_audio(runtime, call, packet),
+        "video" => media::show_video(call, packet),
+        kind => apply_call_control(runtime, call, kind),
+    }
+}
+
+fn apply_call_control(runtime: &CallRuntime, call: &CallRecord, kind: &str) {
+    match kind {
         "accept" => accept_transport(runtime, call),
         "decline" => fail_runtime_call(runtime, &call.call_id, "Call declined.".into()),
         "hangup" => end_runtime_call(runtime, &call.call_id, CallEvent::Hangup),
-        "audio" => media::play_audio(runtime, call, packet),
         _ => {}
     }
 }

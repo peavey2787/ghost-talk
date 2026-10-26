@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.98"
 license = "GPL-2.0-or-later"
-description = "Rust/WASM bindings for the Ghost Talk voice SDK"
+description = "Rust/WASM bindings for the Ghost Talk voice SDK and browser camera video"
 publish = false
 
 [lib]
@@ -14,11 +14,24 @@ crate-type = ["cdylib", "rlib"]
 ghost-talk = { path = "../ghost-talk" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+base64 = "0.22"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
 gloo-timers = { version = "0.3", features = ["futures"] }
-web-sys = { version = "0.3", features = ["Window", "Navigator"] }
+web-sys = { version = "0.3", features = [
+    "Window",
+    "Navigator",
+    "Document",
+    "Element",
+    "NodeList",
+    "Performance",
+    "MediaStream",
+    "HtmlMediaElement",
+    "HtmlVideoElement",
+    "HtmlCanvasElement",
+    "CanvasRenderingContext2d",
+] }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "0.3"

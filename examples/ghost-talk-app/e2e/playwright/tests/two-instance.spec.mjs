@@ -70,7 +70,7 @@ test('1. direct chat: text both ways and a voice call', async () => {
   await app.expectNoCall(bob.page);
 });
 
-test('2. Auto: Kaspa signals the p2p-net route, then voice and text use p2p-net', async () => {
+test('2. Auto: Kaspa signals the p2p-net route, then voice, video and text use p2p-net', async () => {
   // The signed transport announcement travels over Kaspa (the signal layer).
   await app.expectDebug(bob.page, 'announce-received');
   await app.expectDebug(alice.page, 'announce-ack-received');
@@ -79,6 +79,10 @@ test('2. Auto: Kaspa signals the p2p-net route, then voice and text use p2p-net'
   await expect.poll(() => app.routeLabel(alice.page), { timeout: 120_000 }).toBe('P2P connected');
   await app.expectDebug(bob.page, 'realtime-received', 'carrier=p2p-net', 'kind=call-voice');
   await app.expectDebug(alice.page, 'realtime-received', 'carrier=p2p-net', 'kind=call-voice');
+  for (const instance of [alice, bob]) await app.startVideo(instance.page);
+  for (const instance of [alice, bob]) await app.expectPeerVideo(instance.page);
+  await app.expectDebug(bob.page, 'realtime-received', 'carrier=p2p-net', 'kind=call-video');
+  await app.expectDebug(alice.page, 'realtime-received', 'carrier=p2p-net', 'kind=call-video');
   await app.hangUp(alice.page);
   await app.hangUp(bob.page);
   await app.expectNoCall(alice.page);
@@ -93,7 +97,7 @@ test('2. Auto: Kaspa signals the p2p-net route, then voice and text use p2p-net'
   for (const instance of [alice, bob]) await app.setTextRoute(instance.page, 'Kaspa');
 });
 
-test('3. Kaspa only: text and voice travel entirely over Kaspa', async () => {
+test('3. Kaspa only: text and voice travel entirely over Kaspa; video is never offered', async () => {
   for (const instance of [alice, bob]) await app.setRoute(instance.page, 'Kaspa only');
   await app.openChatWith(bob.page, alice.address);
   await app.sendChat(bob.page, `kaspa only ${stamp}`);
@@ -104,6 +108,11 @@ test('3. Kaspa only: text and voice travel entirely over Kaspa', async () => {
   expect(await app.routeLabel(bob.page)).toBe('Kaspa fallback');
   await app.expectDebug(alice.page, 'realtime-received', 'carrier=kaspa', 'kind=call-voice');
   await app.expectDebug(bob.page, 'realtime-sent', 'carrier=kaspa', 'kind=call-voice');
+  // Video is p2p-net only: with Kaspa as the route the camera stays off.
+  for (const instance of [alice, bob]) {
+    await expect(instance.page.getByRole('button', { name: 'Start video' })).toBeDisabled();
+  }
+  for (const instance of [alice, bob]) await app.expectNoDebug(instance.page, 'kind=call-video');
   await app.hangUp(bob.page);
   await app.hangUp(alice.page);
   await app.expectNoCall(alice.page);
@@ -111,11 +120,11 @@ test('3. Kaspa only: text and voice travel entirely over Kaspa', async () => {
   for (const instance of [alice, bob]) await app.setRoute(instance.page, 'Auto');
 });
 
-test('4. Rooms: text both ways and Room voice', async () => {
+test('4. Rooms: text both ways, Room voice and Room video', async () => {
   const roomName = `E2E Room ${stamp}`;
   await app.nav(alice.page, 'Rooms');
   await alice.page.getByPlaceholder('Room name').fill(roomName);
-  await alice.page.locator('.room-create-form select').selectOption('community');
+  await alice.page.locator('.room-create-form select').selectOption('public');
   await alice.page.locator('.room-create-form button.primary').click();
   await alice.page.getByPlaceholder('Contact, KNS, dot.k, or Kaspa address').fill(bob.address);
   await alice.page.getByRole('button', { name: 'Invite', exact: true }).click();
@@ -154,6 +163,13 @@ test('4. Rooms: text both ways and Room voice', async () => {
   await alice.page.waitForTimeout(VOICE_SECONDS);
   await app.expectDebug(bob.page, 'realtime-received', 'kind=room-voice');
   await app.expectDebug(alice.page, 'realtime-received', 'kind=room-voice');
+  for (const instance of [alice, bob]) {
+    await app.nav(instance.page, 'Rooms');
+    await app.startVideo(instance.page);
+  }
+  for (const instance of [alice, bob]) await app.expectPeerVideo(instance.page);
+  await app.expectDebug(bob.page, 'realtime-received', 'carrier=p2p-net', 'kind=room-video');
+  await app.expectDebug(alice.page, 'realtime-received', 'carrier=p2p-net', 'kind=room-video');
   for (const instance of [alice, bob]) {
     await app.nav(instance.page, 'Rooms');
     await instance.page.getByRole('button', { name: 'Leave voice' }).click();

@@ -15,11 +15,7 @@ LEAF_CRATES = {
     "ghost-realtime",      # reusable Ghost/Kinesis realtime protocol/router surface
     "ghost-p2p",           # in-process p2p-net browser transport for the realtime contract
     "ghost-wasm",          # standalone browser application workspace
-    "ghost-direct-chat",   # focused composition/demo binaries
-    "ghost-kaspa-voice",
-    "ghost-pong",
-    "ghost-presenter-room",
-    "ghost-radio-room",
+    "ghost-direct-chat",   # focused composition/demo binary
 }
 
 

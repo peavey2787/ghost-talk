@@ -111,6 +111,18 @@ export async function hangUp(page) {
   await page.getByRole('button', { name: 'Close' }).click({ timeout: 10_000 }).catch(() => {});
 }
 
+/** Turn the camera on from the call window or the Room voice card. */
+export async function startVideo(page) {
+  await page.getByRole('button', { name: 'Start video' }).click();
+  await expect(page.getByRole('button', { name: 'Stop video' })).toBeVisible({ timeout: 30_000 });
+}
+
+/** A peer video tile has painted at least one received JPEG frame. */
+export async function expectPeerVideo(page) {
+  const tile = page.locator('img.video-tile:not(.local)[src^="data:image/jpeg"]');
+  await expect(tile.first()).toBeVisible({ timeout: LONG });
+}
+
 /** Both sides must leave the call: no call window may remain open. */
 export async function expectNoCall(page) {
   await expect(page.locator('.voice-call-modal')).toHaveCount(0, { timeout: LONG });
@@ -151,15 +163,25 @@ export async function markDebug(page) {
   debugBaselines.set(page, new Set(await debugLog(page)));
 }
 
+async function debugSinceMark(page) {
+  const baseline = debugBaselines.get(page) || new Set();
+  return (await debugLog(page)).filter((entry) => !baseline.has(entry));
+}
+
 /** Wait until one entry logged since the last mark contains every fragment. */
 export async function expectDebug(page, ...fragments) {
   await expect
     .poll(async () => {
-      const baseline = debugBaselines.get(page) || new Set();
-      const entries = (await debugLog(page)).filter((entry) => !baseline.has(entry));
+      const entries = await debugSinceMark(page);
       return entries.some((entry) => fragments.every((fragment) => entry.includes(fragment)));
     }, { timeout: LONG, intervals: [3000] })
     .toBe(true);
+}
+
+/** No entry logged since the last mark contains the fragment. */
+export async function expectNoDebug(page, fragment) {
+  const entries = await debugSinceMark(page);
+  expect(entries.filter((entry) => entry.includes(fragment))).toEqual([]);
 }
 
 /** Sidebar messaging mode: "Kaspa" or "No-spend". */
@@ -177,11 +199,11 @@ export async function reopen(page) {
   await expect(page.locator('.sidebar nav')).toBeVisible({ timeout: LONG });
 }
 
-/** Create a public Community room owned by this instance. */
+/** Create a public room owned by this instance. */
 export async function createPublicRoom(page, name) {
   await nav(page, 'Rooms');
   await page.getByPlaceholder('Room name').fill(name);
-  await page.locator('.room-create-form select').selectOption('community');
+  await page.locator('.room-create-form select').selectOption('public');
   await page.locator('.room-create-form button.primary').click();
 }
 

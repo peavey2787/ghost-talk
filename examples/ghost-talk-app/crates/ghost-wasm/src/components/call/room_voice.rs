@@ -1,28 +1,41 @@
-use ghost_talk_wasm::BrowserVoiceSender;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
 use crate::{
-    live_voice,
-    model::{Profile, RealtimeControl},
+    live_voice::{self, RoomMediaPacket},
+    model::{Profile, RealtimeControl, Room},
 };
 
-use super::{active_call, CallRuntime, RoomVoiceContext};
-use crate::controllers::call::RealtimeSender;
+use super::{active_call, video, CallRuntime, RoomVoiceContext};
+
+mod fanout;
+use fanout::{fan, relay_if_owner, valid_hop};
+
+/// The two media a Room participant can send. Voice may fall back to Kaspa
+/// under the Room's route; video is p2p-net only.
+#[derive(Clone, Copy)]
+enum Medium {
+    Voice,
+    Video,
+}
+
+impl Medium {
+    fn encode(self, packet: &RoomMediaPacket) -> Result<String, String> {
+        match self {
+            Medium::Voice => live_voice::encode_room_voice(packet),
+            Medium::Video => live_voice::encode_room_video(packet),
+        }
+    }
+}
 
 pub(super) fn context(runtime: CallRuntime) -> RoomVoiceContext {
     let join_runtime = runtime.clone();
     let leave_runtime = runtime.clone();
-    let session_runtime = runtime.clone();
     RoomVoiceContext {
         active_room_id: (*runtime.room_voice_id).clone(),
         join: Callback::from(move |room_id| join(join_runtime.clone(), room_id)),
         leave: Callback::from(move |_| leave(&leave_runtime)),
-        broadcast_session: (*runtime.room_broadcast_session).clone(),
-        set_broadcast_session: Callback::from(move |session: Option<String>| {
-            *session_runtime.room_broadcast_ref.borrow_mut() = session.clone();
-            session_runtime.room_broadcast_session.set(session);
-        }),
+        video: video::controls(&runtime, send_video_frame),
     }
 }
 
@@ -43,17 +56,11 @@ fn join(runtime: CallRuntime, room_id: String) {
         runtime.on_error.emit("Room is no longer available.".into());
         return;
     };
-    if room.audio_policy() == ghost_rooms::ChannelPolicy::Off {
-        runtime
-            .on_error
-            .emit("Voice is disabled for this Room.".into());
-        return;
-    }
     set_active_room(&runtime, Some(room_id));
     let Some(local_hydra) = profile.hydra_identity_id.clone() else {
         return;
     };
-    if !room.can_speak(&local_hydra) {
+    if !room.is_participant(&local_hydra) {
         return;
     }
     let capture_runtime = runtime.clone();
@@ -66,21 +73,17 @@ fn join(runtime: CallRuntime, room_id: String) {
 }
 
 async fn start_capture(runtime: CallRuntime) -> Result<(), String> {
-    // Bind first so the `borrow()` is released before any `borrow_mut()` below.
-    let existing = runtime.sender_ref.borrow().clone();
-    let sender = if let Some(existing) = existing {
-        existing
-    } else {
-        let created = BrowserVoiceSender::new()?;
-        *runtime.sender_ref.borrow_mut() = Some(created.clone());
-        created
-    };
+    let sender = runtime.voice_sender()?;
     sender
-        .start(move |encoded| send_encoded(runtime.clone(), encoded))
+        .start(move |encoded| send_media(&runtime, Medium::Voice, &encoded))
         .await
 }
 
-fn send_encoded(runtime: CallRuntime, encoded: Vec<u8>) {
+fn send_video_frame(runtime: &CallRuntime, frame: Vec<u8>) {
+    send_media(runtime, Medium::Video, &frame);
+}
+
+fn send_media(runtime: &CallRuntime, medium: Medium, bytes: &[u8]) {
     let Some(room_id) = runtime.room_voice_ref.borrow().clone() else {
         return;
     };
@@ -91,18 +94,15 @@ fn send_encoded(runtime: CallRuntime, encoded: Vec<u8>) {
     let Some(room) = profile.rooms.iter().find(|room| room.id == room_id) else {
         return;
     };
-    if !room.can_speak(&local_hydra) {
+    if !room.is_participant(&local_hydra) {
         return;
     }
-    let sequence = next_sequence(&runtime);
+    let sequence = next_sequence(runtime);
     let timestamp_ms = crate::now_ms().max(0.0) as u64;
-    let packet =
-        live_voice::RoomVoicePacket::audio(room_id, local_hydra, sequence, timestamp_ms, &encoded);
-    let Ok(body) = live_voice::encode_room_voice(&packet) else {
-        return;
-    };
-    fan(&profile, room, None, &body, &runtime.realtime);
-    push_broadcast(runtime, sequence, timestamp_ms, encoded);
+    let packet = RoomMediaPacket::new(room_id, local_hydra, sequence, timestamp_ms, bytes);
+    if let Ok(body) = medium.encode(&packet) {
+        fan(&profile, room, None, medium, &body, &runtime.realtime);
+    }
 }
 
 fn next_sequence(runtime: &CallRuntime) -> u64 {
@@ -111,59 +111,61 @@ fn next_sequence(runtime: &CallRuntime) -> u64 {
     *value
 }
 
-fn push_broadcast(runtime: CallRuntime, sequence: u64, timestamp_ms: u64, encoded: Vec<u8>) {
-    let Some(session_id) = runtime.room_broadcast_ref.borrow().clone() else {
-        return;
-    };
-    spawn_local(async move {
-        let _ =
-            crate::controllers::broadcast::push(&session_id, sequence, timestamp_ms, encoded).await;
-    });
+pub(super) fn process_voice(
+    control: RealtimeControl,
+    packet: RoomMediaPacket,
+    runtime: CallRuntime,
+) {
+    process(control, packet, Medium::Voice, runtime);
 }
 
-pub(super) fn process(
+pub(super) fn process_video(
     control: RealtimeControl,
-    packet: live_voice::RoomVoicePacket,
+    packet: RoomMediaPacket,
+    runtime: CallRuntime,
+) {
+    process(control, packet, Medium::Video, runtime);
+}
+
+fn process(
+    control: RealtimeControl,
+    packet: RoomMediaPacket,
+    medium: Medium,
     runtime: CallRuntime,
 ) {
     let profile = runtime.profile_ref.borrow().clone();
-    let Some(room) = profile
-        .rooms
-        .iter()
-        .find(|room| room.id == packet.room_id)
-        .cloned()
-    else {
+    let Some(room) = admitted_room(&profile, &control, &packet, &runtime) else {
         return;
     };
-    if runtime.room_voice_ref.borrow().as_deref() != Some(packet.room_id.as_str()) {
-        return;
+    match medium {
+        Medium::Voice => play(&runtime, &packet),
+        Medium::Video => show(&packet),
     }
-    if !room.can_speak(&packet.speaker_hydra_id) {
-        return;
-    }
-    if !valid_hop(&profile, &control, &room, &packet.speaker_hydra_id) {
-        return;
-    }
-    play(&runtime, &packet);
-    relay_if_owner(&profile, &room, &packet, &runtime.realtime);
+    relay_if_owner(&profile, &room, &packet, medium, &runtime.realtime);
 }
 
-fn valid_hop(
+/// The Room a packet belongs to, when this device is in that Room's voice,
+/// the sender is a participant and the hop is the sender or the owner.
+fn admitted_room(
     profile: &Profile,
     control: &RealtimeControl,
-    room: &crate::model::Room,
-    speaker: &str,
-) -> bool {
-    let peer = profile
-        .chats
+    packet: &RoomMediaPacket,
+    runtime: &CallRuntime,
+) -> Option<Room> {
+    if runtime.room_voice_ref.borrow().as_deref() != Some(packet.room_id.as_str()) {
+        return None;
+    }
+    let room = profile
+        .rooms
         .iter()
-        .find(|chat| chat.id == control.chat_id)
-        .and_then(|chat| chat.peer_hydra_handle());
-    peer == Some(speaker) || peer == Some(room.owner_hydra_id.as_str())
+        .find(|room| room.id == packet.room_id)?;
+    (room.is_participant(&packet.speaker_hydra_id)
+        && valid_hop(profile, control, room, &packet.speaker_hydra_id))
+    .then(|| room.clone())
 }
 
-fn play(runtime: &CallRuntime, packet: &live_voice::RoomVoicePacket) {
-    let Some(bytes) = packet.audio_bytes() else {
+fn play(runtime: &CallRuntime, packet: &RoomMediaPacket) {
+    let Some(bytes) = packet.bytes() else {
         return;
     };
     if let Err(error) = runtime.receiver.borrow().receive_encoded(&bytes) {
@@ -171,70 +173,17 @@ fn play(runtime: &CallRuntime, packet: &live_voice::RoomVoicePacket) {
     }
 }
 
-fn relay_if_owner(
-    profile: &Profile,
-    room: &crate::model::Room,
-    packet: &live_voice::RoomVoicePacket,
-    realtime: &RealtimeSender,
-) {
-    if profile.hydra_identity_id.as_deref() != Some(room.owner_hydra_id.as_str())
-        || packet.speaker_hydra_id == room.owner_hydra_id
-    {
-        return;
+fn show(packet: &RoomMediaPacket) {
+    if let Some(frame) = packet.bytes() {
+        let tile = video::room_tile(&packet.room_id, &packet.speaker_hydra_id);
+        ghost_talk_wasm::show_video_frame(&tile, &frame);
     }
-    if let Ok(body) = live_voice::encode_room_voice(packet) {
-        fan(
-            profile,
-            room,
-            Some(&packet.speaker_hydra_id),
-            &body,
-            realtime,
-        );
-    }
-}
-
-fn fan(
-    profile: &Profile,
-    room: &crate::model::Room,
-    exclude_hydra: Option<&str>,
-    body: &str,
-    realtime: &RealtimeSender,
-) {
-    if profile.hydra_identity_id.as_deref() == Some(room.owner_hydra_id.as_str()) {
-        for member in room.members() {
-            if member.hydra_handle.as_deref() == exclude_hydra {
-                continue;
-            }
-            if let Some(chat_id) = realtime_chat_for(profile, member.hydra_handle.as_deref()) {
-                realtime.enqueue(chat_id, body.to_owned());
-            }
-        }
-    } else if let Some(chat_id) = realtime_chat_for(profile, Some(&room.owner_hydra_id)) {
-        realtime.enqueue(chat_id, body.to_owned());
-    }
-}
-
-fn realtime_chat_for(profile: &Profile, hydra: Option<&str>) -> Option<String> {
-    let hydra = hydra?;
-    profile
-        .chats
-        .iter()
-        .find(|chat| {
-            chat.peer_hydra_handle() == Some(hydra)
-                && chat.bootstrap_complete()
-                && !chat.left()
-                && !chat.peer_left()
-        })
-        .map(|chat| chat.id.clone())
 }
 
 fn leave(runtime: &CallRuntime) {
     set_active_room(runtime, None);
     if active_call(runtime).is_none() {
-        if let Some(sender) = runtime.sender_ref.borrow_mut().take() {
-            sender.close();
-        }
-        runtime.receiver.borrow().reset();
+        super::close_media(runtime);
     }
 }
 

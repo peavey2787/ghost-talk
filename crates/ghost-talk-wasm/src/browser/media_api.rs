@@ -4,19 +4,38 @@ use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 
 pub async fn microphone_stream() -> Result<JsValue, String> {
+    let audio = Object::new();
+    for name in ["echoCancellation", "noiseSuppression", "autoGainControl"] {
+        Reflect::set(&audio, &JsValue::from_str(name), &JsValue::TRUE).map_err(js_error)?;
+    }
+    user_media(&audio, &JsValue::FALSE).await
+}
+
+/// A camera-only stream sized for compact call video.
+pub(super) async fn camera_stream(width: u32, height: u32) -> Result<JsValue, String> {
+    let video = Object::new();
+    for (name, value) in [("width", width), ("height", height)] {
+        Reflect::set(&video, &JsValue::from_str(name), &JsValue::from(value)).map_err(js_error)?;
+    }
+    Reflect::set(
+        &video,
+        &JsValue::from_str("facingMode"),
+        &JsValue::from_str("user"),
+    )
+    .map_err(js_error)?;
+    user_media(&JsValue::FALSE, &video).await
+}
+
+async fn user_media(audio: &JsValue, video: &JsValue) -> Result<JsValue, String> {
     let window = web_sys::window().ok_or_else(|| "window is unavailable".to_string())?;
     let navigator: JsValue = window.navigator().into();
     let media_devices = get(&navigator, "mediaDevices")?;
     let get_user_media = get(&media_devices, "getUserMedia")?
         .dyn_into::<Function>()
         .map_err(|_| "navigator.mediaDevices.getUserMedia is unavailable".to_string())?;
-    let audio = Object::new();
-    for name in ["echoCancellation", "noiseSuppression", "autoGainControl"] {
-        Reflect::set(&audio, &JsValue::from_str(name), &JsValue::TRUE).map_err(js_error)?;
-    }
     let constraints = Object::new();
-    Reflect::set(&constraints, &JsValue::from_str("audio"), &audio).map_err(js_error)?;
-    Reflect::set(&constraints, &JsValue::from_str("video"), &JsValue::FALSE).map_err(js_error)?;
+    Reflect::set(&constraints, &JsValue::from_str("audio"), audio).map_err(js_error)?;
+    Reflect::set(&constraints, &JsValue::from_str("video"), video).map_err(js_error)?;
     let value = get_user_media
         .call1(&media_devices, &constraints)
         .map_err(js_error)?;

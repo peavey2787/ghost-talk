@@ -3,8 +3,8 @@ use crate::model::{Profile, ProfilePatch};
 use ghost_domain::settings::SpendMode;
 use yew::prelude::*;
 
-pub const TABS: [&str; 8] = [
-    "Chats", "Contacts", "Discover", "Rooms", "Studio", "Games", "Kaspa", "Settings",
+pub const TABS: [&str; 6] = [
+    "Chats", "Contacts", "Discover", "Rooms", "Kaspa", "Settings",
 ];
 
 #[derive(Properties, PartialEq)]
@@ -200,8 +200,6 @@ fn tab_icon(tab: &str) -> &'static str {
         ("Contacts", "◎"),
         ("Discover", "✦"),
         ("Rooms", "▦"),
-        ("Studio", "◍"),
-        ("Games", "◇"),
         ("Kaspa", "K"),
         ("Settings", "⚙"),
     ];

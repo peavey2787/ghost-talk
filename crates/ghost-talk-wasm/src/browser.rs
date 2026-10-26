@@ -7,6 +7,8 @@ pub use media_api::{
 };
 mod receiver;
 mod sender;
+mod video;
 
 pub use receiver::BrowserVoiceReceiver;
 pub use sender::BrowserVoiceSender;
+pub use video::{clear_video_frames, show_video_frame, BrowserVideoSender};

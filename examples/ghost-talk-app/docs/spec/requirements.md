@@ -12,7 +12,7 @@
 ## Messaging/social
 - HYDRA-encrypted 1:1 messages, replies, reactions and receipts.
 - Kaspa durable/offline carrier with idempotent reassembly.
-- HYDRA secure groups and Broadcast presenter/moderator/audience role semantics.
+- HYDRA secure groups; Rooms are Private (invitation only) or Public (listed), with owner/member roles.
 - Local `***` privacy mask is distinct from wire steganography `S`.
 - HYDRA stego profiles: Off, Deterministic, Fast Unicode, Fast Hybrid, Arithmetic (model profiles capability-gated).
 - Contacts: Close Friend, Friend, Acquaintance, Anonymous; blocked is a separate local authority bit.
@@ -35,19 +35,16 @@
 - Kaspa connection status is driven by live node subscription lifecycle, not periodic health polling. Wallet balance/UTXO state is maintained from address-scoped `NotifyUtxosChanged` notifications and virtual DAA state from `NotifyVirtualDaaScoreChanged`. `BlockAdded` is reserved for Ghost carrier/message scanning and MUST NOT trigger wallet-state queries. After one subscription-start/reconnect UTXO baseline (required because `UtxosChanged` is a delta stream), no live wallet-state query or timer-based refresh is permitted. Wallet transaction history merges transaction IDs/addresses observed from the live UTXO stream with a separate explicit “Gather old transactions” REST operation across the deterministic receive/change lookahead; that explicit operation also runs once on wallet restore/import and must not impose an arbitrary transaction-count cap.
 - Never hard-code "three days" as a protocol rule.
 
-## Voice/radio
-- 1:1 and group Opus voice.
+## Voice/video
+- 1:1 and Room Opus voice and camera video.
 - User-facing realtime transport choices are exactly Auto and Kaspa only.
 - Auto uses p2p-net after the authenticated KKTP/HYDRA session is active and falls back to Kaspa; physical transport mechanics are never separate user preferences.
 - Kaspa carries authenticated transport announcements and acknowledgements that bind the p2p PeerId and bounded dial addresses to the exact active SID/HYDRA peer. Browser/native transport negotiation stays inside p2p-net/libp2p.
 - Kaspa only never establishes a direct peer connection.
 - Direct application bytes use the carrier-neutral GTR1 envelope and the same authenticated HYDRA/KKTP identity on both p2p-net and Kaspa routes; carrier fallback must reuse the exact sealed bytes.
-- Radio is independent room audio policy; text/audio may independently be Off, Interactive, Presenters Only.
-- Audience cannot forge presenter media; Kaspa voice has per-call spend ceiling.
+- Video travels over p2p-net only and is never carried on Kaspa.
+- Room media is accepted only from Room participants, directly or relayed by the Room owner; Kaspa voice has a per-call spend ceiling.
 
-## Games
-- Friend challenge/accept/reject; Pong v1; deterministic state/hash.
-- Direct realtime route preferred; Kaspa carries authenticated setup/checkpoints/results.
 
 ## Platforms
 Windows; Debian/Devuan; Android; iOS 15+ on Xcode 16.2/Sonoma; WASM/PWA. Ubuntu is not a release-test target.

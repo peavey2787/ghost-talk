@@ -43,8 +43,7 @@ pub(crate) use runtime::{
 mod profile_patch;
 #[cfg(target_arch = "wasm32")]
 pub(crate) use profile_patch::{
-    BroadcastDelta, ChatDelta, ContactDelta, ProfileDelta, ProfilePatch, RoomDelta,
-    RoomTombstoneDelta,
+    ChatDelta, ContactDelta, ProfileDelta, ProfilePatch, RoomDelta, RoomTombstoneDelta,
 };
 
 #[cfg(target_arch = "wasm32")]

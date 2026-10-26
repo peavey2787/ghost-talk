@@ -26,7 +26,7 @@ pub struct RoomsProps {
 pub(crate) struct RoomsUi {
     pub(crate) selected_id: UseStateHandle<String>,
     pub(crate) name: UseStateHandle<String>,
-    pub(crate) mode: UseStateHandle<String>,
+    pub(crate) access: UseStateHandle<String>,
     pub(crate) invite: UseStateHandle<String>,
     pub(crate) draft: UseStateHandle<String>,
     pub(crate) status: UseStateHandle<String>,
@@ -65,7 +65,7 @@ pub fn rooms_view(props: &RoomsProps) -> Html {
                 .unwrap_or_default()
         }),
         name: use_state(String::new),
-        mode: use_state(|| "private".to_string()),
+        access: use_state(|| "private".to_string()),
         invite: use_state(String::new),
         draft: use_state(String::new),
         status: use_state(String::new),
@@ -194,12 +194,11 @@ pub(crate) fn selected_room(
         .cloned()
 }
 
-fn room_mode(value: &str) -> ghost_rooms::RoomMode {
-    match value {
-        "community" => ghost_rooms::RoomMode::CommunityVoice,
-        "stage" => ghost_rooms::RoomMode::Stage,
-        "radio" => ghost_rooms::RoomMode::Radio,
-        _ => ghost_rooms::RoomMode::PrivateGroup,
+fn room_access(value: &str) -> ghost_rooms::RoomAccess {
+    if value == "public" {
+        ghost_rooms::RoomAccess::Public
+    } else {
+        ghost_rooms::RoomAccess::Private
     }
 }
 
@@ -210,8 +209,8 @@ pub(crate) fn create_room_callback(
 ) -> Callback<MouseEvent> {
     Callback::from(move |_| {
         let room_name = ui.name.trim().to_string();
-        let mode = room_mode(&ui.mode);
-        match crate::controllers::room::create_room(&profile, room_name, mode) {
+        let access = room_access(&ui.access);
+        match crate::controllers::room::create_room(&profile, room_name, access) {
             Ok((room_id, patch)) => {
                 on_update.emit(patch);
                 ui.selected_id.set(room_id);

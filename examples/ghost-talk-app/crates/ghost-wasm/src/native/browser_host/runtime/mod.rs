@@ -1,4 +1,3 @@
-pub(super) mod archive;
 pub(super) mod handshake;
 pub(super) mod live;
 pub(super) mod mailbox;
