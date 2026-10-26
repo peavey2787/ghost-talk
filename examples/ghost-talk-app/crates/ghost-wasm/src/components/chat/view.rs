@@ -235,7 +235,7 @@ pub(crate) fn render_selected_chat(
             {render_chat_header(props, state, &chat)}
             {render_request_banner(props, state, &chat)}
             {render_advanced(props, state, &chat)}
-            {render_messages(props, state, &chat)}
+            {render_messages(props, state, &chat, &send_body)}
             {render_composer_status(&state.status)}
             {render_composer(state, &chat, send_body)}
         </div>

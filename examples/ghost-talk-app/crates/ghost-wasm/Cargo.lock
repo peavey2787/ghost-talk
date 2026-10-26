@@ -3999,7 +3999,7 @@ dependencies = [
 [[package]]
 name = "p2p-net"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net#566424a7b314520e2bb1e61b10b6afb9e8189f3c"
+source = "git+https://github.com/peavey2787/p2p-net#656d1e8526614f29f028a082dadb38616efadb60"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -4043,7 +4043,7 @@ dependencies = [
 [[package]]
 name = "p2p-net-gossipsub"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net#566424a7b314520e2bb1e61b10b6afb9e8189f3c"
+source = "git+https://github.com/peavey2787/p2p-net#656d1e8526614f29f028a082dadb38616efadb60"
 dependencies = [
  "async-channel",
  "asynchronous-codec",
@@ -4072,7 +4072,7 @@ dependencies = [
 [[package]]
 name = "p2p-net-relay"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net#566424a7b314520e2bb1e61b10b6afb9e8189f3c"
+source = "git+https://github.com/peavey2787/p2p-net#656d1e8526614f29f028a082dadb38616efadb60"
 dependencies = [
  "asynchronous-codec",
  "bytes",
@@ -4095,7 +4095,7 @@ dependencies = [
 [[package]]
 name = "p2p-net-webrtc"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net#566424a7b314520e2bb1e61b10b6afb9e8189f3c"
+source = "git+https://github.com/peavey2787/p2p-net#656d1e8526614f29f028a082dadb38616efadb60"
 dependencies = [
  "async-trait",
  "futures",
@@ -4120,7 +4120,7 @@ dependencies = [
 [[package]]
 name = "p2p-net-webrtc-websys"
 version = "0.1.0"
-source = "git+https://github.com/peavey2787/p2p-net#566424a7b314520e2bb1e61b10b6afb9e8189f3c"
+source = "git+https://github.com/peavey2787/p2p-net#656d1e8526614f29f028a082dadb38616efadb60"
 dependencies = [
  "async-trait",
  "bytes",

@@ -99,7 +99,7 @@ pub(crate) fn handle_missing_mailbox_binding(
     message_id: String,
 ) -> Result<HydraMailboxResult, String> {
     if !runtime.hydra.has_contact(peer)? {
-        return Err("KKTP message names an unknown HYDRA peer".into());
+        return Err(ghost_domain::send_error::UNKNOWN_HYDRA_PEER.into());
     }
     let route = route.ok_or_else(|| "KKTP message has no verified Kaspa peer route".to_string())?;
     if route.resume_required {

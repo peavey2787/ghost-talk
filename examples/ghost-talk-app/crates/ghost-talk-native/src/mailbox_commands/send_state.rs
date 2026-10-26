@@ -58,9 +58,7 @@ pub(crate) fn prepare_restart_if_needed(
         return Ok(());
     }
     if !allow_handshake {
-        return Err(
-            "Secure peer transport is restoring after restart; no new handshake was started".into(),
-        );
+        return Err(ghost_domain::send_error::TRANSPORT_RESTORING.into());
     }
     crate::hydra_commands::prepare_restart_successor(runtime, contact_id)?;
     Ok(())

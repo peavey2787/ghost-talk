@@ -138,6 +138,7 @@ enum TransportRetry {
 }
 
 fn classify_transport_error(error: &str, wait_ms: u32) -> TransportRetry {
+    use ghost_domain::send_error::{requires_contact_bootstrap, waits_for_existing_transport};
     if requires_contact_bootstrap(error)
         || (waits_for_existing_transport(error) && wait_ms >= 15_000)
     {
@@ -155,28 +156,6 @@ fn call_is_connecting(runtime: &CallRuntime, call_id: &str) -> bool {
         .borrow()
         .get(call_id)
         .is_some_and(|call| call.phase == CallPhase::Connecting)
-}
-
-fn waits_for_existing_transport(error: &str) -> bool {
-    matches!(
-        error,
-        "The secure session is still being established for a previous message"
-            | "A secure-session handshake is already pending for this peer; retry after it completes"
-            | "The secure-session FINISH is still awaiting the peer's signed acknowledgement; wait for handshake completion before sending another message"
-            | "The secure-session recovery FINISH is still awaiting Kaspa broadcast; wait for handshake recovery before sending another message"
-            | "Waiting for the chat initiator's authenticated PQ handshake"
-    )
-}
-
-fn requires_contact_bootstrap(error: &str) -> bool {
-    matches!(
-        error,
-        "The recipient has not accepted this Ghost Talk chat yet"
-            | "KKTP message names an unknown HYDRA peer"
-            | "Realtime chat has no authenticated HYDRA peer."
-            | "Waiting for the original chat initiator to restore the encrypted peer transport after restart"
-            | "Secure peer transport is restoring after restart; no new handshake was started"
-    ) || error.starts_with("restart restore is missing the persisted KKTP ")
 }
 
 async fn send_call_contact_bootstrap(

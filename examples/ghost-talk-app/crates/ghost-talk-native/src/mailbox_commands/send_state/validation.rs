@@ -29,11 +29,11 @@ pub(crate) fn validate_send_runtime(
         ),
         (
             !runtime.prepared_completion.contains_key(contact_id),
-            "The secure-session FINISH is still awaiting the peer's signed acknowledgement; wait for handshake completion before sending another message",
+            ghost_domain::send_error::FINISH_AWAITING_ACK,
         ),
         (
             !runtime.prepared_recovery_finish.contains_key(contact_id),
-            "The secure-session recovery FINISH is still awaiting Kaspa broadcast; wait for handshake recovery before sending another message",
+            ghost_domain::send_error::RECOVERY_FINISH_AWAITING_BROADCAST,
         ),
     ]
     .into_iter()

@@ -66,6 +66,7 @@ fn apply_runtime_boolean(settings: &mut Settings, field: &str, checked: bool) ->
     match field {
         "autoIgnoreUnknownChats" => settings.auto_ignore_unknown_chats = checked,
         "requireSendPassword" => settings.require_send_password = checked,
+        "messageNotifications" => settings.message_notifications = checked,
         "debugLogging" => settings.debug_logging = checked,
         _ => return false,
     }

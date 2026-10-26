@@ -48,10 +48,10 @@ fn validate_new_handshake(
         return Err("Secure peer transport is not active; no new handshake was started".into());
     }
     if !runtime.hydra.has_contact(contact_id)? {
-        return Err("The recipient has not accepted this Ghost Talk chat yet".into());
+        return Err(ghost_domain::send_error::NOT_ACCEPTED.into());
     }
     if responder_handshake_waiting(runtime, contact_id) {
-        return Err("Waiting for the chat initiator's authenticated PQ handshake".into());
+        return Err(ghost_domain::send_error::INITIATOR_HANDSHAKE_PENDING.into());
     }
     Ok(())
 }
@@ -154,7 +154,7 @@ pub(crate) fn validate_pending_send(
     if matches {
         Ok(())
     } else {
-        Err("The secure session is still being established for a previous message".into())
+        Err(ghost_domain::send_error::SESSION_ESTABLISHING.into())
     }
 }
 
@@ -174,10 +174,7 @@ pub(crate) fn prepare_pending_handshake(
     let pending = runtime
         .pending_outbound
         .get_mut(contact_id)
-        .ok_or_else(|| {
-            "A secure-session handshake is already pending for this peer; retry after it completes"
-                .to_string()
-        })?;
+        .ok_or_else(|| ghost_domain::send_error::HANDSHAKE_PENDING.to_string())?;
 
     if validate_pending_send(pending, contact_id, body, message_id, stego_profile).is_err()
         && !adopt_restore_message(pending, body, message_id, stego_profile)

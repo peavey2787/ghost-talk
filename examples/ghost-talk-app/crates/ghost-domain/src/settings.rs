@@ -48,6 +48,10 @@ pub struct Settings {
     pub backup_messages_kaspa: bool,
     #[serde(default)]
     pub require_send_password: bool,
+    /// System notifications for new chat and Room messages (sender name
+    /// only, never the message text).
+    #[serde(default)]
+    pub message_notifications: bool,
     #[serde(default)]
     pub auto_ignore_unknown_chats: bool,
     #[serde(default)]
@@ -78,6 +82,7 @@ impl Default for Settings {
             contacts_backup_kaspa: true,
             backup_messages_kaspa: false,
             require_send_password: false,
+            message_notifications: false,
             auto_ignore_unknown_chats: false,
             debug_logging: false,
             public_username: String::new(),

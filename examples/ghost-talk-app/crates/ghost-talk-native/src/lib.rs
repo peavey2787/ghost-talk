@@ -163,6 +163,7 @@ macro_rules! native_handler {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let result = tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             app.manage(NativeAppState {
                 handle: app.handle().clone(),

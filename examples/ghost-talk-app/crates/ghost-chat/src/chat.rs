@@ -167,4 +167,29 @@ mod tests {
         assert!(!message.pending);
         assert!(message.pending_id.is_none());
     }
+
+    fn outgoing(id: &str, carrier: Option<&str>) -> Message {
+        let mut message = Message {
+            id: id.into(),
+            wire_id: Some(format!("wire-{id}")),
+            direction: "out".into(),
+            body: format!("body {id}"),
+            carrier: carrier.map(str::to_owned),
+            ..Default::default()
+        };
+        message.mark_failed("node rejected".into());
+        message
+    }
+
+    #[test]
+    fn only_failed_outgoing_messages_are_retryable() {
+        let mut incoming = outgoing("in", None);
+        incoming.direction = "in".into();
+        let mut delivered = outgoing("ok", None);
+        delivered.mark_delivered();
+        assert!(outgoing("failed", None).is_retryable());
+        assert!(outgoing("p2p", Some(crate::CARRIER_P2P)).is_retryable());
+        assert!(!incoming.is_retryable());
+        assert!(!delivered.is_retryable());
+    }
 }

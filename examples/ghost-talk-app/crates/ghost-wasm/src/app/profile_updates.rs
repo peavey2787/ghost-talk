@@ -140,6 +140,7 @@ fn merge_settings(before: &Settings, after: &Settings, latest: &Settings) -> Set
     field!(contacts_backup_kaspa);
     field!(backup_messages_kaspa);
     field!(require_send_password);
+    field!(message_notifications);
     field!(auto_ignore_unknown_chats);
     field!(debug_logging);
     field!(public_username);

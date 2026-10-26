@@ -77,7 +77,7 @@ async fn prepare_handshake_send(
     let profile = wallet.profile_id.clone();
     let peer = outgoing.peer;
     if !with_hydra_runtime(&profile, |hydra| hydra.has_contact(peer))? {
-        return Err("The recipient has not accepted this Ghost Talk chat yet".into());
+        return Err(ghost_domain::send_error::NOT_ACCEPTED.into());
     }
     if with_hydra_runtime(&profile, |hydra| hydra.session_status(peer))? == "pending" {
         with_hydra_runtime(&profile, |hydra| hydra.abort_handshake(peer))?;

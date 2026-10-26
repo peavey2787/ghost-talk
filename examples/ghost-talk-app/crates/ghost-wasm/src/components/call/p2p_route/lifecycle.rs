@@ -5,7 +5,7 @@ use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
 use super::{
-    announce::announce_active_sessions,
+    announce::{announce_active_sessions, forget_sent},
     events::{current, spawn_event_loop},
     shared_topics, trace,
 };
@@ -122,6 +122,7 @@ async fn on_started(runtime: &CallRuntime, generation: u64, binding: LocalP2pBin
 fn retire(runtime: &CallRuntime) {
     advance_generation(runtime);
     runtime.p2p_subscriptions.borrow_mut().clear();
+    forget_sent();
     runtime.p2p_state.set(P2pRouteState::Unavailable);
     runtime.swarm.disable();
     crate::swarm_carrier::detach();

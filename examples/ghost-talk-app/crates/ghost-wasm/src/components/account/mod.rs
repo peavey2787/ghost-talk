@@ -2,6 +2,7 @@ pub mod identity;
 mod identity_create;
 pub mod settings;
 mod settings_backup;
+mod settings_notifications;
 mod settings_p2p;
 mod settings_retention;
 pub mod wallet;

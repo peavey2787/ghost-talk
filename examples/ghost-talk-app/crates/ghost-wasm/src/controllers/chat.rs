@@ -9,8 +9,8 @@ pub(crate) use requests::{
     accept_request, add_contact_patch, incoming_request_state_patch, toggle_archive_patch,
 };
 mod direct;
-pub(crate) use direct::record_direct_text;
-pub(crate) use send::{execute_send, prepare_send};
+pub(crate) use direct::{record_direct_text, record_failed_direct_text};
+pub(crate) use send::{execute_send, prepare_send, PreparedSend};
 
 pub(crate) fn begin_session(
     chats: &mut crate::model::ChatStore,

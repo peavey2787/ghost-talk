@@ -5,7 +5,9 @@ mod composer;
 mod direct_send;
 mod lifecycle;
 mod message_rendering;
+mod outgoing;
 pub(crate) mod reaction_ui;
+mod retry;
 
 #[cfg(all(test, target_arch = "wasm32"))]
 mod browser_tests;

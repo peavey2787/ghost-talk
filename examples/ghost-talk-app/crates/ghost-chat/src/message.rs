@@ -43,6 +43,12 @@ impl Message {
         self.carrier.as_deref() != Some(CARRIER_P2P)
     }
 
+    /// An outgoing message whose send failed may be sent again under its
+    /// original wire id, so a late duplicate is deduplicated by the peer.
+    pub fn is_retryable(&self) -> bool {
+        self.direction == "out" && self.send_state.as_deref() == Some("failed")
+    }
+
     pub fn session_sid(&self) -> Option<&str> {
         self.session_sid.as_deref()
     }

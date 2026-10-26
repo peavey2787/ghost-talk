@@ -20,7 +20,7 @@ pub(crate) fn record_direct_text(
         .flat_map(|chat| chat.messages())
         .any(|message| message.id == text.message_id);
     if known {
-        return None;
+        return outgoing.then(|| mark_known(profile, chat_id, &text.message_id, None));
     }
     let mut after = profile.clone();
     let message = Message {
@@ -41,4 +41,43 @@ pub(crate) fn record_direct_text(
     }
     let patch = super::chat_profile_transition(profile, &after, chat_id);
     Some((after, patch))
+}
+
+/// Record an outgoing p2p-net text that could not be sent, so it stays
+/// visible with its error and can be retried.
+pub(crate) fn record_failed_direct_text(
+    profile: &Profile,
+    chat_id: &str,
+    session_sid: Option<String>,
+    text: &DirectTextV1,
+    error: String,
+) -> (Profile, ProfilePatch) {
+    let base = record_direct_text(profile, chat_id, session_sid, text, true)
+        .map_or_else(|| profile.clone(), |(after, _)| after);
+    let (after, _) = mark_known(&base, chat_id, &text.message_id, Some(error));
+    let patch = super::chat_profile_transition(profile, &after, chat_id);
+    (after, patch)
+}
+
+/// An already recorded outgoing message is delivered (`None`) or failed.
+fn mark_known(
+    profile: &Profile,
+    chat_id: &str,
+    message_id: &str,
+    error: Option<String>,
+) -> (Profile, ProfilePatch) {
+    let mut after = profile.clone();
+    match error {
+        None => {
+            ghost_chat::ChatService::mark_message_delivered(&mut after.chats, chat_id, message_id)
+        }
+        Some(error) => ghost_chat::ChatService::mark_message_failed(
+            &mut after.chats,
+            chat_id,
+            message_id,
+            error,
+        ),
+    };
+    let patch = super::chat_profile_transition(profile, &after, chat_id);
+    (after, patch)
 }

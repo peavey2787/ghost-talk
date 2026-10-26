@@ -1,1 +1,1 @@
-{"identifier":"default","description":"Minimal Ghost Talk application capability","windows":["main"],"permissions":["core:default"]}
+{"identifier":"default","description":"Minimal Ghost Talk application capability","windows":["main"],"permissions":["core:default","notification:default"]}

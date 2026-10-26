@@ -35,6 +35,7 @@ pub fn settings_view(props: &SettingsProps) -> Html {
         {render_voice_settings(props, &state)}
         {super::settings_p2p::render_p2p_settings(props)}
         {super::settings_retention::render_retention_settings(props)}
+        {super::settings_notifications::render_notification_settings(props, &state)}
         {render_security_settings(props, &state)}
         {render_recovery(props, &state)}
         {render_backup_settings(props, &state)}

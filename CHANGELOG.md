@@ -1,5 +1,12 @@
 # Changelog
 
+## r241
+
+- Failed outgoing messages show a **Retry** button. Retry resends the same text under the same message id, so a message is never duplicated and the bubble updates in place; a send the app refuses (wallet locked, another send in progress) keeps the composer draft instead of discarding it. Failed p2p-net-only texts now stay visible with their error instead of disappearing.
+- Send refusals are typed: `ghost_domain::send_error` owns the exact refusal messages and the classifiers (`handshake_in_flight`, `waits_for_existing_transport`, `requires_contact_bootstrap`) used by the chat and call paths, replacing duplicated string matching that silently broke when a message was reworded.
+- Added opt-in **message notifications** (Settings → Notifications). Turning them on asks the system for permission; notifications appear only while Ghost Talk is in the background and show the sender or Room name, never message text. History loaded at start-up never notifies. Native shells use `tauri-plugin-notification`.
+- Fixed p2p-net never reconnecting after its node restarted (switching the realtime route to Kaspa only and back to Auto, or editing relay/bootstrap peers): the restarted node had lost every peer binding but still treated its unchanged binding as already announced, so neither side re-bound and video stayed unavailable. Announced bindings are now forgotten when the node retires.
+
 ## r240
 
 - Ghost Talk is a chat app first: removed Studio, Games (including Pong), Radio, Community Voice, and Stage together with their crates (`ghost-broadcast`, `ghost-games`, `ghost-pong`, `ghost-kaspa-voice`), RTMP/recording sinks, creator/station/podcast catalog, and the permanent Kaspa media archive. Rooms are exactly Private (invitation only) or Public (listed in Discover); every participant may send text, react, and join Room voice and video. Room announcements move to v2 without a mode field, and the Discover room-type filter is gone.

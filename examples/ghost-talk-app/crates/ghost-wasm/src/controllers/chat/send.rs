@@ -25,13 +25,25 @@ pub(crate) struct OutgoingPlan {
     pub(super) recover_existing: bool,
 }
 
+/// Prepare a Kaspa send. `retry_wire_id` resends a failed message under its
+/// original wire id, replacing the failed entry, so the peer deduplicates a
+/// submission that landed after all.
 pub(crate) fn prepare_send(
     profile: &Profile,
     chat: &Chat,
     body: String,
+    retry_wire_id: Option<String>,
 ) -> Result<PreparedSend, String> {
-    let context = prepare_context(chat, &body)?;
+    let mut context = prepare_context(chat, &body)?;
     let mut current = profile.clone();
+    if let Some(wire_id) = retry_wire_id {
+        ghost_chat::ChatService::remove_messages_by_id(
+            &mut current.chats,
+            &chat.id,
+            std::slice::from_ref(&wire_id),
+        );
+        context.new_wire_id = wire_id;
+    }
     append_outgoing_message(
         &mut current.chats,
         chat,

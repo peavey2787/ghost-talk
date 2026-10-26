@@ -231,13 +231,13 @@ pub(crate) fn prepare_restart_successor(
     let prior_sid = route
         .session_sid
         .as_deref()
-        .ok_or_else(|| "restart restore is missing the persisted KKTP SID".to_string())?;
+        .ok_or_else(|| ghost_domain::send_error::RESTORE_MISSING_SID.to_string())?;
     let role = route
         .session_role
-        .ok_or_else(|| "restart restore is missing the persisted KKTP role".to_string())?;
+        .ok_or_else(|| ghost_domain::send_error::RESTORE_MISSING_ROLE.to_string())?;
     (role == KktpRole::Initiator)
         .then_some(())
-        .ok_or_else(|| "Waiting for the original chat initiator to restore the encrypted peer transport after restart".to_string())?;
+        .ok_or_else(|| ghost_domain::send_error::INITIATOR_RESTORE_PENDING.to_string())?;
     let successor = restart_successor_sid(prior_sid, &runtime.identity_id, peer_hydra_id)?;
     if runtime
         .kktp_sessions

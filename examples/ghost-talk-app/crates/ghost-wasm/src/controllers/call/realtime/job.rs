@@ -26,7 +26,7 @@ pub(super) fn target(profile: &Profile, job: &RealtimeJob) -> Result<Target, Str
     let peer = chat
         .peer_hydra_handle()
         .map(str::to_owned)
-        .ok_or_else(|| "Realtime chat has no authenticated HYDRA peer.".to_string())?;
+        .ok_or_else(|| ghost_domain::send_error::NO_REALTIME_PEER.to_string())?;
     let destination = chat
         .peer_kaspa_address()
         .map(str::to_owned)

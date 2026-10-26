@@ -3,7 +3,7 @@
 mod browser_host;
 mod invoke;
 pub(crate) use invoke::{
-    create_wallet, import_wallet, initialize_hydra, is_tauri, load_profile_state,
+    create_wallet, import_wallet, initialize_hydra, is_tauri, js_error, load_profile_state,
     save_profile_state, SESSION_RESTORE_BODY,
 };
 mod transport_restore;

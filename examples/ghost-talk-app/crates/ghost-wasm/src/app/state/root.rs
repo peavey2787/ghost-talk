@@ -1,4 +1,7 @@
-use super::{use_app_runtime, use_app_state, use_native_event_listeners, use_spend_mode_sync};
+use super::{
+    use_app_runtime, use_app_state, use_message_notifications, use_native_event_listeners,
+    use_spend_mode_sync,
+};
 use crate::app::{
     activate_profile_callback, active_profile, app_shell, identity_gate_view, loading_view,
     start_chat_callback, switch_user_callback, update_profile_callback, use_initial_profile_load,
@@ -12,6 +15,7 @@ pub fn app() -> Html {
     use_initial_profile_load(state.clone(), runtime.clone());
     use_native_event_listeners(state.clone(), runtime.clone());
     use_spend_mode_sync(&state);
+    use_message_notifications(&state);
 
     let update_profile = update_profile_callback(state.clone(), runtime.clone());
     let activate = activate_profile_callback(state.clone(), runtime.clone());

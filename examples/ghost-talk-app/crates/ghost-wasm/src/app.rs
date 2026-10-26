@@ -7,7 +7,7 @@ mod numeric;
 mod profile_updates;
 pub(crate) use profile_updates::apply_profile_patch;
 mod state;
-pub(crate) use state::App;
+pub(crate) use state::{request_notification_permission, App};
 mod startup;
 pub(crate) use startup::use_initial_profile_load;
 mod profile_runtime;

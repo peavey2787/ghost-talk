@@ -1,14 +1,11 @@
+use super::outgoing::{OutgoingText, TextSender};
 use super::view::{ChatProps, ChatUiState};
 use super::{input, prevent_submit};
 use crate::{model::Chat, voice};
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
-pub(crate) fn render_composer(
-    state: &ChatUiState,
-    chat: &Chat,
-    send_body: Callback<String>,
-) -> Html {
+pub(crate) fn render_composer(state: &ChatUiState, chat: &Chat, send_body: TextSender) -> Html {
     let closed = chat_composer_closed(chat);
     let masked_draft = "*".repeat(state.draft.chars().count());
     html! {
@@ -44,27 +41,24 @@ pub(crate) fn chat_composer_closed(chat: &Chat) -> bool {
             .is_some_and(|request| request.call_id.is_none() && request.state != "accepted")
 }
 
-pub(crate) fn send_text_callback(
-    state: &ChatUiState,
-    sender: Callback<String>,
-) -> Callback<MouseEvent> {
+/// The draft is cleared only once the send pipeline accepted the text; a
+/// refused send leaves it in the composer.
+pub(crate) fn send_text_callback(state: &ChatUiState, sender: TextSender) -> Callback<MouseEvent> {
     let draft = state.draft.clone();
     Callback::from(move |_| {
         let body = draft.trim().to_string();
-        if body.is_empty() {
-            return;
+        if !body.is_empty() && sender.emit(OutgoingText::new(body)) {
+            draft.set(String::new());
         }
-        sender.emit(body);
-        draft.set(String::new());
     })
 }
 
-pub(crate) fn recording_callback(
-    state: &ChatUiState,
-    sender: Callback<String>,
-) -> Callback<MouseEvent> {
+pub(crate) fn recording_callback(state: &ChatUiState, sender: TextSender) -> Callback<MouseEvent> {
     let recording = state.recording.clone();
     let status = state.status.clone();
+    let sender = Callback::from(move |body: String| {
+        sender.emit(OutgoingText::new(body));
+    });
     Callback::from(move |_| {
         if *recording {
             stop_recording(recording.clone(), status.clone());
@@ -100,56 +94,71 @@ pub(crate) fn start_recording(
     });
 }
 
-pub(crate) fn send_body_callback(
-    props: &ChatProps,
-    state: &ChatUiState,
-    chat: Chat,
-) -> Callback<String> {
+pub(crate) fn send_body_callback(props: &ChatProps, state: &ChatUiState, chat: Chat) -> TextSender {
     let durable = durable_send_callback(props, state, chat.clone());
     super::direct_send::route_text(props, state, chat, durable)
 }
 
+const SEND_IN_PROGRESS: &str = "Wait for the current message to finish sending.";
+
+/// Why a durable send cannot start right now, if it cannot.
+fn send_refusal(password: &str, busy: bool) -> Option<&'static str> {
+    if password.is_empty() {
+        return Some("Unlock Ghost Talk to send.");
+    }
+    busy.then_some(SEND_IN_PROGRESS)
+}
+
 /// Kaspa-anchored KKTP send (the durable default).
-fn durable_send_callback(props: &ChatProps, state: &ChatUiState, chat: Chat) -> Callback<String> {
+fn durable_send_callback(props: &ChatProps, state: &ChatUiState, chat: Chat) -> TextSender {
     let profile = props.profile.clone();
     let password = props.password.clone();
-    let status = state.status.clone();
-    let busy = state.busy.clone();
+    let state = state.clone();
     let on_update = props.on_update.clone();
-    Callback::from(move |body: String| {
-        if password.is_empty() || *busy {
-            return;
+    Callback::from(move |text: OutgoingText| {
+        if let Some(refusal) = send_refusal(&password, *state.busy) {
+            state.status.set(refusal.into());
+            return false;
         }
-        let prepared = match crate::controllers::chat::prepare_send(&profile, &chat, body) {
-            Ok(value) => value,
-            Err(error) => {
-                status.set(error);
-                return;
+        match crate::controllers::chat::prepare_send(&profile, &chat, text.body, text.retry_wire_id)
+        {
+            Ok(prepared) => {
+                start_durable_send(prepared, password.clone(), &state, on_update.clone());
+                true
             }
-        };
-        on_update.emit(prepared.patch);
-        if prepared.establishing {
-            status.set(
-                "Message queued. The existing encrypted HYDRA session is still being established."
-                    .into(),
-            );
-            return;
+            Err(error) => {
+                state.status.set(error);
+                false
+            }
         }
-        busy.set(true);
-        status.set(if prepared.needs_request {
-            "Sending private chat request…".into()
-        } else {
-            "Sending encrypted message…".into()
-        });
-        let password = password.clone();
-        let status = status.clone();
-        let busy = busy.clone();
-        let on_update = on_update.clone();
-        spawn_local(async move {
-            let outcome = crate::controllers::chat::execute_send(prepared.plan, &password).await;
-            on_update.emit(outcome.patch);
-            status.set(outcome.status);
-            busy.set(false);
-        });
     })
+}
+
+fn start_durable_send(
+    prepared: crate::controllers::chat::PreparedSend,
+    password: String,
+    state: &ChatUiState,
+    on_update: Callback<crate::model::ProfilePatch>,
+) {
+    on_update.emit(prepared.patch);
+    if prepared.establishing {
+        state.status.set(
+            "Message queued. The existing encrypted HYDRA session is still being established."
+                .into(),
+        );
+        return;
+    }
+    state.busy.set(true);
+    state.status.set(if prepared.needs_request {
+        "Sending private chat request…".into()
+    } else {
+        "Sending encrypted message…".into()
+    });
+    let (status, busy) = (state.status.clone(), state.busy.clone());
+    spawn_local(async move {
+        let outcome = crate::controllers::chat::execute_send(prepared.plan, &password).await;
+        on_update.emit(outcome.patch);
+        status.set(outcome.status);
+        busy.set(false);
+    });
 }

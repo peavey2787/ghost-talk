@@ -95,7 +95,12 @@ fn render_kasia_compatibility(props: &ChatProps, chat: &Chat) -> Html {
     }
 }
 
-pub(super) fn render_messages(props: &ChatProps, state: &ChatUiState, chat: &Chat) -> Html {
+pub(super) fn render_messages(
+    props: &ChatProps,
+    state: &ChatUiState,
+    chat: &Chat,
+    send: &crate::components::chat::outgoing::TextSender,
+) -> Html {
     if chat.messages().is_empty() {
         return html! {<div class="messages" ref={state.messages_ref.clone()}><div class="inline-empty">{"Send the first message to establish or use the secure session."}</div></div>};
     }
@@ -110,6 +115,7 @@ pub(super) fn render_messages(props: &ChatProps, state: &ChatUiState, chat: &Cha
                             {render_message(message, *state.mask_messages)}
                             {render_reaction_picker(message, own_actor, picker)}
                         </div>
+                        {crate::components::chat::retry::render_retry(message, send)}
                         {render_reaction_summary(message, own_actor)}
                     </div>
                 }

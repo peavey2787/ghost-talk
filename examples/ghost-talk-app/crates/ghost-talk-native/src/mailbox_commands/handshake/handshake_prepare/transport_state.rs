@@ -41,7 +41,7 @@ fn reset_unbound_active_session(
     allow_handshake: bool,
 ) -> Result<String, String> {
     if responder_handshake_waiting(runtime, contact_id) {
-        return Err("Waiting for the chat initiator's authenticated PQ handshake".into());
+        return Err(ghost_domain::send_error::INITIATOR_HANDSHAKE_PENDING.into());
     }
     if !allow_handshake {
         return Err("Secure peer transport is not active; no new handshake was started".into());

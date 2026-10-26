@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 
 use wasm_bindgen_test::*;
 use web_sys::Element;
@@ -6,6 +6,8 @@ use yew::prelude::*;
 
 use super::{
     composer::render_composer,
+    outgoing::OutgoingText,
+    retry::render_retry,
     view::{ChatProps, ChatUiState, ChatView},
 };
 use crate::components::browser_test_support::{click, input, settle, test_root};
@@ -18,6 +20,8 @@ thread_local! {
     static SENDS: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
     static SELECTIONS: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
     static UPDATES: RefCell<Vec<ProfilePatch>> = const { RefCell::new(Vec::new()) };
+    static ACCEPT: Cell<bool> = const { Cell::new(true) };
+    static RETRIES: RefCell<Vec<OutgoingText>> = const { RefCell::new(Vec::new()) };
 }
 
 fn reset_events() {
@@ -25,6 +29,8 @@ fn reset_events() {
     SENDS.with(|events| events.borrow_mut().clear());
     SELECTIONS.with(|events| events.borrow_mut().clear());
     UPDATES.with(|events| events.borrow_mut().clear());
+    RETRIES.with(|events| events.borrow_mut().clear());
+    ACCEPT.with(|accept| accept.set(true));
 }
 
 fn take_strings(slot: &'static std::thread::LocalKey<RefCell<Vec<String>>>) -> Vec<String> {
@@ -76,8 +82,28 @@ fn composer_harness() -> Html {
         direct: None,
     };
     let chat = ghost_chat::ChatService::new_basic("chat-c".into(), "C".into());
-    let send = Callback::from(|body: String| SENDS.with(|events| events.borrow_mut().push(body)));
+    let send = Callback::from(|text: OutgoingText| {
+        SENDS.with(|events| events.borrow_mut().push(text.body));
+        ACCEPT.with(Cell::get)
+    });
     render_composer(&state, &chat, send)
+}
+
+#[component(RetryHarness)]
+fn retry_harness() -> Html {
+    let mut message = crate::model::Message {
+        id: "m1".into(),
+        wire_id: Some("wire-1".into()),
+        direction: "out".into(),
+        body: "lost text".into(),
+        ..Default::default()
+    };
+    message.mark_failed("node rejected".into());
+    let send = Callback::from(|text: OutgoingText| {
+        RETRIES.with(|events| events.borrow_mut().push(text));
+        true
+    });
+    render_retry(&message, &send)
 }
 
 #[wasm_bindgen_test(async)]
@@ -143,6 +169,52 @@ async fn rendered_composer_sends_exact_message_body() {
     click(&root, ".composer .primary");
     settle().await;
     assert_eq!(take_strings(&SENDS), vec!["hello C"]);
+    assert_eq!(composer_draft(&root), "");
+    root.remove();
+}
+
+fn composer_draft(root: &Element) -> String {
+    use wasm_bindgen::JsCast;
+    root.query_selector(".composer input")
+        .ok()
+        .flatten()
+        .and_then(|node| node.dyn_into::<web_sys::HtmlInputElement>().ok())
+        .map(|input| input.value())
+        .unwrap_or_default()
+}
+
+#[wasm_bindgen_test(async)]
+async fn rendered_composer_keeps_the_draft_when_the_send_is_refused() {
+    reset_events();
+    ACCEPT.with(|accept| accept.set(false));
+    let root = test_root();
+    yew::Renderer::<ComposerHarness>::with_root(root.clone()).render();
+    settle().await;
+    input(&root, ".composer input", "keep me");
+    settle().await;
+    click(&root, ".composer .primary");
+    settle().await;
+    assert_eq!(take_strings(&SENDS), vec!["keep me"]);
+    assert_eq!(composer_draft(&root), "keep me");
+    root.remove();
+}
+
+#[wasm_bindgen_test(async)]
+async fn rendered_retry_resends_the_failed_text_under_its_wire_id() {
+    reset_events();
+    let root = test_root();
+    yew::Renderer::<RetryHarness>::with_root(root.clone()).render();
+    settle().await;
+    click(&root, ".message-retry");
+    settle().await;
+    let retries = RETRIES.with(|events| std::mem::take(&mut *events.borrow_mut()));
+    assert_eq!(
+        retries,
+        vec![OutgoingText {
+            body: "lost text".into(),
+            retry_wire_id: Some("wire-1".into()),
+        }]
+    );
     root.remove();
 }
 

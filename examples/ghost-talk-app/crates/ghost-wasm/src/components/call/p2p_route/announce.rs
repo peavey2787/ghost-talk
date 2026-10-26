@@ -53,6 +53,12 @@ thread_local! {
         std::cell::RefCell::default();
 }
 
+/// A restarted node has lost every peer binding, so each session must be
+/// announced again even when this device's binding is unchanged.
+pub(super) fn forget_sent() {
+    SENT.with(|sent| sent.borrow_mut().clear());
+}
+
 /// Record `binding` as announced for the chat session; false when it was
 /// already sent for that session.
 pub(super) fn mark_sent(chat: &Chat, binding: &LocalP2pBinding) -> bool {
@@ -130,4 +136,32 @@ pub(super) fn session_is_eligible(chat: &Chat) -> bool {
         && !chat.archived()
         && !chat.left()
         && !chat.peer_left()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{forget_sent, mark_sent};
+    use ghost_p2p::LocalP2pBinding;
+    use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
+
+    wasm_bindgen_test_configure!(run_in_browser);
+
+    #[wasm_bindgen_test]
+    fn a_restarted_node_announces_an_unchanged_binding_again() {
+        let chat = ghost_chat::ChatService::new_basic("chat".into(), "Peer".into());
+        let binding = LocalP2pBinding {
+            peer_id: "12D3KooWPeer".into(),
+            dial_addresses: vec!["/dns4/relay/tcp/443/wss/p2p/12D3KooWPeer".into()],
+        };
+        assert!(mark_sent(&chat, &binding));
+        assert!(
+            !mark_sent(&chat, &binding),
+            "an unchanged binding is sent once"
+        );
+        forget_sent();
+        assert!(
+            mark_sent(&chat, &binding),
+            "a restarted node announces again"
+        );
+    }
 }

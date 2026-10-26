@@ -67,13 +67,8 @@ pub(super) fn apply_failure(
     plan: &mut OutgoingPlan,
     error: String,
 ) -> SendOutcome {
-    let restore_still_in_flight = plan.recover_existing && matches!(
-        error.as_str(),
-        "The secure-session FINISH is still awaiting the peer's signed acknowledgement; wait for handshake completion before sending another message"
-            | "The secure-session recovery FINISH is still awaiting Kaspa broadcast; wait for handshake recovery before sending another message"
-            | "A secure-session handshake is already pending for this peer; retry after it completes"
-            | "The secure session is still being established for a previous message"
-    );
+    let restore_still_in_flight =
+        plan.recover_existing && ghost_domain::send_error::handshake_in_flight(&error);
     if restore_still_in_flight {
         let _ = ghost_chat::ChatService::mark_message_queued_handshake(
             &mut plan.current.chats,
