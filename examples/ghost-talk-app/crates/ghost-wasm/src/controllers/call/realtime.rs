@@ -27,6 +27,19 @@ enum RealtimeDelivery {
     DurableControl,
 }
 
+impl RealtimeDelivery {
+    /// Queue order, lowest first and FIFO within a rank: signaling, then
+    /// binding announcements, then media. A slow Kaspa media backlog must never
+    /// delay the announcement that moves media onto p2p-net.
+    fn rank(self) -> u8 {
+        match self {
+            Self::DurableControl => 0,
+            Self::KaspaRealtime => 1,
+            Self::Realtime | Self::DirectOnly | Self::Video => 2,
+        }
+    }
+}
+
 #[derive(Clone)]
 struct RealtimeJob {
     chat_id: String,
@@ -166,16 +179,13 @@ impl RealtimeSender {
     fn enqueue_job(&self, job: RealtimeJob) {
         let should_start = {
             let mut inner = self.inner.borrow_mut();
-            if job.delivery == RealtimeDelivery::DurableControl {
-                let insert_at = inner
-                    .queue
-                    .iter()
-                    .position(|queued| queued.delivery != RealtimeDelivery::DurableControl)
-                    .unwrap_or(inner.queue.len());
-                inner.queue.insert(insert_at, job);
-            } else {
-                inner.queue.push_back(job);
-            }
+            let rank = job.delivery.rank();
+            let insert_at = inner
+                .queue
+                .iter()
+                .position(|queued| queued.delivery.rank() > rank)
+                .unwrap_or(inner.queue.len());
+            inner.queue.insert(insert_at, job);
             if inner.running {
                 false
             } else {

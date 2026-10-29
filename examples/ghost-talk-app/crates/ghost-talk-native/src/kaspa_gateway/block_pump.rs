@@ -1,4 +1,13 @@
+use std::time::Duration;
+
 use super::{broadcast, is_transport_failure, KaspaGatewayState, LiveBlockEvent, PortalFacade};
+
+/// Kaspa produces blocks every fraction of a second, so a subscription that
+/// stays silent this long has stalled even though its socket is open.
+const STALL_AFTER: Duration = Duration::from_secs(30);
+/// Reported when the BlockAdded stream stalls; a transport failure, so the
+/// gateway moves to its next endpoint.
+pub(super) const BLOCK_STREAM_STALLED: &str = "kaspa blockadded stream stalled";
 
 impl KaspaGatewayState {
     pub(super) fn spawn_block_pump(
@@ -67,7 +76,8 @@ async fn pump_blocks(
 ) {
     let mut observed_first_block = false;
     loop {
-        match portal.next_block_added().await {
+        let next = tokio::time::timeout(STALL_AFTER, portal.next_block_added()).await;
+        match next.unwrap_or_else(|_| Err(BLOCK_STREAM_STALLED.to_owned())) {
             Ok(event) => handle_block_event(
                 &network,
                 &endpoint,

@@ -7,6 +7,9 @@ use wasm_bindgen_futures::spawn_local;
 use crate::native::browser_host::support::debug;
 
 const RECONNECT_DELAY_MS: u32 = 3_000;
+/// Kaspa produces blocks every fraction of a second, so a subscription that
+/// stays silent this long has stalled even though its socket is open.
+const STALL_AFTER_MS: u32 = 30_000;
 
 /// One BlockAdded stream per profile over its own Portal notification socket.
 /// The socket is replaced in place when it drops, so the stream survives
@@ -119,9 +122,15 @@ async fn run_stream(target: StreamTarget, mut api: NetworkApi) {
 
 async fn pump_blocks(target: &StreamTarget, api: &NetworkApi, blocks: &mut u64) -> String {
     loop {
-        let block = match api.next_block_added().await {
-            Ok(block) => block,
-            Err(error) => return error.to_string(),
+        let next = api.next_block_added();
+        let stall = gloo_timers::future::TimeoutFuture::new(STALL_AFTER_MS);
+        futures_util::pin_mut!(next);
+        let block = match futures_util::future::select(next, stall).await {
+            futures_util::future::Either::Left((Ok(block), _)) => block,
+            futures_util::future::Either::Left((Err(error), _)) => return error.to_string(),
+            futures_util::future::Either::Right(_) => {
+                return format!("stalled: no block for {STALL_AFTER_MS} ms")
+            }
         };
         if !target.alive.get() {
             return "stopped".into();

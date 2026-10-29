@@ -52,40 +52,16 @@ pub(in crate::components::call) async fn process_transport_control(
             announcement.peer_id
         ),
     );
-    let new_binding = remember_received(&chat, announcement);
     dial(&runtime, announcement).await;
     mark_if_connected(&runtime, &announcement.peer_id).await;
-    // Acknowledge only a peer binding we have not seen: a repeated
-    // announcement must not cost another Kaspa transaction.
-    if !body.is_ack() && new_binding {
+    // Announcements are sent once per binding and session, so one arriving
+    // again means the peer's node restarted and lost our binding: always
+    // answer it. (Kaspa redelivery never reaches here twice; the realtime
+    // replay window processes each packet once.)
+    if !body.is_ack() {
         announce(&runtime, &chat, true, true).await?;
     }
     Ok(())
-}
-
-/// Chat id + session SID.
-type SessionKey = (String, String);
-/// Peer id + dial addresses.
-type PeerBinding = (String, Vec<String>);
-
-thread_local! {
-    /// Last peer binding received per chat session.
-    static RECEIVED: std::cell::RefCell<std::collections::HashMap<SessionKey, PeerBinding>> =
-        std::cell::RefCell::default();
-}
-
-/// Remember the peer's announced binding for this session; true when it is
-/// new for the session (a new SID always needs our acknowledgement).
-fn remember_received(chat: &Chat, announcement: &TransportAnnounceV1) -> bool {
-    let key = (
-        chat.id.clone(),
-        chat.session_sid().unwrap_or_default().to_owned(),
-    );
-    let binding = (
-        announcement.peer_id.clone(),
-        announcement.dial_addresses.clone(),
-    );
-    RECEIVED.with(|received| received.borrow_mut().insert(key, binding.clone()) != Some(binding))
 }
 
 fn validate(announcement: &TransportAnnounceV1) -> Result<(), String> {
@@ -169,21 +145,38 @@ async fn dial_addresses(runtime: &CallRuntime, addresses: &[String]) {
     if addresses.is_empty() {
         return;
     }
+    if !addresses.iter().any(|address| browser_dialable(address)) {
+        trace(
+            runtime,
+            "dial-skipped",
+            format!("no browser-dialable address in {addresses:?}"),
+        );
+    }
     runtime.p2p_state.set(P2pRouteState::Connecting);
-    let mut p2p = runtime.p2p();
     for address in addresses.iter().filter(|address| browser_dialable(address)) {
-        let dial = p2p.connect(address);
-        let timeout = gloo_timers::future::TimeoutFuture::new(DIAL_TIMEOUT_MS);
-        futures_util::pin_mut!(dial);
-        match futures_util::future::select(dial, timeout).await {
-            Either::Left((Ok(()), _)) => return,
-            Either::Left((Err(error), _)) => {
-                trace(runtime, "dial-failed", format!("{address}: {error}"))
-            }
-            Either::Right(_) => trace(runtime, "dial-failed", format!("{address}: timed out")),
+        if dial_one(runtime, address).await {
+            return;
         }
     }
     runtime.p2p_state.set(P2pRouteState::KaspaFallback);
+}
+
+/// Dial one address within the dial timeout; true when it connected.
+async fn dial_one(runtime: &CallRuntime, address: &str) -> bool {
+    let mut p2p = runtime.p2p();
+    let dial = p2p.connect(address);
+    let timeout = gloo_timers::future::TimeoutFuture::new(DIAL_TIMEOUT_MS);
+    futures_util::pin_mut!(dial);
+    let failure = match futures_util::future::select(dial, timeout).await {
+        Either::Left((Ok(()), _)) => {
+            trace(runtime, "dialed", address.to_owned());
+            return true;
+        }
+        Either::Left((Err(error), _)) => error,
+        Either::Right(_) => "timed out".to_owned(),
+    };
+    trace(runtime, "dial-failed", format!("{address}: {failure}"));
+    false
 }
 
 /// The remote side may have dialed first; its PeerConnected event could have

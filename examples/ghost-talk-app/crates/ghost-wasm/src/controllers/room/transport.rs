@@ -1,4 +1,4 @@
-use crate::model::{ChatStore, Profile, RoomMember, RoomWire, WalletProjection};
+use crate::model::{Chat, ChatStore, Profile, RoomMember, RoomWire, WalletProjection};
 
 pub(crate) fn remove_pending_room_payloads(
     chats: &mut ChatStore,
@@ -111,33 +111,14 @@ pub(crate) async fn send_room_wire_to_route(
     kaspa_address: &str,
     wire: &RoomWire,
 ) -> Result<WalletProjection, String> {
-    let active_route = profile.chats.iter().find(|chat| {
-        chat.peer_hydra_handle() == Some(hydra_handle)
-            && chat.bootstrap_complete()
-            && !chat.left()
-            && !chat.peer_left()
-    });
-    let Some(active_route) = active_route else {
-        if profile.chats.iter().any(|chat| {
-            chat.peer_hydra_handle() == Some(hydra_handle)
-                && chat.transport_restore_pending()
-                && !chat.left()
-                && !chat.peer_left()
-        }) {
-            return Err(format!(
-                "Secure session with {label} is restoring after restart. Try again in a moment."
-            ));
-        }
-        return Err(format!(
-            "Secure session with {label} is not established yet."
-        ));
-    };
+    let active_route = active_route(profile, label, hydra_handle)?;
     let destination = active_route
         .peer_kaspa_address()
         .filter(|value| !value.is_empty())
         .unwrap_or(kaspa_address);
     let payload = encode_room_wire(wire)?;
     let message_id = crate::random_id()?;
+    crate::controllers::debug::record("room", "room-send-started", format!("to={label}"));
     let sent = crate::native::send_mailbox_message_existing_session(
         profile,
         password,
@@ -146,11 +127,51 @@ pub(crate) async fn send_room_wire_to_route(
         &payload,
         &message_id,
     )
-    .await?;
+    .await
+    .inspect_err(|error| {
+        crate::controllers::debug::record("room", "room-send-failed", format!("to={label} {error}"))
+    })?;
+    crate::controllers::debug::record(
+        "room",
+        "room-sent",
+        format!("to={label} pending_handshake={}", sent.pending_handshake),
+    );
     if sent.pending_handshake {
         return Err(format!("Secure session with {label} is not active yet."));
     }
     Ok(sent.public)
+}
+
+/// The member's live chat session, or why a Room send cannot use it yet.
+fn active_route<'a>(
+    profile: &'a Profile,
+    label: &str,
+    hydra_handle: &str,
+) -> Result<&'a Chat, String> {
+    let live = |chat: &&Chat| {
+        chat.peer_hydra_handle() == Some(hydra_handle) && !chat.left() && !chat.peer_left()
+    };
+    if let Some(chat) = profile
+        .chats
+        .iter()
+        .filter(live)
+        .find(|chat| chat.bootstrap_complete())
+    {
+        return Ok(chat);
+    }
+    if profile
+        .chats
+        .iter()
+        .filter(live)
+        .any(|chat| chat.transport_restore_pending())
+    {
+        return Err(format!(
+            "Secure session with {label} is restoring after restart. Try again in a moment."
+        ));
+    }
+    Err(format!(
+        "Secure session with {label} is not established yet."
+    ))
 }
 
 pub(crate) async fn broadcast_room_wire_to_members(
