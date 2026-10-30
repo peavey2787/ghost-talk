@@ -17,10 +17,10 @@ pub use room_announcement::{sign_room_announcement, verify_room_announcement};
 mod portal;
 pub use portal::upstream;
 pub use portal::{
-    p2pk_compressed_public_key, sign_call_signal, sign_contact_accept, sign_contact_request,
-    sign_delivery_ack, sign_domain_message, sign_gtcd, sign_kktp_session_end, validate_destination,
-    verify_call_signal, verify_contact_accept, verify_contact_request, verify_delivery_ack,
-    verify_domain_message, verify_gtcd, verify_kktp_session_end, LiveBlockEvent,
-    LiveTransactionObservation, Outpoint, PortalCurrentUtxo, PortalFacade, PortalMassAnalysis,
-    UtxoReservations,
+    is_orphan_rejection, is_portal_transport_failure, p2pk_compressed_public_key, sign_call_signal,
+    sign_contact_accept, sign_contact_request, sign_delivery_ack, sign_domain_message, sign_gtcd,
+    sign_kktp_session_end, validate_destination, verify_call_signal, verify_contact_accept,
+    verify_contact_request, verify_delivery_ack, verify_domain_message, verify_gtcd,
+    verify_kktp_session_end, LiveBlockEvent, LiveTransactionObservation, Outpoint,
+    PortalCurrentUtxo, PortalFacade, PortalMassAnalysis, UtxoReservations,
 };

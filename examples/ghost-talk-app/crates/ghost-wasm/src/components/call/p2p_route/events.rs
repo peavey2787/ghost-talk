@@ -4,7 +4,12 @@ use wasm_bindgen_futures::spawn_local;
 use super::{announce::announce_active_sessions, trace};
 use crate::components::call::CallRuntime;
 
-const REDIAL_DELAY_MS: u32 = 2_000;
+/// Waits before each re-dial of a bound peer that is still not connected. A
+/// relay-circuit dial can fail silently (p2p-net reports it only in its
+/// diagnostics), e.g. when it races the peer's relay reservation after a node
+/// restart, so one attempt is never enough. The last wait repeats for as long
+/// as the peer stays bound and disconnected.
+const REDIAL_DELAYS_MS: [u32; 6] = [2_000, 4_000, 8_000, 15_000, 30_000, 60_000];
 const ANNOUNCE_SETTLE_MS: u32 = 1_500;
 
 /// Follow p2p-net lifecycle events for one node generation.
@@ -67,20 +72,47 @@ fn schedule_announce(runtime: &CallRuntime) {
     });
 }
 
-/// Idle relay circuits are closed by p2p-net; while the peer's session is
-/// still eligible, reconnect so realtime keeps its direct route.
-fn schedule_redial(runtime: &CallRuntime, peer_id: &str) {
+thread_local! {
+    /// Bound peers with a re-dial loop already running.
+    static REDIALING: std::cell::RefCell<std::collections::HashSet<String>> =
+        std::cell::RefCell::default();
+}
+
+/// Keep re-dialing a bound peer until it connects: after an idle relay circuit
+/// closes, and after an announcement's dial that may have failed silently.
+pub(super) fn schedule_redial(runtime: &CallRuntime, peer_id: &str) {
     if !bound(runtime, peer_id) || !super::route_is_automatic(runtime) {
+        return;
+    }
+    if !REDIALING.with(|peers| peers.borrow_mut().insert(peer_id.to_owned())) {
         return;
     }
     let (runtime, peer_id) = (runtime.clone(), peer_id.to_owned());
     spawn_local(async move {
-        gloo_timers::future::TimeoutFuture::new(REDIAL_DELAY_MS).await;
-        if bound(&runtime, &peer_id) && !runtime.p2p().is_connected(&peer_id).await.unwrap_or(true)
-        {
-            super::control::redial(&runtime, &peer_id).await;
-        }
+        redial_until_connected(&runtime, &peer_id).await;
+        REDIALING.with(|peers| peers.borrow_mut().remove(&peer_id));
     });
+}
+
+async fn redial_until_connected(runtime: &CallRuntime, peer_id: &str) {
+    let last = REDIAL_DELAYS_MS[REDIAL_DELAYS_MS.len() - 1];
+    for delay in REDIAL_DELAYS_MS.into_iter().chain(std::iter::repeat(last)) {
+        gloo_timers::future::TimeoutFuture::new(delay).await;
+        if !bound(runtime, peer_id) || !super::route_is_automatic(runtime) {
+            return;
+        }
+        if runtime.swarm.is_connected(peer_id) {
+            super::control::mark_if_connected(runtime, peer_id);
+            return;
+        }
+        let last_error = runtime.p2p().last_dial_error().await.unwrap_or_default();
+        trace(
+            runtime,
+            "redial",
+            format!("peer={peer_id} last_dial_error={last_error}"),
+        );
+        super::control::redial(runtime, peer_id).await;
+    }
 }
 
 /// Route-state transitions; only peers bound to an authenticated session count.

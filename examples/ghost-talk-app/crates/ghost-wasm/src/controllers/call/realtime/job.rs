@@ -169,12 +169,16 @@ async fn send_p2p_bounded(
     sealed: &HydraRealtimeEnvelope,
     budget_ms: u32,
 ) -> Result<(), String> {
-    let send = send_p2p_until_bound(snapshot, sealed);
+    let last_error = std::cell::RefCell::new(String::new());
+    let send = send_p2p_until_bound(snapshot, sealed, &last_error);
     let timeout = gloo_timers::future::TimeoutFuture::new(budget_ms);
     futures_util::pin_mut!(send);
     match futures_util::future::select(send, timeout).await {
         Either::Left((result, _)) => result,
-        Either::Right(_) => Err("p2p-net send did not succeed in time".to_string()),
+        Either::Right(_) => Err(format!(
+            "p2p-net send did not succeed in time: {}",
+            last_error.borrow()
+        )),
     }
 }
 
@@ -183,15 +187,20 @@ async fn send_p2p_bounded(
 const P2P_RETRY_MS: u32 = 250;
 
 /// Retries the same sealed bytes until the bounded window closes; a failed
-/// publish delivered nothing, so a retry can never duplicate a message.
+/// publish delivered nothing, so a retry can never duplicate a message. The
+/// latest failure is kept for the timeout report.
 async fn send_p2p_until_bound(
     snapshot: &SenderSnapshot,
     sealed: &HydraRealtimeEnvelope,
+    last_error: &std::cell::RefCell<String>,
 ) -> Result<(), String> {
     loop {
         match send_p2p(snapshot, sealed).await {
             Ok(()) => return Ok(()),
-            Err(_) => gloo_timers::future::TimeoutFuture::new(P2P_RETRY_MS).await,
+            Err(error) => {
+                last_error.replace(error);
+                gloo_timers::future::TimeoutFuture::new(P2P_RETRY_MS).await;
+            }
         }
     }
 }

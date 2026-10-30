@@ -5,7 +5,7 @@ use serde_json::Value;
 use std::{cell::RefCell, collections::HashMap};
 
 use crate::native::browser_host::{
-    kaspa::{endpoint_override, profile_portal},
+    kaspa::{endpoint_override, profile_portal, remove_portal},
     support::util::{required, required_str},
 };
 
@@ -65,23 +65,13 @@ impl BrowserWallet {
                 pending_id,
             ));
         }
-        let portal = profile_portal(
-            &self.profile_id,
-            &self.public,
-            endpoint_override(args, "wrpcEndpoint"),
-        )
-        .await?;
+        let endpoint = endpoint_override(args, "wrpcEndpoint");
+        let mut portal = profile_portal(&self.profile_id, &self.public, endpoint).await?;
         let mut transaction_id = String::new();
         for payload in payloads {
-            let sent = ghost_kaspa::wallet::send_payload(
-                &portal,
-                &self.secret,
-                &self.public,
-                destination,
-                0,
-                &payload,
-            )
-            .await?;
+            let sent = self
+                .send_with_retry(&mut portal, endpoint, destination, &payload)
+                .await?;
             transaction_id = sent.transaction_id;
             self.public = sent.public;
         }
@@ -94,6 +84,72 @@ impl BrowserWallet {
             pending_id,
             swarm: None,
         })
+    }
+}
+
+/// Attempts per payload. Every attempt spends the same UTXOs, so at most one
+/// transaction can ever confirm and a retry never duplicates the message.
+const SEND_ATTEMPTS: usize = 3;
+/// Wait before resubmitting a transaction whose parent the node lacks.
+const ORPHAN_RETRY_MS: u32 = 3_000;
+
+impl BrowserWallet {
+    /// Send one payload, retrying transient failures: a dropped node connection
+    /// reconnects, and an orphan rejection waits for its parent to propagate.
+    async fn send_with_retry(
+        &self,
+        portal: &mut ghost_kaspa::PortalFacade,
+        endpoint: Option<&str>,
+        destination: &str,
+        payload: &[u8],
+    ) -> Result<ghost_kaspa::wallet::KaspaBroadcastResult, String> {
+        let mut attempt = 1;
+        loop {
+            let error = match self.send_payload(portal, destination, payload).await {
+                Ok(sent) => return Ok(sent),
+                Err(error) if attempt == SEND_ATTEMPTS => return Err(error),
+                Err(error) => error,
+            };
+            self.recover(portal, endpoint, error).await?;
+            attempt += 1;
+        }
+    }
+
+    /// Prepare the next attempt after a transient failure; any other error
+    /// is returned as final.
+    async fn recover(
+        &self,
+        portal: &mut ghost_kaspa::PortalFacade,
+        endpoint: Option<&str>,
+        error: String,
+    ) -> Result<(), String> {
+        if ghost_kaspa::is_portal_transport_failure(&error) {
+            remove_portal(&self.profile_id);
+            *portal = profile_portal(&self.profile_id, &self.public, endpoint).await?;
+            return Ok(());
+        }
+        if ghost_kaspa::is_orphan_rejection(&error) {
+            gloo_timers::future::TimeoutFuture::new(ORPHAN_RETRY_MS).await;
+            return Ok(());
+        }
+        Err(error)
+    }
+
+    async fn send_payload(
+        &self,
+        portal: &ghost_kaspa::PortalFacade,
+        destination: &str,
+        payload: &[u8],
+    ) -> Result<ghost_kaspa::wallet::KaspaBroadcastResult, String> {
+        ghost_kaspa::wallet::send_payload(
+            portal,
+            &self.secret,
+            &self.public,
+            destination,
+            0,
+            payload,
+        )
+        .await
     }
 }
 

@@ -10,6 +10,12 @@ const RECONNECT_DELAY_MS: u32 = 3_000;
 /// Kaspa produces blocks every fraction of a second, so a subscription that
 /// stays silent this long has stalled even though its socket is open.
 const STALL_AFTER_MS: u32 = 30_000;
+/// A socket open or subscribe that never resolves must not end the stream.
+const OPEN_TIMEOUT_MS: u32 = 15_000;
+
+/// Last delivered block hash, shared with the stream's registry entry so a
+/// replacement stream can backfill from where the old one stopped.
+type Anchor = Rc<RefCell<Option<String>>>;
 
 /// One BlockAdded stream per profile over its own Portal notification socket.
 /// The socket is replaced in place when it drops, so the stream survives
@@ -18,6 +24,7 @@ struct BrowserLiveStream {
     portal: Rc<RefCell<PortalFacade>>,
     endpoint: String,
     alive: Rc<Cell<bool>>,
+    last_block: Anchor,
 }
 
 /// What the notification task needs to reopen its socket.
@@ -28,7 +35,7 @@ struct StreamTarget {
     portal: Rc<RefCell<PortalFacade>>,
     alive: Rc<Cell<bool>>,
     /// Last delivered block; the backfill anchor after a reconnect.
-    last_block: RefCell<Option<String>>,
+    last_block: Anchor,
 }
 
 thread_local! {
@@ -43,16 +50,20 @@ pub(in crate::native::browser_host) async fn start(
     if live_matches(profile_id, portal)? {
         return Ok(());
     }
-    stop(profile_id).await;
     let endpoint = portal.endpoint()?;
+    // Open first: a failed open keeps the old stream instead of leaving none.
+    // The replacement resumes from the old one's last block, so nothing mined
+    // while switching endpoints or wallets is missed.
     let (stream, api) = open_stream(&public.network, &endpoint).await?;
+    let anchor = stop_stream(profile_id).unwrap_or_default();
+    debug::record("info", "kaspa", "live-stream-started", endpoint.clone());
     let target = StreamTarget {
         profile_id: profile_id.to_owned(),
         network: public.network.clone(),
         endpoint: endpoint.clone(),
         portal: Rc::new(RefCell::new(stream)),
         alive: Rc::new(Cell::new(true)),
-        last_block: RefCell::new(None),
+        last_block: Rc::new(RefCell::new(anchor)),
     };
     LIVE_STREAMS.with(|streams| {
         streams.borrow_mut().insert(
@@ -61,6 +72,7 @@ pub(in crate::native::browser_host) async fn start(
                 portal: Rc::clone(&target.portal),
                 endpoint,
                 alive: Rc::clone(&target.alive),
+                last_block: Rc::clone(&target.last_block),
             },
         );
     });
@@ -69,6 +81,18 @@ pub(in crate::native::browser_host) async fn start(
 }
 
 async fn open_stream(network: &str, endpoint: &str) -> Result<(PortalFacade, NetworkApi), String> {
+    let open = subscribe(network, endpoint);
+    let timeout = gloo_timers::future::TimeoutFuture::new(OPEN_TIMEOUT_MS);
+    futures_util::pin_mut!(open);
+    match futures_util::future::select(open, timeout).await {
+        futures_util::future::Either::Left((opened, _)) => opened,
+        futures_util::future::Either::Right(_) => Err(format!(
+            "Kaspa BlockAdded stream did not open within {OPEN_TIMEOUT_MS} ms"
+        )),
+    }
+}
+
+async fn subscribe(network: &str, endpoint: &str) -> Result<(PortalFacade, NetworkApi), String> {
     let stream = PortalFacade::connect(network, endpoint).await?;
     let api = stream.network_api()?;
     if let Err(error) = api.subscribe_block_added().await {
@@ -79,11 +103,16 @@ async fn open_stream(network: &str, endpoint: &str) -> Result<(PortalFacade, Net
 }
 
 pub(in crate::native::browser_host) async fn stop(profile_id: &str) {
-    let stream = LIVE_STREAMS.with(|streams| streams.borrow_mut().remove(profile_id));
-    if let Some(stream) = stream {
-        stream.alive.set(false);
-        stream.portal.borrow().disconnect();
-    }
+    stop_stream(profile_id);
+}
+
+/// Stop the profile's stream, returning its last delivered block.
+fn stop_stream(profile_id: &str) -> Option<Option<String>> {
+    let stream = LIVE_STREAMS.with(|streams| streams.borrow_mut().remove(profile_id))?;
+    stream.alive.set(false);
+    stream.portal.borrow().disconnect();
+    let anchor = stream.last_block.borrow().clone();
+    Some(anchor)
 }
 
 fn live_matches(profile_id: &str, portal: &PortalFacade) -> Result<bool, String> {
@@ -99,6 +128,9 @@ fn live_matches(profile_id: &str, portal: &PortalFacade) -> Result<bool, String>
 /// Deliver blocks until the stream is stopped, reopening a dropped socket.
 async fn run_stream(target: StreamTarget, mut api: NetworkApi) {
     let mut blocks = 0u64;
+    // A replacement stream starts with the old stream's anchor; a new one
+    // has none and backfill does nothing.
+    backfill(&target, &mut blocks).await;
     while target.alive.get() {
         let closed = pump_blocks(&target, &api, &mut blocks).await;
         if !target.alive.get() {

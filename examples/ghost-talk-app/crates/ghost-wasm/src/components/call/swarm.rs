@@ -60,6 +60,13 @@ impl SwarmTracker {
         *self.status
     }
 
+    /// Whether this node generation has reported a live connection to the
+    /// peer. Only node events count: p2p-net's peer list also reflects its
+    /// persisted peer book, which survives a node restart.
+    pub(super) fn is_connected(&self, peer: &str) -> bool {
+        self.peers.borrow().contains(peer)
+    }
+
     pub(super) fn starting(&self) {
         self.peers.borrow_mut().clear();
         self.status.set(SwarmStatus::Starting);

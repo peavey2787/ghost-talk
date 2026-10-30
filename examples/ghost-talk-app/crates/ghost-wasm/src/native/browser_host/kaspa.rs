@@ -157,7 +157,8 @@ fn remember_portal(
     });
 }
 
-fn remove_portal(profile_id: &str) {
+/// Drop the profile's cached connection so the next use reconnects.
+pub(super) fn remove_portal(profile_id: &str) {
     PORTALS.with(|portals| {
         portals.borrow_mut().remove(profile_id);
     });

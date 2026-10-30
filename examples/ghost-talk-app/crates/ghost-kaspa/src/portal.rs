@@ -10,6 +10,7 @@ mod client;
 mod contact_signatures;
 #[cfg(all(test, feature = "upstream"))]
 mod contract_tests;
+mod failures;
 mod reservations;
 
 pub use carriers::{LiveBlockEvent, LiveTransactionObservation};
@@ -20,4 +21,5 @@ pub use contact_signatures::{
     verify_contact_accept, verify_contact_request, verify_delivery_ack, verify_domain_message,
     verify_gtcd, verify_kktp_session_end,
 };
+pub use failures::{is_orphan_rejection, is_portal_transport_failure};
 pub use reservations::{validate_destination, Outpoint, UtxoReservations};

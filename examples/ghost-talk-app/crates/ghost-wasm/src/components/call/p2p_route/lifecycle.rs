@@ -73,28 +73,56 @@ fn advance_generation(runtime: &CallRuntime) -> u64 {
     *value
 }
 
+/// A node start that never resolves (an unreachable relay or bootstrap peer)
+/// must not leave the swarm down for the whole session.
+const START_TIMEOUT_MS: u32 = 30_000;
+/// Waits before each restart of a node that failed or timed out; the last one
+/// repeats while this generation stays current.
+const START_RETRY_MS: [u32; 4] = [5_000, 10_000, 30_000, 60_000];
+
 async fn start(runtime: CallRuntime, generation: u64, config: P2pStartConfig) {
-    let started = start_node(&runtime, config).await;
-    if !current(&runtime, generation) {
-        // The effect retired while this node was starting; the node is stale.
-        shutdown_detached(&runtime);
-        return;
-    }
-    match started {
-        Ok(binding) => on_started(&runtime, generation, binding).await,
-        Err(error) => {
-            trace(&runtime, "node-start-failed", error);
-            runtime.p2p_state.set(P2pRouteState::KaspaFallback);
-            runtime.swarm.offline();
+    for attempt in 0.. {
+        let started = start_node(&runtime, config.clone()).await;
+        if !current(&runtime, generation) {
+            // The effect retired while this node was starting; the node is stale.
+            shutdown_detached(&runtime);
+            return;
         }
+        match started {
+            Ok(binding) => return on_started(&runtime, generation, binding).await,
+            Err(error) => on_start_failed(&runtime, error),
+        }
+        let delay = START_RETRY_MS[attempt.min(START_RETRY_MS.len() - 1)];
+        gloo_timers::future::TimeoutFuture::new(delay).await;
+        if !current(&runtime, generation) {
+            return;
+        }
+        runtime.p2p_state.set(P2pRouteState::Starting);
+        runtime.swarm.starting();
     }
+}
+
+fn on_start_failed(runtime: &CallRuntime, error: String) {
+    trace(runtime, "node-start-failed", error);
+    runtime.p2p_state.set(P2pRouteState::KaspaFallback);
+    runtime.swarm.offline();
+    shutdown_detached(runtime);
 }
 
 async fn start_node(
     runtime: &CallRuntime,
     config: P2pStartConfig,
 ) -> Result<LocalP2pBinding, String> {
-    runtime.p2p().start(config).await
+    let mut p2p = runtime.p2p();
+    let start = p2p.start(config);
+    let timeout = gloo_timers::future::TimeoutFuture::new(START_TIMEOUT_MS);
+    futures_util::pin_mut!(start);
+    match futures_util::future::select(start, timeout).await {
+        futures_util::future::Either::Left((result, _)) => result,
+        futures_util::future::Either::Right(_) => Err(format!(
+            "p2p-net did not start within {START_TIMEOUT_MS} ms"
+        )),
+    }
 }
 
 async fn on_started(runtime: &CallRuntime, generation: u64, binding: LocalP2pBinding) {
@@ -131,7 +159,10 @@ fn retire(runtime: &CallRuntime) {
 
 fn shutdown_detached(runtime: &CallRuntime) {
     let mut old = std::mem::take(&mut *runtime.p2p.borrow_mut());
+    let runtime = runtime.clone();
     spawn_local(async move {
-        let _ = old.shutdown().await;
+        if let Err(error) = old.shutdown().await {
+            trace(&runtime, "node-shutdown-failed", error);
+        }
     });
 }

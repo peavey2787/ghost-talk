@@ -53,7 +53,8 @@ pub(in crate::components::call) async fn process_transport_control(
         ),
     );
     dial(&runtime, announcement).await;
-    mark_if_connected(&runtime, &announcement.peer_id).await;
+    mark_if_connected(&runtime, &announcement.peer_id);
+    super::events::schedule_redial(&runtime, &announcement.peer_id);
     // Announcements are sent once per binding and session, so one arriving
     // again means the peer's node restarted and lost our binding: always
     // answer it. (Kaspa redelivery never reaches here twice; the realtime
@@ -180,9 +181,9 @@ async fn dial_one(runtime: &CallRuntime, address: &str) -> bool {
 }
 
 /// The remote side may have dialed first; its PeerConnected event could have
-/// arrived before this binding existed, so confirm the connection directly.
-async fn mark_if_connected(runtime: &CallRuntime, peer_id: &str) {
-    if runtime.p2p().is_connected(peer_id).await.unwrap_or(false) {
+/// arrived before this binding existed, so check the connected peers.
+pub(super) fn mark_if_connected(runtime: &CallRuntime, peer_id: &str) {
+    if runtime.swarm.is_connected(peer_id) {
         runtime.p2p_state.set(P2pRouteState::Connected);
     }
 }

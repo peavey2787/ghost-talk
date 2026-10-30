@@ -14,15 +14,6 @@ pub enum P2pNetEvent {
     Offline,
 }
 
-/// The subset of p2p-net's `PeerInfo` Ghost Talk needs.
-#[cfg(any(target_arch = "wasm32", test))]
-#[derive(Debug, Deserialize)]
-pub(crate) struct PeerInfoWire {
-    pub(crate) peer_id: String,
-    #[serde(default)]
-    pub(crate) connected: bool,
-}
-
 #[derive(Debug, Deserialize)]
 #[serde(tag = "event", rename_all = "snake_case")]
 pub(crate) enum NodeEventWire {
@@ -77,16 +68,5 @@ mod tests {
                 dial_addresses: vec!["/ip4/1.2.3.4/tcp/1/p2p/relay/p2p-circuit/p2p/me".into()],
             })
         );
-    }
-
-    #[test]
-    fn peer_info_subset_ignores_unrelated_fields() {
-        let peers: Vec<PeerInfoWire> = serde_json::from_str(
-            r#"[{"peer_id":"a","connected":true,"addresses":[],"sources":["connected"]},{"peer_id":"b"}]"#,
-        )
-        .unwrap();
-        assert_eq!(peers[0].peer_id, "a");
-        assert!(peers[0].connected);
-        assert!(!peers[1].connected);
     }
 }

@@ -8,9 +8,13 @@ use js_sys::{Reflect, Uint8Array};
 use p2p_net::wasm::{WasmEventSubscription, WasmNode, WasmSubscription};
 use wasm_bindgen::JsValue;
 
-use crate::events::{NodeEventWire, P2pNetEvent, PeerInfoWire};
+use crate::events::{NodeEventWire, P2pNetEvent};
 use crate::incoming::admit;
 use crate::node::{js_error, start_node};
+
+/// Shutdown waits up to 60 s for in-flight operations to release the node.
+const SHUTDOWN_POLL_MS: u32 = 250;
+const SHUTDOWN_POLLS: u32 = 240;
 
 type SharedBindings = Rc<RefCell<SessionPeerBindings>>;
 
@@ -67,18 +71,17 @@ impl P2pNetTransport {
         Ok(P2pNetTopicSubscription { inner })
     }
 
-    pub fn has_bound_peer(&self, peer_id: &str) -> bool {
-        self.bindings.borrow().contains_peer(peer_id)
+    /// p2p-net's most recent application dial failure, for redial traces.
+    pub async fn last_dial_error(&self) -> Option<String> {
+        let json = self.node().ok()?.snapshot().await.ok()?;
+        let snapshot: serde_json::Value = serde_json::from_str(&json).ok()?;
+        snapshot["last_application_dial_error"]
+            .as_str()
+            .map(str::to_owned)
     }
 
-    /// Whether p2p-net currently holds a connection to `peer_id`.
-    pub async fn is_connected(&self, peer_id: &str) -> Result<bool, String> {
-        let value = self.node()?.get_peers().await.map_err(js_error)?;
-        let peers: Vec<PeerInfoWire> = serde_wasm_bindgen::from_value(value)
-            .map_err(|error| format!("invalid p2p-net peer list: {error}"))?;
-        Ok(peers
-            .iter()
-            .any(|peer| peer.connected && peer.peer_id == peer_id))
+    pub fn has_bound_peer(&self, peer_id: &str) -> bool {
+        self.bindings.borrow().contains_peer(peer_id)
     }
 }
 
@@ -182,15 +185,26 @@ impl GhostP2pTransport for P2pNetTransport {
         Box::pin(async move {
             *self.bindings.borrow_mut() = SessionPeerBindings::default();
             let node = self.node.borrow_mut().take();
-            // In-flight operations hold clones; once they finish the last
-            // owner shuts down and releases the profile lock.
-            match node.map(Rc::try_unwrap) {
-                Some(Ok(mut node)) => node.shutdown().await.map_err(js_error),
-                Some(Err(_)) => Err("p2p-net is busy; retry shutdown".into()),
+            match node {
+                Some(node) => shutdown_when_released(node).await,
                 None => Ok(()),
             }
         })
     }
+}
+
+/// In-flight operations hold clones of the node; wait for them to finish so
+/// the node really stops. Dropping it un-shut would leave its swarm running,
+/// still holding relay circuits and the profile lock.
+async fn shutdown_when_released(mut node: Rc<WasmNode>) -> Result<(), String> {
+    for _ in 0..SHUTDOWN_POLLS {
+        match Rc::try_unwrap(node) {
+            Ok(mut owned) => return owned.shutdown().await.map_err(js_error),
+            Err(shared) => node = shared,
+        }
+        gloo_timers::future::TimeoutFuture::new(SHUTDOWN_POLL_MS).await;
+    }
+    Err("p2p-net stayed busy; shutdown abandoned".into())
 }
 
 fn read_incoming(value: &JsValue) -> Result<P2pIncoming, String> {

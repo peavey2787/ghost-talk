@@ -1744,6 +1744,7 @@ name = "ghost-p2p"
 version = "0.1.0"
 dependencies = [
  "ghost-realtime",
+ "gloo-timers 0.3.0",
  "js-sys",
  "p2p-net",
  "serde",
